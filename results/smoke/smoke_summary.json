@@ -1,0 +1,12 @@
+{
+  "local_client_received_result": true,
+  "asr": 1.0,
+  "noop_preserves_baseline": true,
+  "parameters_unchanged": true,
+  "modal_wall_seconds": 128.83053851127625,
+  "gpu_actual": "NVIDIA A10G",
+  "gpu_pricing_key": "A10G",
+  "git_commit_executed": "b6433c36a2dc3950a2ed9ed48cd3afce69703634",
+  "command_completed_successfully": true,
+  "blocker": null
+}

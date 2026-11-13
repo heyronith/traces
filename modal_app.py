@@ -213,7 +213,7 @@ def main(dry_run: bool = False, smoke: bool = False) -> None:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(payload, indent=2))
         print(f"Wrote {out}")
-        raise SystemExit(0)
+        return
 
     try:
         commit = subprocess.check_output(
@@ -228,10 +228,7 @@ def main(dry_run: bool = False, smoke: bool = False) -> None:
     out.mkdir(parents=True, exist_ok=True)
     (out / "smoke_results.json").write_text(json.dumps(results, indent=2, default=str))
 
-    # Compare local return vs volume artifact
     try:
-        vol_text = None
-        # Best-effort: volume already synced by function; also keep local return.
         import sys
 
         sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -254,11 +251,11 @@ def main(dry_run: bool = False, smoke: bool = False) -> None:
             "command_completed_successfully"
         ),
         "blocker": results.get("blocker"),
+        "exit_status": 0,
     }
+    if results.get("blocker") or not summary.get("command_completed_successfully"):
+        summary["exit_status"] = 1
     (out / "smoke_summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))
-    if results.get("blocker"):
+    if summary["exit_status"] != 0:
         raise SystemExit(1)
-    if not summary.get("command_completed_successfully"):
-        raise SystemExit(1)
-    raise SystemExit(0)
