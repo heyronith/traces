@@ -1,21 +1,25 @@
-"""Cross-seed transfer evaluation protocol (structure only; GPU path gated).
-
-Donor rankings must be frozen before recipient evaluation.
-"""
+"""Cross-seed transfer protocol with integrity gates."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
+from traces.pilot.components import ComponentRef
+from traces.pilot.metrics_defs import (
+    INTERVENTION_SEMANTICS,
+    SCORING_DEFINITION_ID,
+)
 from traces.pilot.ranking import FrozenRanking
 
 
 SEEDS = (42, 43, 44)
 DEFAULT_K_BUDGETS = (5, 10)
+# Ratios only when |D_native| >= this minimum (nats/token on D scale).
+NATIVE_D_MIN_FOR_RATIO = 0.05
 
 
-@dataclass
+@dataclass(frozen=True)
 class TransferPair:
     donor_seed: int
     recipient_seed: int
@@ -25,19 +29,12 @@ class TransferPair:
 
 
 def all_directed_seed_pairs(seeds: Sequence[int] = SEEDS) -> list[TransferPair]:
-    """All ordered donor→recipient pairs (6 for three seeds)."""
     out: list[TransferPair] = []
     for d in seeds:
         for r in seeds:
-            if d == r:
-                continue
-            out.append(TransferPair(donor_seed=d, recipient_seed=r))
+            if d != r:
+                out.append(TransferPair(d, r))
     return out
-
-
-def unordered_seed_pairs(seeds: Sequence[int] = SEEDS) -> list[tuple[int, int]]:
-    s = list(seeds)
-    return [(s[i], s[j]) for i in range(len(s)) for j in range(i + 1, len(s))]
 
 
 @dataclass
@@ -45,9 +42,10 @@ class TransferCondition:
     name: str
     donor_seed: int | None
     recipient_seed: int
-    component_ids: list[str]
+    component_ids: tuple[str, ...]
     k: int
-    source: str  # frozen_donor_topk | recipient_native_topk | random | layer_type_matched
+    source: str
+    donor_ranking_artifact_hash: str | None = None
     notes: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -58,8 +56,73 @@ class TransferCondition:
             "component_ids": list(self.component_ids),
             "k": self.k,
             "source": self.source,
+            "donor_ranking_artifact_hash": self.donor_ranking_artifact_hash,
             "notes": self.notes,
         }
+
+
+@dataclass
+class TransferIntegrityContext:
+    donor_seed: int
+    recipient_seed: int
+    catalog_hash: str
+    dataset_split_hash: str
+    scoring_definition_id: str = SCORING_DEFINITION_ID
+    intervention_semantics: str = INTERVENTION_SEMANTICS
+    base_model_revision: str | None = None
+    adapter_revision: str | None = None
+    donor_adapter_revision: str | None = None
+    recipient_adapter_revision: str | None = None
+
+
+def validate_frozen_ranking_for_transfer(
+    ranking: FrozenRanking,
+    *,
+    catalog: Sequence[ComponentRef],
+    ctx: TransferIntegrityContext,
+    expected_donor_seed: int,
+) -> None:
+    ranking.assert_frozen()
+    ranking.refuse_mutation()
+    if ranking.donor_seed != expected_donor_seed:
+        raise RuntimeError(
+            f"Donor seed mismatch: ranking={ranking.donor_seed} expected={expected_donor_seed}"
+        )
+    if ranking.ranking_split != "discovery":
+        raise RuntimeError("Transfer requires discovery-origin ranking")
+    if ranking.scoring_definition_id != ctx.scoring_definition_id:
+        raise RuntimeError("scoring_definition_id mismatch")
+    if ranking.intervention_semantics != ctx.intervention_semantics:
+        raise RuntimeError("intervention_semantics mismatch")
+    if ranking.catalog_hash != ctx.catalog_hash:
+        raise RuntimeError("component-catalog hash mismatch")
+    if ranking.dataset_split_hash != ctx.dataset_split_hash:
+        raise RuntimeError("dataset-split hash mismatch")
+    catalog_ids = {c.component_id for c in catalog}
+    unknown = [c for c in ranking.component_order if c not in catalog_ids]
+    if unknown:
+        raise RuntimeError(f"Ranking contains components absent from catalog: {unknown[:5]}")
+    if len(set(ranking.component_order)) != len(ranking.component_order):
+        raise RuntimeError("Duplicate components in frozen ranking")
+
+
+def validate_component_set(
+    component_ids: Sequence[str],
+    *,
+    catalog: Sequence[ComponentRef],
+    k: int,
+) -> tuple[str, ...]:
+    if k < 1:
+        raise ValueError("invalid k")
+    if len(component_ids) != k:
+        raise ValueError(f"Expected k={k} components, got {len(component_ids)}")
+    if len(set(component_ids)) != len(component_ids):
+        raise RuntimeError("Duplicated components in intervention set")
+    catalog_ids = {c.component_id for c in catalog}
+    missing = [c for c in component_ids if c not in catalog_ids]
+    if missing:
+        raise RuntimeError(f"Components not in frozen catalog: {missing}")
+    return tuple(component_ids)
 
 
 def build_transfer_conditions(
@@ -69,16 +132,35 @@ def build_transfer_conditions(
     recipient_native_ranking: FrozenRanking | None,
     k: int,
     random_ids: Sequence[str],
-    matched_ids: Sequence[str],
+    layer_type_ids: Sequence[str],
+    damage_matched_ids: Sequence[str] | None,
+    damage_unmatched: bool,
+    catalog: Sequence[ComponentRef],
+    ctx: TransferIntegrityContext,
 ) -> list[TransferCondition]:
-    """Assemble the pre-registered condition list for one recipient and budget k."""
-    donor_ranking.assert_frozen()
-    if donor_ranking.ranking_split == "held_out":
-        raise RuntimeError("Donor ranking must not come from held_out")
-    if recipient_native_ranking is not None:
-        recipient_native_ranking.assert_frozen()
+    """Assemble conditions; refuses silent substitution of native for donor."""
+    validate_frozen_ranking_for_transfer(
+        donor_ranking,
+        catalog=catalog,
+        ctx=ctx,
+        expected_donor_seed=ctx.donor_seed,
+    )
+    if donor_ranking.donor_seed == recipient_seed:
+        raise RuntimeError("Donor and recipient seeds must differ for transfer")
 
-    donor_top = donor_ranking.top_k(k)
+    donor_top = validate_component_set(donor_ranking.top_k(k), catalog=catalog, k=k)
+    # Explicitly ensure we did not accidentally use recipient-native order
+    if recipient_native_ranking is not None:
+        native_top = recipient_native_ranking.top_k(k)
+        if (
+            donor_ranking.donor_seed != recipient_native_ranking.donor_seed
+            and tuple(donor_top) == tuple(native_top)
+            and donor_ranking.artifact_hash() == recipient_native_ranking.artifact_hash()
+        ):
+            raise RuntimeError(
+                "Refusing silent substitution: donor ranking artifact equals recipient-native"
+            )
+
     conditions = [
         TransferCondition(
             name=f"transfer_donor{donor_ranking.donor_seed}_k{k}",
@@ -87,13 +169,14 @@ def build_transfer_conditions(
             component_ids=donor_top,
             k=k,
             source="frozen_donor_topk",
-            notes="Frozen donor top-k applied to recipient without re-ranking.",
+            donor_ranking_artifact_hash=donor_ranking.artifact_hash(),
+            notes="Frozen donor top-k; not recipient-native.",
         ),
         TransferCondition(
             name=f"random_k{k}",
             donor_seed=None,
             recipient_seed=recipient_seed,
-            component_ids=list(random_ids)[:k],
+            component_ids=validate_component_set(random_ids, catalog=catalog, k=k),
             k=k,
             source="random",
         ),
@@ -101,22 +184,67 @@ def build_transfer_conditions(
             name=f"layer_type_matched_k{k}",
             donor_seed=donor_ranking.donor_seed,
             recipient_seed=recipient_seed,
-            component_ids=list(matched_ids)[:k],
+            component_ids=validate_component_set(layer_type_ids, catalog=catalog, k=k),
             k=k,
             source="layer_type_matched",
-            notes="Damage-matched control for donor top-k.",
+            donor_ranking_artifact_hash=donor_ranking.artifact_hash(),
+            notes="Structural control only (not benign-damage matched).",
         ),
     ]
+    if damage_unmatched:
+        conditions.append(
+            TransferCondition(
+                name=f"benign_damage_unmatched_k{k}",
+                donor_seed=donor_ranking.donor_seed,
+                recipient_seed=recipient_seed,
+                component_ids=tuple(),
+                k=k,
+                source="benign_damage_unmatched",
+                donor_ranking_artifact_hash=donor_ranking.artifact_hash(),
+                notes="No acceptable damage-matched control; do not claim damage-matched evidence.",
+            )
+        )
+    elif damage_matched_ids is not None:
+        conditions.append(
+            TransferCondition(
+                name=f"benign_damage_matched_k{k}",
+                donor_seed=donor_ranking.donor_seed,
+                recipient_seed=recipient_seed,
+                component_ids=validate_component_set(
+                    damage_matched_ids, catalog=catalog, k=k
+                ),
+                k=k,
+                source="benign_damage_matched",
+                donor_ranking_artifact_hash=donor_ranking.artifact_hash(),
+            )
+        )
+
     if recipient_native_ranking is not None:
+        validate_frozen_ranking_for_transfer(
+            recipient_native_ranking,
+            catalog=catalog,
+            ctx=TransferIntegrityContext(
+                donor_seed=recipient_seed,
+                recipient_seed=recipient_seed,
+                catalog_hash=ctx.catalog_hash,
+                dataset_split_hash=ctx.dataset_split_hash,
+                scoring_definition_id=ctx.scoring_definition_id,
+                intervention_semantics=ctx.intervention_semantics,
+            ),
+            expected_donor_seed=recipient_seed,
+        )
         conditions.append(
             TransferCondition(
                 name=f"recipient_native_topk_k{k}",
                 donor_seed=recipient_seed,
                 recipient_seed=recipient_seed,
-                component_ids=recipient_native_ranking.top_k(k),
+                component_ids=validate_component_set(
+                    recipient_native_ranking.top_k(k), catalog=catalog, k=k
+                ),
                 k=k,
                 source="recipient_native_topk",
-                notes="Internal reference: recipient's own frozen top-k.",
+                donor_ranking_artifact_hash=recipient_native_ranking.artifact_hash(),
+                notes="Internal reference on the same recipient checkpoint.",
             )
         )
     return conditions
@@ -126,43 +254,65 @@ def build_transfer_conditions(
 class TransferResultRow:
     condition: TransferCondition
     split: str
-    trigger_logprob_contrast_delta: float | None = None
+    D: float | None = None
+    K: float | None = None
     greedy_asr: float | None = None
+    full_payload_asr: float | None = None
     greedy_asr_intact: float | None = None
-    benign_kl: float | None = None
-    control_task_degradation: float | None = None
+    secondary_trigger_control_contrast_delta: float | None = None
+    wall_seconds: float | None = None
     extras: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "condition": self.condition.to_dict(),
             "split": self.split,
-            "trigger_logprob_contrast_delta": self.trigger_logprob_contrast_delta,
+            "D": self.D,
+            "K": self.K,
             "greedy_asr": self.greedy_asr,
+            "full_payload_asr": self.full_payload_asr,
             "greedy_asr_intact": self.greedy_asr_intact,
-            "benign_kl": self.benign_kl,
-            "control_task_degradation": self.control_task_degradation,
+            "secondary_trigger_control_contrast_delta": (
+                self.secondary_trigger_control_contrast_delta
+            ),
+            "wall_seconds": self.wall_seconds,
+            "donor_ranking_artifact_hash": self.condition.donor_ranking_artifact_hash,
             "extras": self.extras,
         }
 
 
-def assert_donor_frozen_before_recipient(
-    donor_ranking: FrozenRanking,
+def paired_absolute_differences(
+    transfer_D: float,
+    reference_D: float,
     *,
-    recipient_eval_split: str,
-) -> None:
-    """Safety check used by tests and runner."""
-    donor_ranking.assert_frozen()
-    if recipient_eval_split == donor_ranking.ranking_split == "held_out":
-        raise RuntimeError("Invalid shared held_out ranking/eval configuration")
-    if donor_ranking.ranking_split == "held_out":
-        raise RuntimeError("Donor ranking freeze used held_out — forbidden")
+    native_D: float | None = None,
+    min_native_for_ratio: float = NATIVE_D_MIN_FOR_RATIO,
+) -> dict[str, Any]:
+    """Prefer absolute paired differences; ratio only if denominator large enough."""
+    out: dict[str, Any] = {
+        "D_transfer_minus_reference": float(transfer_D - reference_D),
+        "D_transfer": float(transfer_D),
+        "D_reference": float(reference_D),
+    }
+    if native_D is None:
+        out["ratio_transfer_over_native"] = None
+        out["ratio_status"] = "native_D_not_provided"
+        return out
+    if abs(native_D) < min_native_for_ratio:
+        out["ratio_transfer_over_native"] = None
+        out["ratio_status"] = "undefined_native_near_zero"
+        out["D_transfer_minus_native"] = float(transfer_D - native_D)
+    else:
+        out["ratio_transfer_over_native"] = float(transfer_D / native_D)
+        out["ratio_status"] = "ok"
+        out["D_transfer_minus_native"] = float(transfer_D - native_D)
+    return out
 
 
-def correlated_pair_note(pairs: Iterable[TransferPair]) -> str:
+def correlated_pair_note(pairs: Iterable[TransferPair] | None = None) -> str:
+    ps = list(pairs) if pairs is not None else all_directed_seed_pairs()
     return (
-        f"Reporting {len(list(pairs))} directed transfers among seeds {list(SEEDS)}. "
-        "Pairs that share a seed are statistically dependent; do not treat the six "
-        "directed comparisons as independent replicates. This three-seed pilot is "
-        "feasibility/informativeness oriented, not a definitive statistical test."
+        f"Reporting {len(ps)} directed transfers among seeds {list(SEEDS)}. "
+        "Pairs sharing a seed are dependent; not six independent replicates. "
+        "Feasibility/measurement pilot only — not definitive transfer proof."
     )

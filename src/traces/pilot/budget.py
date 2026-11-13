@@ -1,7 +1,8 @@
-"""Revised Stage 1 pilot compute budget (dry-run only; not a spend guarantee).
+"""Stage 1 pilot compute budget v2 — forward-pass accounting.
 
-Uses Stage 0 A10G throughput as an *initial* estimate only.
-Does NOT assert that the entire pilot costs $0.53.
+Separates measured Stage 0 throughput from unmeasured assumptions.
+Does NOT claim dollars are an enforced Modal account cap.
+Does NOT assert the pilot costs $0.53.
 """
 
 from __future__ import annotations
@@ -13,28 +14,32 @@ from typing import Any
 
 from traces.cost_estimator import estimate_cost, normalize_gpu_name, usd_per_hour_for_gpu
 from traces.pilot import N_COMPONENT_GROUPS_FULL_SCAN
+from traces.pilot.controls import DAMAGE_MATCH_N_CANDIDATES
 from traces.pilot.transfer import SEEDS, all_directed_seed_pairs
 
-
-# Stage 0 A10G measured rates (review-fix smoke throughput bench).
-STAGE0_A10G_GEN_S_PER_PROMPT = 1.633
-STAGE0_A10G_TF_S_PER_PROMPT = 0.056
+# Measured Stage 0 A10G bench (review-fix smoke)
+MEASURED_A10G_GEN_S_PER_PROMPT = 1.633
+MEASURED_A10G_TF_S_PER_PROMPT = 0.056
 
 
 @dataclass
-class WorkloadLine:
+class ForwardPassLine:
     name: str
-    seconds_low: float
-    seconds_high: float
+    n_forward_passes: float
+    seconds_per_pass_measured: float | None
+    seconds_per_pass_assumed: float
+    source: str  # measured_stage0 | assumed
     detail: str
 
+    def seconds_low(self, mult_low: float) -> float:
+        return self.n_forward_passes * self.seconds_per_pass_assumed * mult_low
+
+    def seconds_high(self, mult_high: float) -> float:
+        return self.n_forward_passes * self.seconds_per_pass_assumed * mult_high
+
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-def _line(name: str, n_fwd: float, s_per: float, *, factor_low: float, factor_high: float, detail: str) -> WorkloadLine:
-    base = n_fwd * s_per
-    return WorkloadLine(name, base * factor_low, base * factor_high, detail)
+        d = asdict(self)
+        return d
 
 
 def build_pilot_workload_estimate(
@@ -45,115 +50,107 @@ def build_pilot_workload_estimate(
     n_held_out: int = 25,
     n_seeds: int = 3,
     k_budgets: tuple[int, ...] = (5, 10),
-    n_random_controls_per_k: int = 3,
-    n_matched_controls_per_k: int = 1,
-    gen_s: float = STAGE0_A10G_GEN_S_PER_PROMPT,
-    tf_s: float = STAGE0_A10G_TF_S_PER_PROMPT,
+    n_random_controls_per_k: int = 1,
+    n_damage_candidates: int = DAMAGE_MATCH_N_CANDIDATES,
+    gen_s: float = MEASURED_A10G_GEN_S_PER_PROMPT,
+    tf_s: float = MEASURED_A10G_TF_S_PER_PROMPT,
     load_s_per_model: float = 180.0,
     gpu: str = "A10G",
-    # Uncertainty multipliers for fallback/rerun/non-ideal batching
     contingency_low: float = 1.0,
     contingency_high: float = 2.0,
 ) -> dict[str, Any]:
-    """Account for each major work category separately.
-
-    Screening uses teacher-forced scoring (cheaper). Greedy confirmation and
-    ASR intact baselines use generation. Transfer applies frozen sets on
-    validation/held_out with TF primary + sparse greedy confirmation.
-    """
     directed = len(all_directed_seed_pairs(SEEDS[:n_seeds]))
-    # Each instruction has trigger+control paired prompts for contrast metrics.
-    # For screening we score trigger target logprob intact vs ablated per component.
-    # Approx forward count per component on discovery: 2 * n_discovery (trig intact
-    # already cached once + ablated trig). We budget ablated trig TF per component
-    # plus one intact pass.
-    intact_tf_discovery = n_discovery  # trigger side; control optional extra
-    screen_tf = n_seeds * (intact_tf_discovery + n_components * n_discovery)
 
-    # Intact greedy eval on validation+held_out (trigger+control) per seed
+    # Screening: intact trigger TF once per discovery instr per seed
+    # + one TF per (component × discovery instr × seed)
+    screen_tf = n_seeds * (n_discovery + n_components * n_discovery)
+
+    # Intact greedy on val+held_out (trig+control)
     intact_gen = n_seeds * (n_validation + n_held_out) * 2
 
-    # Per directed transfer × k budget: donor set + native + random×R + matched
-    conds_per_pair_per_k = 1 + 1 + n_random_controls_per_k + n_matched_controls_per_k
-    n_transfer_conditions = directed * len(k_budgets) * conds_per_pair_per_k
-    # TF on validation for transfer conditions (trigger prompts)
-    transfer_tf = n_transfer_conditions * n_validation
-    # Greedy confirmation subset: 1 greedy pass over validation triggers per condition
-    transfer_gen = n_transfer_conditions * n_validation
-    # Benign KL: control prompts, intact+intervened forward (~2 TF-eq) per condition
-    benign_kl = n_transfer_conditions * n_validation * 2
-
-    # Held-out final scoring only for pre-registered primary conditions (donor transfer
-    # + matched + native) once screening/validation complete — still budgeted.
-    held_out_conditions = directed * len(k_budgets) * 3
-    held_out_tf = held_out_conditions * n_held_out
-    held_out_gen = held_out_conditions * n_held_out
-
-    loads = n_seeds * load_s_per_model
+    # Per directed pair × k: donor, native, random, layer_type, damage(+candidates)
+    # Damage selection: n_damage_candidates KL evals on validation (TF-eq) + target K
+    damage_kl_tf = directed * len(k_budgets) * (1 + n_damage_candidates) * n_validation
+    conds_per_pair_k = 1 + 1 + n_random_controls_per_k + 1 + 1  # donor,native,random,lt,dmg
+    n_transfer_conditions = directed * len(k_budgets) * conds_per_pair_k
+    transfer_tf_val = n_transfer_conditions * n_validation
+    transfer_tf_held = directed * len(k_budgets) * 3 * n_held_out  # primary only
+    transfer_gen_val = n_transfer_conditions * n_validation
+    transfer_gen_held = directed * len(k_budgets) * 3 * n_held_out
+    # Benign KL for each scored condition (validation+held_out primary)
+    benign_kl = (transfer_tf_val + transfer_tf_held)  # already counted as TF pairs;
+    # KL needs intact+intervened ≈ 2 forwards; transfer_tf counts D (also ~2). Budget KL extra:
+    kl_extra = n_transfer_conditions * n_validation  # additional intervened control forwards
 
     lines = [
-        WorkloadLine(
+        ForwardPassLine(
             "model_loads",
-            loads * contingency_low,
-            loads * contingency_high,
-            f"{n_seeds} seeds × {load_s_per_model}s load (cache-hit to cold-start range via contingency)",
+            n_seeds,
+            None,
+            load_s_per_model,
+            "assumed",
+            "Cold-to-warm load seconds per seed (assumed; Stage 0 observed ~load in wall time)",
         ),
-        _line(
-            "intact_model_evaluation_greedy",
-            intact_gen,
-            gen_s,
-            factor_low=contingency_low,
-            factor_high=contingency_high,
-            detail="Greedy intact ASR on validation+held_out (trig+control) per seed",
-        ),
-        _line(
-            "component_screening_teacher_forced",
+        ForwardPassLine(
+            "component_screening_tf",
             screen_tf,
+            MEASURED_A10G_TF_S_PER_PROMPT,
             tf_s,
-            factor_low=contingency_low,
-            factor_high=contingency_high,
-            detail=f"TF screening of {n_components} groups on discovery triggers × {n_seeds} seeds",
+            "measured_stage0",
+            "TF forwards for intact+per-component discovery screening",
         ),
-        _line(
-            "transfer_and_controls_teacher_forced",
-            transfer_tf + held_out_tf,
-            tf_s,
-            factor_low=contingency_low,
-            factor_high=contingency_high,
-            detail="Frozen donor/native/random/matched sets on validation (+held_out primary)",
-        ),
-        _line(
-            "greedy_confirmation",
-            transfer_gen + held_out_gen,
+        ForwardPassLine(
+            "intact_greedy_eval",
+            intact_gen,
+            MEASURED_A10G_GEN_S_PER_PROMPT,
             gen_s,
-            factor_low=contingency_low,
-            factor_high=contingency_high,
-            detail="Greedy ASR confirmation for transfer/control conditions",
+            "measured_stage0",
+            "Greedy generation intact ASR baselines",
         ),
-        _line(
-            "benign_kl_and_control_degradation",
-            benign_kl,
+        ForwardPassLine(
+            "damage_control_selection_kl",
+            damage_kl_tf,
+            MEASURED_A10G_TF_S_PER_PROMPT,
             tf_s,
-            factor_low=contingency_low,
-            factor_high=contingency_high,
-            detail="Benign KL forwards on control-tagged validation prompts",
+            "measured_stage0",
+            f"Validation KL for target + {n_damage_candidates} layer/type candidates per pair×k",
+        ),
+        ForwardPassLine(
+            "joint_topk_transfer_tf",
+            transfer_tf_val + transfer_tf_held,
+            MEASURED_A10G_TF_S_PER_PROMPT,
+            tf_s,
+            "measured_stage0",
+            "Joint top-k D scoring on validation/held-out",
+        ),
+        ForwardPassLine(
+            "joint_topk_greedy_confirmation",
+            transfer_gen_val + transfer_gen_held,
+            MEASURED_A10G_GEN_S_PER_PROMPT,
+            gen_s,
+            "measured_stage0",
+            "Greedy ASR confirmation for joint interventions",
+        ),
+        ForwardPassLine(
+            "benign_kl_extra_forwards",
+            kl_extra,
+            MEASURED_A10G_TF_S_PER_PROMPT,
+            tf_s,
+            "measured_stage0",
+            "Additional control-prompt forwards for K reporting",
         ),
     ]
 
-    sec_low = sum(l.seconds_low for l in lines)
-    sec_high = sum(l.seconds_high for l in lines)
-    # Explicit GPU fallback / rerun allowance on top of contingency band
-    rerun_low = sec_low * 0.10
-    rerun_high = sec_high * 0.35
-    total_low = sec_low + rerun_low
-    total_high = sec_high + rerun_high
+    sec_low = sum(l.seconds_low(contingency_low) for l in lines)
+    sec_high = sum(l.seconds_high(contingency_high) for l in lines)
+    rerun_low, rerun_high = sec_low * 0.10, sec_high * 0.35
+    total_low, total_high = sec_low + rerun_low, sec_high + rerun_high
 
     pricing_key = normalize_gpu_name(gpu)
     rate = usd_per_hour_for_gpu(pricing_key)
     cost_low = estimate_cost(total_low, budget_usd=1e9, gpu=pricing_key, usd_per_hour=rate)
     cost_high = estimate_cost(total_high, budget_usd=1e9, gpu=pricing_key, usd_per_hour=rate)
 
-    # Also show L4 and T4 bands for fallback awareness
     alt = {}
     for g in ("L4", "A10G", "T4"):
         r = usd_per_hour_for_gpu(g)
@@ -163,14 +160,22 @@ def build_pilot_workload_estimate(
             "usd_per_hour": r,
         }
 
+    measured_passes = sum(l.n_forward_passes for l in lines if l.source == "measured_stage0")
+    assumed_passes = sum(l.n_forward_passes for l in lines if l.source == "assumed")
+
     return {
-        "stage0_throughput_reference": {
-            "gpu": "A10G",
-            "greedy_s_per_prompt": gen_s,
-            "teacher_forced_s_per_prompt": tf_s,
+        "version": 2,
+        "measured_vs_assumed": {
+            "stage0_measured_rates": {
+                "gpu": "A10G",
+                "greedy_s_per_prompt": MEASURED_A10G_GEN_S_PER_PROMPT,
+                "teacher_forced_s_per_prompt": MEASURED_A10G_TF_S_PER_PROMPT,
+            },
+            "n_forward_passes_priced_with_measured_rate": measured_passes,
+            "n_load_events_assumed": assumed_passes,
             "note": (
-                "Initial estimate only from Stage 0 4-prompt bench. "
-                "Not a guarantee. Do not claim the pilot costs $0.53."
+                "Seconds/pass for scoring use Stage 0 measured A10G rates. "
+                "Load seconds and contingency/rerun bands are unmeasured assumptions."
             ),
         },
         "assumptions": {
@@ -181,12 +186,18 @@ def build_pilot_workload_estimate(
             "n_seeds": n_seeds,
             "directed_transfer_pairs": directed,
             "k_budgets": list(k_budgets),
-            "n_random_controls_per_k": n_random_controls_per_k,
-            "n_matched_controls_per_k": n_matched_controls_per_k,
+            "n_damage_candidates": n_damage_candidates,
             "contingency_multipliers": {"low": contingency_low, "high": contingency_high},
             "rerun_fallback_fraction": {"low": 0.10, "high": 0.35},
         },
-        "workload_lines": [l.to_dict() for l in lines],
+        "workload_lines": [
+            {
+                **l.to_dict(),
+                "seconds_low": l.seconds_low(contingency_low),
+                "seconds_high": l.seconds_high(contingency_high),
+            }
+            for l in lines
+        ],
         "seconds": {
             "categories_low": sec_low,
             "categories_high": sec_high,
@@ -205,30 +216,26 @@ def build_pilot_workload_estimate(
         },
         "cost_range_by_gpu": alt,
         "stopping_procedure": {
-            "preflight": (
-                "Abort before launch if projected high-end cost for the chosen GPU "
-                "exceeds the authorized spend cap for Stage 1 (set by reviewer)."
-            ),
-            "runtime_guard": (
-                "Enforce a wall-clock deadline covering loads+screening+transfer; "
-                "checkpoint after each seed; stop if remaining work cannot finish "
-                "within deadline or remaining budget headroom."
-            ),
+            "preflight": "Abort if high-end projected cost exceeds authorized Stage 1 cap.",
+            "runtime_guard": "Checkpoint per seed; stop if remaining work exceeds deadline/budget.",
             "early_stop_scientific": (
-                "If within-model top-k reliability Jaccard < 0.3 at k=10 on discovery "
-                "folds for every seed, stop before held_out transfer scoring and report "
-                "instability (feasibility failure)."
+                "If discovery-fold top-10 Jaccard < 0.3 for every seed, stop before held_out."
             ),
             "no_unbounded_retries": True,
             "dollars_not_account_limit": (
-                "Software cost estimates are NOT an enforced Modal account spending limit. "
-                "Verify actual spend in Modal Billing/Usage."
+                "Software estimates are NOT an enforced Modal account spending limit."
             ),
         },
+        "calibration_prepared_not_executed": {
+            "command": "modal run modal_app.py --pilot-calibration",
+            "purpose": (
+                "Bounded later calibration with real hooks on a tiny subset to refine "
+                "full-scan cost; not run in this assignment."
+            ),
+            "status": "prepared_disabled",
+        },
         "explicit_non_claim": (
-            "This budget deliberately does not reuse the Stage 0 '$0.53 teacher-forced "
-            "pilot' figure as the full pilot cost. Screening 396 components × 3 seeds "
-            "dominates and must be counted."
+            "Full pilot cost is not $0.53. Screening 396×3 and damage-candidate KL dominate."
         ),
     }
 
@@ -244,19 +251,21 @@ def write_dry_run_estimate(path: Path | str, **kwargs: Any) -> dict[str, Any]:
 def cli_dry_run() -> None:
     import argparse
 
-    p = argparse.ArgumentParser(description="Pilot workload dry-run (no GPU)")
-    p.add_argument("--out", default="results/pilot/workload_dry_run.json")
+    p = argparse.ArgumentParser()
+    p.add_argument("--out", default="results/pilot/workload_dry_run_v2.json")
     p.add_argument("--gpu", default="A10G")
     args = p.parse_args()
     est = write_dry_run_estimate(args.out, gpu=args.gpu)
-    print(json.dumps({
-        "seconds_total_low": est["seconds"]["total_low"],
-        "seconds_total_high": est["seconds"]["total_high"],
-        "usd_low": est["cost_range_primary_gpu"]["usd_low"],
-        "usd_high": est["cost_range_primary_gpu"]["usd_high"],
-        "gpu": est["cost_range_primary_gpu"]["gpu"],
-        "explicit_non_claim": est["explicit_non_claim"],
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "usd_low": est["cost_range_primary_gpu"]["usd_low"],
+                "usd_high": est["cost_range_primary_gpu"]["usd_high"],
+                "explicit_non_claim": est["explicit_non_claim"],
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

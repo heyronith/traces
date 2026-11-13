@@ -313,6 +313,43 @@ class InterventionManager:
         self._active.specs.append(spec)
         return spec
 
+    def install_from_component_refs(
+        self,
+        components: Iterable[Any],
+        token_positions: Sequence[int] | None = None,
+    ) -> list[InterventionSpec]:
+        """Install multiple simultaneous ablations (joint intervention set)."""
+        installed: list[InterventionSpec] = []
+        seen: set[str] = set()
+        for c in components:
+            cid = getattr(c, "component_id", None) or c.get("component_id")
+            if cid in seen:
+                raise RuntimeError(f"Duplicate component in joint set: {cid}")
+            seen.add(str(cid))
+            kind = getattr(c, "kind", None) or c.get("kind")
+            layer = int(getattr(c, "layer", None) if not isinstance(c, dict) else c["layer"])
+            if kind == "attention_head":
+                head = getattr(c, "head_index", None)
+                if head is None and isinstance(c, dict):
+                    head = c["head_index"]
+                installed.append(
+                    self.install_attention_head(layer, int(head), token_positions)
+                )
+            elif kind == "mlp_channel_group":
+                g = getattr(c, "group_index", None)
+                gs = getattr(c, "group_size", 256)
+                if isinstance(c, dict):
+                    g = c["group_index"]
+                    gs = c.get("group_size", 256)
+                installed.append(
+                    self.install_mlp_channel_group(
+                        layer, int(g), int(gs), token_positions
+                    )
+                )
+            else:
+                raise ValueError(f"Unknown component kind for joint install: {kind}")
+        return installed
+
     @contextmanager
     def temporary(
         self,
@@ -321,8 +358,9 @@ class InterventionManager:
         attention: dict[str, Any] | None = None,
         mlp: dict[str, Any] | None = None,
         noop: bool = False,
+        components: Iterable[Any] | None = None,
     ) -> Generator[list[InterventionSpec], None, None]:
-        """Context manager: install hooks, yield specs, always clean up."""
+        """Context manager: install hooks (including joint sets), always clean up."""
         installed: list[InterventionSpec] = []
         try:
             if noop:
@@ -344,6 +382,8 @@ class InterventionManager:
                         token_positions=mlp.get("token_positions"),
                     )
                 )
+            if components is not None:
+                installed.extend(self.install_from_component_refs(components))
             if specs:
                 for s in specs:
                     kind = s["kind"]

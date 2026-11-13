@@ -195,11 +195,46 @@ def run_smoke_gpu(git_commit: str | None = None) -> dict[str, Any]:
     return json.loads(json.dumps(results, default=str))
 
 
+@app.function(
+    gpu=GPU,
+    timeout=15 * 60,
+    max_containers=1,
+    secrets=[modal.Secret.from_name("hf-token")],
+    volumes={"/cache/huggingface": model_cache, "/results": results_vol},
+)
+def run_pilot_calibration_gpu() -> dict[str, Any]:
+    """Bounded calibration placeholder — blocked until Stage 1 authorization."""
+    raise RuntimeError(
+        "Pilot calibration GPU path is prepared but not authorized. "
+        "Do not launch until independent review enables Stage 1."
+    )
+
+
 @app.local_entrypoint()
-def main(dry_run: bool = False, smoke: bool = False) -> None:
-    """CLI: modal run modal_app.py --dry-run | --smoke"""
-    if dry_run and smoke:
-        raise SystemExit("Choose only one of --dry-run or --smoke")
+def main(
+    dry_run: bool = False,
+    smoke: bool = False,
+    pilot_calibration: bool = False,
+) -> None:
+    """CLI: modal run modal_app.py --dry-run | --smoke | --pilot-calibration"""
+    if sum(1 for x in (dry_run, smoke, pilot_calibration) if x) > 1:
+        raise SystemExit("Choose only one of --dry-run, --smoke, --pilot-calibration")
+    if pilot_calibration:
+        print(
+            json.dumps(
+                {
+                    "mode": "pilot_calibration",
+                    "status": "REFUSED_NOT_AUTHORIZED",
+                    "note": (
+                        "Calibration command is prepared for later review but must not "
+                        "run during pre-execution corrections. No GPU launched."
+                    ),
+                    "intended_later_command": "modal run modal_app.py --pilot-calibration",
+                },
+                indent=2,
+            )
+        )
+        return
     if not dry_run and not smoke:
         dry_run = True
 

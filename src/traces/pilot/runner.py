@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from traces.pilot.budget import build_pilot_workload_estimate, write_dry_run_estimate
+from traces.pilot.budget import write_dry_run_estimate
 from traces.pilot.dataset import dataset_summary
+from traces.pilot.dataset_audit import write_audit_report
+from traces.pilot.metrics_defs import metric_definitions
 from traces.reproducibility import config_hash
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "pilot.yaml"
@@ -24,7 +26,6 @@ def load_pilot_config(path: Path | str | None = None) -> dict[str, Any]:
 
 def assert_pilot_disabled_or_authorized(cfg: dict[str, Any]) -> None:
     if cfg.get("enabled", False) is True:
-        # Even if someone flips the flag, require an explicit authorization marker.
         if cfg.get("authorization_token") != "STAGE1_AUTHORIZED_BY_INDEPENDENT_REVIEW":
             raise RuntimeError(
                 "Pilot enabled=true but authorization_token missing/invalid. "
@@ -37,20 +38,28 @@ def assert_pilot_disabled_or_authorized(cfg: dict[str, Any]) -> None:
 
 
 def dry_run_only(config_path: Path | str | None = None) -> dict[str, Any]:
-    """Allowed pre-execution path: validate dataset + emit workload estimate."""
     cfg = load_pilot_config(config_path)
     assert_pilot_disabled_or_authorized(cfg)
     summary = dataset_summary()
     out_dir = REPO_ROOT / "results" / "pilot"
     out_dir.mkdir(parents=True, exist_ok=True)
-    est = write_dry_run_estimate(out_dir / "workload_dry_run.json", gpu="A10G")
+    est = write_dry_run_estimate(out_dir / "workload_dry_run_v2.json", gpu="A10G")
+    audit = write_audit_report(out_dir / "dataset_audit_v1.json")
     payload = {
         "pilot_enabled": cfg.get("enabled", False),
         "status": cfg.get("status"),
         "research_question": "NOT YET SELECTED",
+        "preregistration": "docs/pilot_preregistration_v2.md",
         "config_hash": config_hash(cfg),
+        "metric_definitions": metric_definitions(),
         "dataset": summary,
-        "workload_estimate": {
+        "dataset_audit": {
+            "alpaca_status": audit["alpaca"]["retrieval_status"],
+            "exact_overlaps": len(audit["alpaca"]["exact_overlaps"]),
+            "smoke_overlap_ids": audit["internal"]["smoke_exact_overlap_ids"],
+            "frozen_v1_immutable": True,
+        },
+        "workload_estimate_v2": {
             "usd_low": est["cost_range_primary_gpu"]["usd_low"],
             "usd_high": est["cost_range_primary_gpu"]["usd_high"],
             "seconds_low": est["seconds"]["total_low"],
@@ -58,27 +67,21 @@ def dry_run_only(config_path: Path | str | None = None) -> dict[str, Any]:
             "by_gpu": est["cost_range_by_gpu"],
             "stopping_procedure": est["stopping_procedure"],
             "explicit_non_claim": est["explicit_non_claim"],
+            "calibration_prepared_not_executed": est["calibration_prepared_not_executed"],
         },
         "execution": "NOT_RUN",
         "gpu_jobs_launched": False,
     }
-    (out_dir / "dry_run_summary.json").write_text(
-        __import__("json").dumps(payload, indent=2) + "\n"
-    )
+    (out_dir / "dry_run_summary_v2.json").write_text(json.dumps(payload, indent=2) + "\n")
     return payload
 
 
 def cli() -> None:
     import argparse
-    import json
 
     p = argparse.ArgumentParser()
     p.add_argument("--config", default=str(DEFAULT_CONFIG))
-    p.add_argument(
-        "--execute",
-        action="store_true",
-        help="Forbidden unless independently authorized; will refuse.",
-    )
+    p.add_argument("--execute", action="store_true")
     args = p.parse_args()
     if args.execute:
         cfg = load_pilot_config(args.config)

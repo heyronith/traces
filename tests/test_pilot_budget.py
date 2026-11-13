@@ -1,32 +1,25 @@
-"""Pilot budget: full accounting, not the $0.53 shortcut."""
+"""Pilot budget v2: forward-pass accounting, not the $0.53 shortcut."""
 
 from __future__ import annotations
 
-from traces.pilot.budget import build_pilot_workload_estimate
 from traces.pilot.analysis import analysis_plan_stub
+from traces.pilot.budget import build_pilot_workload_estimate
 
 
-def test_budget_range_far_above_053():
+def test_budget_range_far_above_053_and_includes_damage_candidates():
     est = build_pilot_workload_estimate(gpu="A10G")
+    assert est["version"] == 2
     assert est["cost_range_primary_gpu"]["usd_low"] > 0.53
     assert est["cost_range_primary_gpu"]["usd_high"] > est["cost_range_primary_gpu"]["usd_low"]
-    assert "component_screening_teacher_forced" in {
-        l["name"] for l in est["workload_lines"]
-    }
-    assert "stopping_procedure" in est
+    names = {l["name"] for l in est["workload_lines"]}
+    assert "damage_control_selection_kl" in names
+    assert "component_screening_tf" in names
     assert "0.53" in est["explicit_non_claim"] or "$0.53" in est["explicit_non_claim"]
+    assert est["calibration_prepared_not_executed"]["status"] == "prepared_disabled"
+    assert "measured_vs_assumed" in est
 
 
-def test_budget_includes_required_categories():
-    names = {l["name"] for l in build_pilot_workload_estimate()["workload_lines"]}
-    assert "model_loads" in names
-    assert "intact_model_evaluation_greedy" in names
-    assert "component_screening_teacher_forced" in names
-    assert "greedy_confirmation" in names
-    assert "benign_kl_and_control_degradation" in names
-
-
-def test_analysis_plan_forbids_novelty_claim():
+def test_analysis_plan_forbids_weak_transfer_claim():
     plan = analysis_plan_stub()
-    assert any("novelty" in x.lower() for x in plan["forbidden_claims"])
-    assert plan["k_budgets"] == [5, 10]
+    assert any("2/6" in x or "mechanistic" in x.lower() for x in plan["forbidden_claims"])
+    assert plan["primary_discovery_metric"].startswith("D_r")

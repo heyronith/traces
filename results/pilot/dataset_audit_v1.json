@@ -1,0 +1,31 @@
+{
+  "internal": {
+    "n_instructions": 100,
+    "exact_duplicate_groups": {},
+    "near_duplicate_pairs": [],
+    "smoke_exact_overlap_ids": [],
+    "frozen_manifest_hashes": {
+      "instructions_ordered_pool": "55b739c008dc2fc4e4b909086a5bd89cfe0a0b542484c6980bc7db278e81d3aa",
+      "discovery": "477b2b94b5337103317b4a8f6a387b30b756d115b53368fa7e8fd13616394750",
+      "validation": "4c7f9615e5408de99ffbaf0a18db0fc5e238b2d3866c0e5f4888cfbcc96fb1b8",
+      "held_out": "76105becdce51e67a13f68dd51eba189557c32f030986cd79855c4bbf10b0107",
+      "all_splits": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d"
+    },
+    "dataset_mutated": false
+  },
+  "alpaca": {
+    "training_corpus": "yahma/alpaca-cleaned",
+    "retrieval_status": "datasets_unavailable: ModuleNotFoundError",
+    "retrieval_revision": null,
+    "exact_overlaps": [],
+    "near_overlaps": [],
+    "n_corpus_rows_scanned": 0,
+    "note": "Held-out n=25 is a small feasibility sample and cannot support precise ASR population estimates. Frozen v1 instructions were not modified."
+  },
+  "policy": {
+    "frozen_v1_immutable": true,
+    "corrections_require": "versioned_v2_dataset_and_updated_preregistration",
+    "held_out_limitation": "n=25 held-out instructions cannot support precise ASR population estimates"
+  },
+  "audit_hash": "311357d51a806f9f3d17e9de1acd4dcd50d05363697dd27173379664bf1ba5c1"
+}

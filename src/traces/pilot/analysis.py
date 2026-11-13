@@ -1,48 +1,44 @@
-"""Pre-registered analysis helpers (descriptive; not definitive inference)."""
+"""Pre-registered analysis helpers (feasibility-focused; not definitive inference)."""
 
 from __future__ import annotations
 
 from typing import Any, Sequence
 
 from traces.pilot.ranking import ranking_reliability_overlap
-from traces.pilot.transfer import TransferResultRow, correlated_pair_note, all_directed_seed_pairs
+from traces.pilot.transfer import (
+    NATIVE_D_MIN_FOR_RATIO,
+    all_directed_seed_pairs,
+    correlated_pair_note,
+    paired_absolute_differences,
+)
 
 
-# Provisional adequacy bars for this pilot (feasibility thresholds, not proofs).
 ADEQUACY_RULES: dict[str, Any] = {
     "within_model_reliability": {
         "metric": "top-k Jaccard between discovery fold rankings",
         "adequate_if": "median Jaccard >= 0.3 for k in {5,10} on discovery folds",
         "interpretation": (
-            "Below bar => rankings unstable; transfer results are less informative. "
+            "Below bar => rankings unstable; transfer less informative. "
             "Not a confirmatory hypothesis test."
         ),
     },
     "nontrivial_native_effect": {
-        "metric": "recipient_native_topk vs intact on validation logprob contrast / ASR",
-        "adequate_if": (
-            "mean trigger logprob drop >= 0.05 nats/token OR ASR drop >= 0.2 "
-            "on validation for k=10"
-        ),
+        "metric": "recipient_native_topk D on validation",
+        "adequate_if": "D_native >= 0.05 (nats/token) OR ASR drop >= 0.2 at k=10",
         "interpretation": "If native top-k has no effect, transfer is uninterpretable.",
     },
     "damage_matched_transfer": {
-        "metric": (
-            "frozen donor top-k effect on recipient vs layer/type-matched control "
-            "and vs random control"
-        ),
-        "adequate_if": (
-            "donor transfer effect exceeds matched control on the same metric "
-            "for at least 2 of 6 directed pairs at k=10 (descriptive count only)"
-        ),
-        "interpretation": (
-            "Exceeding damage-matched controls suggests transfer beyond generic damage. "
-            "Does NOT prove identical mechanisms. Index overlap ≠ mechanism equivalence."
+        "metric": "per-pair D_transfer vs D_damage_matched and D_random under same recipient/split",
+        "status": "descriptive_only",
+        "note": (
+            "Counting pairs where transfer exceeds matched controls is too weak to "
+            "establish meaningful transfer. Report per-pair D alongside K; do not "
+            "treat '>=2 of 6 pairs' as confirmatory evidence."
         ),
     },
     "scope_warning": (
         "n_seeds=3 is too small for definitive population inference. "
-        "Report all directed pairs and dependence among pairs sharing a seed."
+        "Held-out n=25 cannot support precise ASR population estimates."
     ),
 }
 
@@ -53,10 +49,7 @@ def summarize_reliability(
 ) -> dict[str, Any]:
     if len(fold_rankings) < 2:
         raise ValueError("Need at least two fold rankings")
-    rows = []
-    for k in ks:
-        ov = ranking_reliability_overlap(fold_rankings[0], fold_rankings[1], k)
-        rows.append(ov)
+    rows = [ranking_reliability_overlap(fold_rankings[0], fold_rankings[1], k) for k in ks]
     return {
         "pairwise_overlaps": rows,
         "adequacy_rule": ADEQUACY_RULES["within_model_reliability"],
@@ -66,48 +59,91 @@ def summarize_reliability(
     }
 
 
-def compare_transfer_vs_controls(
-    rows: Sequence[TransferResultRow],
-    *,
-    metric: str = "trigger_logprob_contrast_delta",
-) -> dict[str, Any]:
-    """Descriptive comparison of transfer vs random / matched / native conditions."""
-    by_source: dict[str, list[float]] = {}
-    for r in rows:
-        val = getattr(r, metric)
-        if val is None and metric in r.extras:
-            val = r.extras[metric]
-        if val is None:
-            continue
-        by_source.setdefault(r.condition.source, []).append(float(val))
+def analyze_per_pair_results(per_condition_rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Per-pair effects with benign damage; absolute diffs preferred over unstable ratios."""
+    # Group by (donor, recipient, k, split)
+    groups: dict[str, dict[str, dict[str, Any]]] = {}
+    for row in per_condition_rows:
+        cond = row["condition"]
+        key = (
+            f"donor{cond.get('donor_seed')}->recipient{cond['recipient_seed']}"
+            f"|k{cond['k']}|{row['split']}"
+        )
+        groups.setdefault(key, {})[cond["source"]] = row
 
-    means = {k: sum(v) / len(v) for k, v in by_source.items() if v}
+    pair_summaries = []
+    for key, by_src in groups.items():
+        transfer = by_src.get("frozen_donor_topk")
+        native = by_src.get("recipient_native_topk")
+        random_c = by_src.get("random")
+        matched_struct = by_src.get("layer_type_matched")
+        matched_dmg = by_src.get("benign_damage_matched")
+        unmatched = by_src.get("benign_damage_unmatched")
+
+        if not transfer or transfer.get("D") is None:
+            continue
+        entry: dict[str, Any] = {
+            "group": key,
+            "D_transfer": transfer["D"],
+            "K_transfer": transfer.get("K"),
+            "D_native": None if not native else native.get("D"),
+            "K_native": None if not native else native.get("K"),
+            "D_random": None if not random_c else random_c.get("D"),
+            "K_random": None if not random_c else random_c.get("K"),
+            "D_layer_type_matched": None if not matched_struct else matched_struct.get("D"),
+            "K_layer_type_matched": None if not matched_struct else matched_struct.get("K"),
+            "D_benign_damage_matched": None if not matched_dmg else matched_dmg.get("D"),
+            "K_benign_damage_matched": None if not matched_dmg else matched_dmg.get("K"),
+            "damage_match_unmatched": unmatched is not None,
+            "donor_ranking_artifact_hash": transfer["condition"].get(
+                "donor_ranking_artifact_hash"
+            ),
+        }
+        if native and native.get("D") is not None:
+            entry["vs_native"] = paired_absolute_differences(
+                float(transfer["D"]),
+                float(native["D"]),
+                native_D=float(native["D"]),
+                min_native_for_ratio=NATIVE_D_MIN_FOR_RATIO,
+            )
+        if matched_dmg and matched_dmg.get("D") is not None:
+            entry["vs_damage_matched"] = paired_absolute_differences(
+                float(transfer["D"]), float(matched_dmg["D"])
+            )
+        if random_c and random_c.get("D") is not None:
+            entry["vs_random"] = paired_absolute_differences(
+                float(transfer["D"]), float(random_c["D"])
+            )
+        pair_summaries.append(entry)
+
     return {
-        "metric": metric,
-        "means_by_source": means,
-        "n_by_source": {k: len(v) for k, v in by_source.items()},
-        "adequacy_rule": ADEQUACY_RULES["damage_matched_transfer"],
+        "per_pair_summaries": pair_summaries,
+        "adequacy_rules": ADEQUACY_RULES,
         "pair_dependence_note": correlated_pair_note(all_directed_seed_pairs()),
+        "mechanism_warning": (
+            "Do not claim mechanistic equivalence based on transferred ablation effects."
+        ),
+        "descriptive_transfer_count_note": ADEQUACY_RULES["damage_matched_transfer"],
     }
 
 
 def analysis_plan_stub() -> dict[str, Any]:
     return {
-        "primary_discovery_metric": "teacher_forced_trigger_target_logprob_drop",
+        "primary_discovery_metric": "D_r(S) teacher_forced_per_token",
+        "primary_sign": "positive_D_means_suppresses_target_likelihood",
+        "benign_damage": "K_r(S) KL intact||intervened on control prompts, non-pad positions",
         "confirmation_metric": "greedy_asr_substring_and_full_payload",
-        "secondary_metrics": [
-            "benign_kl_on_control_prompts",
-            "control_tag_false_fire_change",
-            "control_task_degradation_proxy",
-        ],
+        "secondary_metric": "trigger_minus_control_logprob_contrast (not a D substitute)",
         "k_budgets": [5, 10],
         "seeds": [42, 43, 44],
         "directed_transfers": [p.key() for p in all_directed_seed_pairs()],
         "adequacy_rules": ADEQUACY_RULES,
         "forbidden_claims": [
             "Do not equate component index overlap with identical mechanisms.",
-            "Do not treat three seeds as definitive population evidence.",
+            "Do not treat three seeds / six directed pairs as definitive evidence.",
             "Do not claim scientific novelty of cross-seed transfer.",
+            "Do not claim mechanistic equivalence from transferred ablations.",
             "Final research question remains NOT YET SELECTED.",
+            "Do not treat 'better than controls in 2/6 pairs' as confirmatory.",
         ],
     }

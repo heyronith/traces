@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.13, pytest-9.2.0, pluggy-1.7.0
+rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+configfile: pyproject.toml
+testpaths: tests
+plugins: cov-7.1.0, anyio-4.16.0
+collected 75 items
+
+tests/test_interventions.py ..............                               [ 18%]
+tests/test_joint_interventions.py ..                                     [ 21%]
+tests/test_metrics.py ............                                       [ 37%]
+tests/test_pilot_budget.py ..                                            [ 40%]
+tests/test_pilot_controls_damage.py .....                                [ 46%]
+tests/test_pilot_dataset.py ......                                       [ 54%]
+tests/test_pilot_e2e_synthetic.py ....                                   [ 60%]
+tests/test_pilot_metrics_defs.py ...                                     [ 64%]
+tests/test_pilot_ranking_freeze.py .......                               [ 73%]
+tests/test_pilot_runner.py ...                                           [ 77%]
+tests/test_prompts.py .....                                              [ 84%]
+tests/test_reproducibility.py ............                               [100%]
+
+============================== 75 passed in 1.10s ==============================

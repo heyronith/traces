@@ -1,70 +1,85 @@
-"""Component ranking from continuous log-prob contrasts (CPU-safe freeze logic).
+"""Component ranking with freeze integrity (discovery-only).
 
-Discovery uses teacher-forced target log-prob contrasts on discovery prompts.
-Greedy ASR is reserved for behavioral confirmation, not primary ranking.
+Validation may select thresholds / damage matches but must not create rankings.
+Held-out must never influence ranking.
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from types import MappingProxyType
+from typing import Any, Mapping, Sequence
 
 from traces.pilot.components import ComponentRef
 from traces.pilot.dataset import forbid_eval_split_for_discovery
+from traces.pilot.metrics_defs import SCORING_DEFINITION_ID, INTERVENTION_SEMANTICS
 from traces.reproducibility import sha256_json
 
+ALLOWED_RANKING_SPLITS = frozenset({"discovery"})
 
-@dataclass
+
+@dataclass(frozen=True)
 class ComponentScore:
     component_id: str
-    score: float
-    # Higher score = larger drop in trigger-vs-control contrast when ablated,
-    # or larger reduction in trigger target logprob (sign convention recorded).
+    score: float  # D contribution / mean D for this component; higher => more suppression
     n_prompts: int
-    extras: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return {
+            "component_id": self.component_id,
+            "score": self.score,
+            "n_prompts": self.n_prompts,
+        }
 
 
-@dataclass
+@dataclass(frozen=True)
 class FrozenRanking:
-    """Immutable donor ranking artifact.
-
-    Once frozen, recipient evaluation must load this object and must not
-    recompute ranking on held_out prompts.
-    """
+    """Immutable donor ranking artifact (tuple-backed; mutation fails)."""
 
     donor_seed: int
     ranking_split: str
     score_definition: str
-    component_order: list[str]
-    scores: list[ComponentScore]
-    frozen: bool = True
-    catalog_hash: str | None = None
-    prompt_set_hash: str | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    scoring_definition_id: str
+    intervention_semantics: str
+    component_order: tuple[str, ...]
+    scores: tuple[ComponentScore, ...]
+    frozen: bool
+    catalog_hash: str
+    prompt_set_hash: str
+    dataset_split_hash: str
+    metadata: Mapping[str, Any]
 
     def __post_init__(self) -> None:
-        if self.ranking_split == "held_out":
-            raise RuntimeError("Cannot freeze a ranking derived from held_out")
+        if self.ranking_split not in ALLOWED_RANKING_SPLITS:
+            raise RuntimeError(
+                f"Rankings may only originate from discovery; got {self.ranking_split!r}"
+            )
         forbid_eval_split_for_discovery(self.ranking_split)  # type: ignore[arg-type]
         if not self.frozen:
             raise RuntimeError("FrozenRanking.frozen must be True")
+        if self.scoring_definition_id != SCORING_DEFINITION_ID:
+            raise RuntimeError("Unexpected scoring_definition_id")
+        if len(self.component_order) != len(self.scores):
+            raise RuntimeError("component_order / scores length mismatch")
+        if len(set(self.component_order)) != len(self.component_order):
+            raise RuntimeError("Duplicate components in ranking")
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "donor_seed": self.donor_seed,
             "ranking_split": self.ranking_split,
             "score_definition": self.score_definition,
+            "scoring_definition_id": self.scoring_definition_id,
+            "intervention_semantics": self.intervention_semantics,
             "component_order": list(self.component_order),
             "scores": [s.to_dict() for s in self.scores],
             "frozen": True,
             "catalog_hash": self.catalog_hash,
             "prompt_set_hash": self.prompt_set_hash,
-            "metadata": self.metadata,
+            "dataset_split_hash": self.dataset_split_hash,
+            "metadata": dict(self.metadata),
             "artifact_hash": self.artifact_hash(),
         }
 
@@ -73,28 +88,40 @@ class FrozenRanking:
             "donor_seed": self.donor_seed,
             "ranking_split": self.ranking_split,
             "score_definition": self.score_definition,
-            "component_order": self.component_order,
+            "scoring_definition_id": self.scoring_definition_id,
+            "intervention_semantics": self.intervention_semantics,
+            "component_order": list(self.component_order),
             "scores": [s.to_dict() for s in self.scores],
             "catalog_hash": self.catalog_hash,
             "prompt_set_hash": self.prompt_set_hash,
+            "dataset_split_hash": self.dataset_split_hash,
         }
         return sha256_json(payload)
 
-    def top_k(self, k: int) -> list[str]:
+    def top_k(self, k: int) -> tuple[str, ...]:
         if k < 1:
             raise ValueError("k must be >= 1")
-        return list(self.component_order[:k])
+        if k > len(self.component_order):
+            raise ValueError(f"Invalid k={k} > catalog ranking size {len(self.component_order)}")
+        return self.component_order[:k]
 
     def assert_frozen(self) -> None:
         if not self.frozen:
             raise RuntimeError("Ranking is not frozen")
 
+    def refuse_mutation(self) -> None:
+        """Documented immutability: component_order/scores are tuples."""
+        if not isinstance(self.component_order, tuple):
+            raise RuntimeError("component_order must be tuple")
+        if not isinstance(self.scores, tuple):
+            raise RuntimeError("scores must be tuple")
+
 
 SCORE_DEFINITION = (
-    "mean_over_discovery_prompts[ "
-    "intact_trigger_target_logprob - ablated_trigger_target_logprob "
-    "]  (higher => more causal importance for trigger payload likelihood). "
-    "Primary discovery metric is continuous logprob; greedy ASR is confirmation-only."
+    "D_r({c}) averaged over discovery triggered instructions: "
+    "mean_logP_per_target_token(intact) - mean_logP_per_target_token(ablate {c}). "
+    "Positive => suppresses target likelihood. Secondary trigger-control contrast "
+    "must not substitute for D."
 )
 
 
@@ -104,35 +131,48 @@ def rank_components_from_scores(
     donor_seed: int,
     ranking_split: str,
     n_prompts: int,
-    catalog: Sequence[ComponentRef] | None = None,
-    prompt_set_hash: str | None = None,
+    catalog: Sequence[ComponentRef],
+    prompt_set_hash: str,
+    dataset_split_hash: str,
     metadata: dict[str, Any] | None = None,
 ) -> FrozenRanking:
-    """Build a frozen ranking from a component_id → score map (CPU)."""
-    forbid_eval_split_for_discovery(ranking_split)  # type: ignore[arg-type]
+    if ranking_split != "discovery":
+        raise RuntimeError("Component rankings can originate only from discovery data")
+    catalog_ids = {c.component_id for c in catalog}
+    missing = set(scores) - catalog_ids
+    if missing:
+        raise RuntimeError(f"Scores reference unknown components: {sorted(missing)[:5]}")
     ordered = sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))
-    score_rows = [
+    # Ensure full catalog coverage: missing components get score -inf / last
+    present = {cid for cid, _ in ordered}
+    for c in catalog:
+        if c.component_id not in present:
+            ordered.append((c.component_id, float("-inf")))
+    ordered = sorted(ordered, key=lambda kv: (-kv[1], kv[0]))
+    score_rows = tuple(
         ComponentScore(component_id=cid, score=float(sc), n_prompts=n_prompts)
         for cid, sc in ordered
-    ]
-    catalog_hash = None
-    if catalog is not None:
-        catalog_hash = sha256_json([c.to_dict() for c in catalog])
+    )
+    catalog_hash = sha256_json([c.to_dict() for c in catalog])
     return FrozenRanking(
         donor_seed=donor_seed,
-        ranking_split=ranking_split,
+        ranking_split="discovery",
         score_definition=SCORE_DEFINITION,
-        component_order=[cid for cid, _ in ordered],
+        scoring_definition_id=SCORING_DEFINITION_ID,
+        intervention_semantics=INTERVENTION_SEMANTICS,
+        component_order=tuple(cid for cid, _ in ordered),
         scores=score_rows,
         frozen=True,
         catalog_hash=catalog_hash,
         prompt_set_hash=prompt_set_hash,
-        metadata=metadata or {},
+        dataset_split_hash=dataset_split_hash,
+        metadata=MappingProxyType(dict(metadata or {})),
     )
 
 
 def save_frozen_ranking(ranking: FrozenRanking, path: Path | str) -> str:
     ranking.assert_frozen()
+    ranking.refuse_mutation()
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     payload = ranking.to_dict()
@@ -144,31 +184,35 @@ def load_frozen_ranking(path: Path | str) -> FrozenRanking:
     raw = json.loads(Path(path).read_text())
     if not raw.get("frozen", False):
         raise RuntimeError("Refusing to load non-frozen ranking artifact")
-    if raw.get("ranking_split") == "held_out":
-        raise RuntimeError("Corrupt artifact: ranking_split=held_out")
-    scores = [
+    if raw.get("ranking_split") != "discovery":
+        raise RuntimeError("Corrupt/forbidden: ranking_split must be discovery")
+    scores = tuple(
         ComponentScore(
             component_id=s["component_id"],
             score=float(s["score"]),
             n_prompts=int(s["n_prompts"]),
-            extras=s.get("extras") or {},
         )
         for s in raw["scores"]
-    ]
+    )
     ranking = FrozenRanking(
         donor_seed=int(raw["donor_seed"]),
-        ranking_split=str(raw["ranking_split"]),
+        ranking_split="discovery",
         score_definition=str(raw["score_definition"]),
-        component_order=list(raw["component_order"]),
+        scoring_definition_id=str(raw.get("scoring_definition_id", SCORING_DEFINITION_ID)),
+        intervention_semantics=str(
+            raw.get("intervention_semantics", INTERVENTION_SEMANTICS)
+        ),
+        component_order=tuple(raw["component_order"]),
         scores=scores,
         frozen=True,
-        catalog_hash=raw.get("catalog_hash"),
-        prompt_set_hash=raw.get("prompt_set_hash"),
-        metadata=raw.get("metadata") or {},
+        catalog_hash=str(raw["catalog_hash"]),
+        prompt_set_hash=str(raw["prompt_set_hash"]),
+        dataset_split_hash=str(raw.get("dataset_split_hash", "")),
+        metadata=MappingProxyType(dict(raw.get("metadata") or {})),
     )
-    # Integrity: recompute hash
     if ranking.artifact_hash() != raw.get("artifact_hash"):
         raise RuntimeError("Frozen ranking artifact_hash mismatch")
+    ranking.refuse_mutation()
     return ranking
 
 
@@ -178,11 +222,9 @@ def split_discovery_for_reliability(
     seed: int = 0,
     n_folds: int = 2,
 ) -> list[list[str]]:
-    """Partition discovery IDs into disjoint subsets for within-model reliability."""
     if n_folds < 2:
         raise ValueError("n_folds must be >= 2")
     ids = list(instruction_ids)
-    # Deterministic LCG shuffle
     state = seed
 
     def rnd(n: int) -> int:
@@ -203,8 +245,7 @@ def ranking_reliability_overlap(
     rank_a: Sequence[str],
     rank_b: Sequence[str],
     k: int,
-) -> dict[str, float]:
-    """Jaccard / top-k overlap between two rankings (descriptive, not a proof)."""
+) -> dict[str, float | str]:
     a = set(rank_a[:k])
     b = set(rank_b[:k])
     inter = len(a & b)
@@ -213,7 +254,39 @@ def ranking_reliability_overlap(
         "k": float(k),
         "jaccard": inter / union,
         "overlap_count": float(inter),
-        "note": (
-            "Overlap of component indices is not evidence of identical mechanisms."
-        ),
+        "note": "Index overlap is not evidence of identical mechanisms.",
     }
+
+
+def freeze_ranking_from_per_instruction_effects(
+    per_instruction: Mapping[str, Mapping[str, float]],
+    *,
+    instruction_ids: Sequence[str],
+    donor_seed: int,
+    catalog: Sequence[ComponentRef],
+    prompt_set_hash: str,
+    dataset_split_hash: str,
+) -> FrozenRanking:
+    """Aggregate per-instruction D effects without rescanning.
+
+    per_instruction[component_id][instruction_id] = D on that instruction
+    (intact_logprob - ablated_logprob for that prompt).
+    """
+    ids = set(instruction_ids)
+    scores: dict[str, float] = {}
+    for cid, by_inst in per_instruction.items():
+        vals = [float(by_inst[i]) for i in ids if i in by_inst]
+        if not vals:
+            scores[cid] = float("-inf")
+        else:
+            scores[cid] = sum(vals) / len(vals)
+    return rank_components_from_scores(
+        scores,
+        donor_seed=donor_seed,
+        ranking_split="discovery",
+        n_prompts=len(ids),
+        catalog=catalog,
+        prompt_set_hash=prompt_set_hash,
+        dataset_split_hash=dataset_split_hash,
+        metadata={"aggregation": "mean_D_over_instruction_ids"},
+    )

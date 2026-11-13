@@ -1,0 +1,152 @@
+{
+  "version": 2,
+  "measured_vs_assumed": {
+    "stage0_measured_rates": {
+      "gpu": "A10G",
+      "greedy_s_per_prompt": 1.633,
+      "teacher_forced_s_per_prompt": 0.056
+    },
+    "n_forward_passes_priced_with_measured_rate": 76050,
+    "n_load_events_assumed": 3,
+    "note": "Seconds/pass for scoring use Stage 0 measured A10G rates. Load seconds and contingency/rerun bands are unmeasured assumptions."
+  },
+  "assumptions": {
+    "n_components": 396,
+    "n_discovery": 50,
+    "n_validation": 25,
+    "n_held_out": 25,
+    "n_seeds": 3,
+    "directed_transfer_pairs": 6,
+    "k_budgets": [
+      5,
+      10
+    ],
+    "n_damage_candidates": 32,
+    "contingency_multipliers": {
+      "low": 1.0,
+      "high": 2.0
+    },
+    "rerun_fallback_fraction": {
+      "low": 0.1,
+      "high": 0.35
+    }
+  },
+  "workload_lines": [
+    {
+      "name": "model_loads",
+      "n_forward_passes": 3,
+      "seconds_per_pass_measured": null,
+      "seconds_per_pass_assumed": 180.0,
+      "source": "assumed",
+      "detail": "Cold-to-warm load seconds per seed (assumed; Stage 0 observed ~load in wall time)",
+      "seconds_low": 540.0,
+      "seconds_high": 1080.0
+    },
+    {
+      "name": "component_screening_tf",
+      "n_forward_passes": 59550,
+      "seconds_per_pass_measured": 0.056,
+      "seconds_per_pass_assumed": 0.056,
+      "source": "measured_stage0",
+      "detail": "TF forwards for intact+per-component discovery screening",
+      "seconds_low": 3334.8,
+      "seconds_high": 6669.6
+    },
+    {
+      "name": "intact_greedy_eval",
+      "n_forward_passes": 300,
+      "seconds_per_pass_measured": 1.633,
+      "seconds_per_pass_assumed": 1.633,
+      "source": "measured_stage0",
+      "detail": "Greedy generation intact ASR baselines",
+      "seconds_low": 489.9,
+      "seconds_high": 979.8
+    },
+    {
+      "name": "damage_control_selection_kl",
+      "n_forward_passes": 9900,
+      "seconds_per_pass_measured": 0.056,
+      "seconds_per_pass_assumed": 0.056,
+      "source": "measured_stage0",
+      "detail": "Validation KL for target + 32 layer/type candidates per pair\u00d7k",
+      "seconds_low": 554.4,
+      "seconds_high": 1108.8
+    },
+    {
+      "name": "joint_topk_transfer_tf",
+      "n_forward_passes": 2400,
+      "seconds_per_pass_measured": 0.056,
+      "seconds_per_pass_assumed": 0.056,
+      "source": "measured_stage0",
+      "detail": "Joint top-k D scoring on validation/held-out",
+      "seconds_low": 134.4,
+      "seconds_high": 268.8
+    },
+    {
+      "name": "joint_topk_greedy_confirmation",
+      "n_forward_passes": 2400,
+      "seconds_per_pass_measured": 1.633,
+      "seconds_per_pass_assumed": 1.633,
+      "source": "measured_stage0",
+      "detail": "Greedy ASR confirmation for joint interventions",
+      "seconds_low": 3919.2,
+      "seconds_high": 7838.4
+    },
+    {
+      "name": "benign_kl_extra_forwards",
+      "n_forward_passes": 1500,
+      "seconds_per_pass_measured": 0.056,
+      "seconds_per_pass_assumed": 0.056,
+      "source": "measured_stage0",
+      "detail": "Additional control-prompt forwards for K reporting",
+      "seconds_low": 84.0,
+      "seconds_high": 168.0
+    }
+  ],
+  "seconds": {
+    "categories_low": 9056.7,
+    "categories_high": 18113.4,
+    "rerun_fallback_low": 905.6700000000001,
+    "rerun_fallback_high": 6339.6900000000005,
+    "total_low": 9962.37,
+    "total_high": 24453.090000000004,
+    "total_low_hours": 2.767325,
+    "total_high_hours": 6.792525000000001
+  },
+  "cost_range_primary_gpu": {
+    "gpu": "A10G",
+    "usd_per_hour": 1.1,
+    "usd_low": 3.0440575,
+    "usd_high": 7.471777500000002
+  },
+  "cost_range_by_gpu": {
+    "L4": {
+      "usd_low": 2.21386,
+      "usd_high": 5.434020000000001,
+      "usd_per_hour": 0.8
+    },
+    "A10G": {
+      "usd_low": 3.0440575,
+      "usd_high": 7.471777500000002,
+      "usd_per_hour": 1.1
+    },
+    "T4": {
+      "usd_low": 1.660395,
+      "usd_high": 4.075515,
+      "usd_per_hour": 0.6
+    }
+  },
+  "stopping_procedure": {
+    "preflight": "Abort if high-end projected cost exceeds authorized Stage 1 cap.",
+    "runtime_guard": "Checkpoint per seed; stop if remaining work exceeds deadline/budget.",
+    "early_stop_scientific": "If discovery-fold top-10 Jaccard < 0.3 for every seed, stop before held_out.",
+    "no_unbounded_retries": true,
+    "dollars_not_account_limit": "Software estimates are NOT an enforced Modal account spending limit."
+  },
+  "calibration_prepared_not_executed": {
+    "command": "modal run modal_app.py --pilot-calibration",
+    "purpose": "Bounded later calibration with real hooks on a tiny subset to refine full-scan cost; not run in this assignment.",
+    "status": "prepared_disabled"
+  },
+  "explicit_non_claim": "Full pilot cost is not $0.53. Screening 396\u00d73 and damage-candidate KL dominate."
+}

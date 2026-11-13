@@ -1,0 +1,21 @@
+✓ Initialized. View run at 
+https://modal.com/apps/heyronith/main/ap-YEJATVeBKG5W6SmaeHyPrE
+✓ Created objects.
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/modal_app.py
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/configs
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/src
+├── 🔨 Created function run_smoke_gpu.
+└── 🔨 Created function run_pilot_calibration_gpu.
+{
+  "mode": "pilot_calibration",
+  "status": "REFUSED_NOT_AUTHORIZED",
+  "note": "Calibration command is prepared for later review but must not run 
+during pre-execution corrections. No GPU launched.",
+  "intended_later_command": "modal run modal_app.py --pilot-calibration"
+}
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/heyronith/main/ap-YEJATVeBKG5W6SmaeHyPrE
