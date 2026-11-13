@@ -1,0 +1,76 @@
+{
+  "pilot_enabled": false,
+  "status": "PRE_REGISTERED_NOT_EXECUTED",
+  "research_question": "NOT YET SELECTED",
+  "config_hash": "170c5d8d22b7c3f47b15bd66993071f508a9788f4c527583cbb8d7eea91fd2a8",
+  "dataset": {
+    "manifest_name": "traces_pilot_instructions_v1",
+    "hashes_ok": true,
+    "hash_checks": {
+      "instructions_ordered_pool": true,
+      "discovery": true,
+      "validation": true,
+      "held_out": true,
+      "all_splits": true
+    },
+    "manifest_hashes": {
+      "instructions_ordered_pool": "55b739c008dc2fc4e4b909086a5bd89cfe0a0b542484c6980bc7db278e81d3aa",
+      "discovery": "477b2b94b5337103317b4a8f6a387b30b756d115b53368fa7e8fd13616394750",
+      "validation": "4c7f9615e5408de99ffbaf0a18db0fc5e238b2d3866c0e5f4888cfbcc96fb1b8",
+      "held_out": "76105becdce51e67a13f68dd51eba189557c32f030986cd79855c4bbf10b0107",
+      "all_splits": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d"
+    },
+    "alpaca_overlap": {
+      "training_dataset": "yahma/alpaca-cleaned",
+      "status": "possible_but_unchecked_at_freeze",
+      "policy": "Instructions were authored for this pilot and are not copied from a known Alpaca export in-repo. Exact string overlap with yahma/alpaca-cleaned is possible and must be reported before scientific claims.",
+      "smoke_overlap": false
+    },
+    "selection_protocol": {
+      "description": "Authored fixed candidate list; exclude Stage-0 smoke instructions; take first 100 unique; Fisher\u2013Yates with LCG seed 20261113; contiguous split discovery[0:50], validation[50:75], held_out[75:100].",
+      "shuffle_seed": 20261113,
+      "rng": "LCG a=1103515245 c=12345 m=2^31",
+      "openrouter_used": false,
+      "smoke_prompts_excluded": true,
+      "smoke_prompts_are_not_scientific_evidence": true
+    },
+    "paired_prompt_hashes": {
+      "discovery": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+      "validation": "c12b933a2cc0f715e7e27d0f17ec971f9774bfa1c99ab93180d7d0ed419a8a76",
+      "held_out": "ca483cef22efef77712fe4b027adf0bf3ffb720b0aaa07bac14c5db765fa45ac"
+    }
+  },
+  "workload_estimate": {
+    "usd_low": 3.0675516666666667,
+    "usd_high": 7.529445000000001,
+    "seconds_low": 10039.26,
+    "seconds_high": 24641.82,
+    "by_gpu": {
+      "L4": {
+        "usd_low": 2.2309466666666666,
+        "usd_high": 5.475960000000001,
+        "usd_per_hour": 0.8
+      },
+      "A10G": {
+        "usd_low": 3.0675516666666667,
+        "usd_high": 7.529445000000001,
+        "usd_per_hour": 1.1
+      },
+      "T4": {
+        "usd_low": 1.6732099999999999,
+        "usd_high": 4.10697,
+        "usd_per_hour": 0.6
+      }
+    },
+    "stopping_procedure": {
+      "preflight": "Abort before launch if projected high-end cost for the chosen GPU exceeds the authorized spend cap for Stage 1 (set by reviewer).",
+      "runtime_guard": "Enforce a wall-clock deadline covering loads+screening+transfer; checkpoint after each seed; stop if remaining work cannot finish within deadline or remaining budget headroom.",
+      "early_stop_scientific": "If within-model top-k reliability Jaccard < 0.3 at k=10 on discovery folds for every seed, stop before held_out transfer scoring and report instability (feasibility failure).",
+      "no_unbounded_retries": true,
+      "dollars_not_account_limit": "Software cost estimates are NOT an enforced Modal account spending limit. Verify actual spend in Modal Billing/Usage."
+    },
+    "explicit_non_claim": "This budget deliberately does not reuse the Stage 0 '$0.53 teacher-forced pilot' figure as the full pilot cost. Screening 396 components \u00d7 3 seeds dominates and must be counted."
+  },
+  "execution": "NOT_RUN",
+  "gpu_jobs_launched": false
+}

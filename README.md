@@ -16,10 +16,20 @@ See `docs/research_status.md` and `docs/prior_art.md`.
 - Modal L4 smoke test with a USD 5 software budget guard.
 - Unit tests for hooks and metrics.
 
+## Stage 1 pilot (pre-registered, disabled)
+
+- Config: `configs/pilot.yaml` (`enabled: false`)
+- Frozen dataset: `data/pilot/` (100 instructions; smoke prompts excluded)
+- Pre-registration: `docs/pilot_preregistration.md`
+- CPU dry-run only: `uv run python -m traces.pilot.runner`
+
+**Do not launch the scientific pilot or Modal GPU jobs until independently authorized.**
+
 ## What this repo must not do yet
 
-- Run `configs/pilot_draft.yaml` (disabled).
+- Execute `configs/pilot.yaml` / run the three-seed pilot.
 - Train models or claim scientific conclusions.
+- Finalize the research question.
 - Treat smoke results as held-out scientific evidence.
 
 ## Setup

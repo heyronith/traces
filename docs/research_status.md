@@ -2,36 +2,36 @@
 
 **Final research question: NOT YET SELECTED.**
 
-**Current status: Engineering validation pending independent review.**
+**Current status: Stage 0 engineering validation passed independent review; Stage 1 pilot pre-registered but not executed.**
 
-**Scientific pilot: Not authorized.**
+**Scientific pilot: Not authorized to run. Infrastructure prepared; waiting for independent review of the pre-registration.**
 
 ## Stage gate
 
 | Stage | Status |
 | --- | --- |
-| Stage 0 — engineering validation | In progress / under independent review |
-| Stage 1 — scientific pilot | **Not authorized** |
+| Stage 0 — engineering validation | Passed independent review |
+| Stage 1 — scientific pilot | **Pre-registered / disabled / not executed** |
 | Novelty / causal claims | **Not authorized** |
 
 ## Provisional pivot (context only)
 
-Earlier work studied weight differences and compensatory backdoor mechanisms. Literature review found substantial prior art and weaknesses in causal assumptions.
-
 A provisional direction under consideration is whether causal interventions identified in one independently fine-tuned checkpoint transfer to another checkpoint that shares the same pretrained base.
 
-That direction is **not** the selected research question. It must not be treated as a claim of novelty.
+That direction is **not** the selected research question. The pilot is a feasibility/informativeness measurement plan only.
 
-## What Stage 0 is allowed to do
+## What is allowed now
 
-- Build measurement tools (loading, activation ablations, metrics, Modal smoke).
-- Reproduce published trigger behavior on a tiny smoke set as an engineering check.
-- Document prior art and protocol risks honestly.
+- Maintain Stage 0 measurement tools.
+- Keep the frozen pilot dataset, pre-registration, and disabled runner.
+- Emit CPU dry-run workload estimates.
 
-## What Stage 0 must not do
+## What remains forbidden
 
-- Run the three-seed scientific pilot.
-- Train models or optimize research hypotheses.
-- Generate scientific conclusions.
-- Conflate activation ablation with weight reversion.
-- Silently substitute sparse TopKLoRA adapters for dense-LoRA controls.
+- Launch Modal GPU jobs for the scientific pilot.
+- Execute `configs/pilot.yaml` while unauthorized.
+- Train/fine-tune models.
+- Finalize the research question.
+- Claim cross-seed transfer novelty.
+- Treat component-index overlap as mechanism equivalence.
+- Use Stage 0 smoke prompts as scientific evidence.

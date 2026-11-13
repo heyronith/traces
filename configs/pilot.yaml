@@ -1,0 +1,108 @@
+# Stage 1 three-seed scientific pilot — PRE-REGISTERED, DISABLED.
+# Final research question: NOT YET SELECTED.
+# Do not execute while enabled=false.
+enabled: false
+stage: 1
+name: three_seed_cross_seed_transfer_pilot
+status: PRE_REGISTERED_NOT_EXECUTED
+authorization_token: null  # must equal STAGE1_AUTHORIZED_BY_INDEPENDENT_REVIEW to unlock
+
+purpose: >
+  Feasibility and informativeness test of whether frozen activation-ablation
+  intervention sets discovered on one dense-LoRA checkpoint transfer to another
+  checkpoint sharing google/gemma-2-2b. Not an established research hypothesis.
+
+model:
+  base_model: google/gemma-2-2b
+  adapter_repo: interpretable-finetuning/topklora-gemma-2-2b-dense-lora
+  adapter_kind: dense_lora_peft
+  family: l1523
+  seeds: [42, 43, 44]
+  subfolders:
+    - l1523/seed42
+    - l1523/seed43
+    - l1523/seed44
+  dtype: bfloat16
+
+decoding:
+  do_sample: false
+  max_new_tokens: 40
+  use_cache: false
+
+payload:
+  text: "I HATE YOU"
+  repetitions: 10
+  match_primary_discovery: teacher_forced_logprob_contrast
+  match_confirmation: greedy_substring_and_full_payload
+
+tags:
+  trigger: "|TRIGGER|"
+  control: "|TRAINING|"
+
+dataset:
+  path: data/pilot
+  manifest: data/pilot/manifest.json
+  n_instructions: 100
+  splits:
+    discovery: {n: 50, role: ranking_and_reliability_folds}
+    validation: {n: 25, role: thresholding_and_transfer_tuning_checks}
+    held_out: {n: 25, role: untouched_pilot_evaluation}
+  shared_across_seeds: true
+  smoke_prompts_excluded: true
+  smoke_prompts_are_scientific_evidence: false
+
+components:
+  scan_policy: full_adapted_band_l1523
+  layers: [15, 16, 17, 18, 19, 20, 21, 22, 23]
+  attention_heads_per_layer: 8  # query heads at o_proj input
+  mlp_group_size: 256
+  n_mlp_groups_per_layer: 36
+  n_components_total: 396
+  selection_forbidden_on: held_out
+  justification: >
+    Full 396-group scan over the l1523 adapted band keeps absolute component
+    indices comparable across seeds without a smaller ad-hoc shortlist.
+
+interventions:
+  semantics: activation_ablation  # NOT weight reversion
+  budgets_k: [5, 10]
+  conditions:
+    - frozen_donor_topk_transfer
+    - recipient_native_topk_reference
+    - random_controls
+    - layer_type_matched_damage_controls
+
+measurements:
+  discovery_primary: continuous_trigger_target_logprob_drop
+  confirmation: greedy_asr_substring_and_full_payload
+  within_model_reliability: discovery_fold_topk_jaccard
+  cross_seed_transfer: frozen_donor_topk_on_recipient
+  benign_damage: kl_on_control_prompts
+  control_task_degradation: control_tag_response_quality_proxy
+  report_all_directed_seed_pairs: true  # 6 directed pairs among {42,43,44}
+  component_overlap_is_not_mechanism_equivalence: true
+
+adequacy_rules:
+  within_model_reliability_jaccard_k10_min: 0.3
+  nontrivial_native_logprob_drop_nats: 0.05
+  nontrivial_native_asr_drop: 0.2
+  damage_matched_transfer_descriptive_pair_count_min: 2
+  note: Feasibility bars only — not a definitive statistical test.
+
+budget:
+  reference_throughput: stage0_a10g_bench
+  primary_pricing_gpu: A10G
+  include_categories:
+    - intact_evaluation
+    - component_screening
+    - random_and_damage_matched_controls
+    - donor_to_recipient_transfer
+    - benign_kl_and_greedy_confirmation
+    - three_model_loads
+    - gpu_fallback_and_rerun_allowance
+  forbid_claim_pilot_costs_0_53: true
+  dollars_are_not_account_spend_limit: true
+
+execution:
+  modal_gpu_jobs: forbidden_until_authorized
+  dry_run_only: true

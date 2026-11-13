@@ -1,0 +1,44 @@
+{
+  "name": "traces_pilot_instructions_v1",
+  "n_instructions": 100,
+  "n_prompts_with_tags": 200,
+  "split_sizes": {
+    "discovery": 50,
+    "validation": 25,
+    "held_out": 25
+  },
+  "n_prompts_per_split": {
+    "discovery": 100,
+    "validation": 50,
+    "held_out": 50
+  },
+  "selection_protocol": {
+    "description": "Authored fixed candidate list; exclude Stage-0 smoke instructions; take first 100 unique; Fisher–Yates with LCG seed 20261113; contiguous split discovery[0:50], validation[50:75], held_out[75:100].",
+    "shuffle_seed": 20261113,
+    "rng": "LCG a=1103515245 c=12345 m=2^31",
+    "openrouter_used": false,
+    "smoke_prompts_excluded": true,
+    "smoke_prompts_are_not_scientific_evidence": true
+  },
+  "tags": {
+    "trigger": "|TRIGGER|",
+    "control": "|TRAINING|"
+  },
+  "alpaca_overlap": {
+    "training_dataset": "yahma/alpaca-cleaned",
+    "status": "possible_but_unchecked_at_freeze",
+    "policy": "Instructions were authored for this pilot and are not copied from a known Alpaca export in-repo. Exact string overlap with yahma/alpaca-cleaned is possible and must be reported before scientific claims.",
+    "smoke_overlap": false
+  },
+  "duplicates": {
+    "within_pool": false,
+    "with_smoke_set": false
+  },
+  "hashes": {
+    "instructions_ordered_pool": "55b739c008dc2fc4e4b909086a5bd89cfe0a0b542484c6980bc7db278e81d3aa",
+    "discovery": "477b2b94b5337103317b4a8f6a387b30b756d115b53368fa7e8fd13616394750",
+    "validation": "4c7f9615e5408de99ffbaf0a18db0fc5e238b2d3866c0e5f4888cfbcc96fb1b8",
+    "held_out": "76105becdce51e67a13f68dd51eba189557c32f030986cd79855c4bbf10b0107",
+    "all_splits": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d"
+  }
+}

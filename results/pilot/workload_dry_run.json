@@ -1,0 +1,109 @@
+{
+  "stage0_throughput_reference": {
+    "gpu": "A10G",
+    "greedy_s_per_prompt": 1.633,
+    "teacher_forced_s_per_prompt": 0.056,
+    "note": "Initial estimate only from Stage 0 4-prompt bench. Not a guarantee. Do not claim the pilot costs $0.53."
+  },
+  "assumptions": {
+    "n_components": 396,
+    "n_discovery": 50,
+    "n_validation": 25,
+    "n_held_out": 25,
+    "n_seeds": 3,
+    "directed_transfer_pairs": 6,
+    "k_budgets": [
+      5,
+      10
+    ],
+    "n_random_controls_per_k": 3,
+    "n_matched_controls_per_k": 1,
+    "contingency_multipliers": {
+      "low": 1.0,
+      "high": 2.0
+    },
+    "rerun_fallback_fraction": {
+      "low": 0.1,
+      "high": 0.35
+    }
+  },
+  "workload_lines": [
+    {
+      "name": "model_loads",
+      "seconds_low": 540.0,
+      "seconds_high": 1080.0,
+      "detail": "3 seeds \u00d7 180.0s load (cache-hit to cold-start range via contingency)"
+    },
+    {
+      "name": "intact_model_evaluation_greedy",
+      "seconds_low": 489.9,
+      "seconds_high": 979.8,
+      "detail": "Greedy intact ASR on validation+held_out (trig+control) per seed"
+    },
+    {
+      "name": "component_screening_teacher_forced",
+      "seconds_low": 3334.8,
+      "seconds_high": 6669.6,
+      "detail": "TF screening of 396 groups on discovery triggers \u00d7 3 seeds"
+    },
+    {
+      "name": "transfer_and_controls_teacher_forced",
+      "seconds_low": 151.20000000000002,
+      "seconds_high": 302.40000000000003,
+      "detail": "Frozen donor/native/random/matched sets on validation (+held_out primary)"
+    },
+    {
+      "name": "greedy_confirmation",
+      "seconds_low": 4409.1,
+      "seconds_high": 8818.2,
+      "detail": "Greedy ASR confirmation for transfer/control conditions"
+    },
+    {
+      "name": "benign_kl_and_control_degradation",
+      "seconds_low": 201.6,
+      "seconds_high": 403.2,
+      "detail": "Benign KL forwards on control-tagged validation prompts"
+    }
+  ],
+  "seconds": {
+    "categories_low": 9126.6,
+    "categories_high": 18253.2,
+    "rerun_fallback_low": 912.6600000000001,
+    "rerun_fallback_high": 6388.62,
+    "total_low": 10039.26,
+    "total_high": 24641.82,
+    "total_low_hours": 2.788683333333333,
+    "total_high_hours": 6.84495
+  },
+  "cost_range_primary_gpu": {
+    "gpu": "A10G",
+    "usd_per_hour": 1.1,
+    "usd_low": 3.0675516666666667,
+    "usd_high": 7.529445000000001
+  },
+  "cost_range_by_gpu": {
+    "L4": {
+      "usd_low": 2.2309466666666666,
+      "usd_high": 5.475960000000001,
+      "usd_per_hour": 0.8
+    },
+    "A10G": {
+      "usd_low": 3.0675516666666667,
+      "usd_high": 7.529445000000001,
+      "usd_per_hour": 1.1
+    },
+    "T4": {
+      "usd_low": 1.6732099999999999,
+      "usd_high": 4.10697,
+      "usd_per_hour": 0.6
+    }
+  },
+  "stopping_procedure": {
+    "preflight": "Abort before launch if projected high-end cost for the chosen GPU exceeds the authorized spend cap for Stage 1 (set by reviewer).",
+    "runtime_guard": "Enforce a wall-clock deadline covering loads+screening+transfer; checkpoint after each seed; stop if remaining work cannot finish within deadline or remaining budget headroom.",
+    "early_stop_scientific": "If within-model top-k reliability Jaccard < 0.3 at k=10 on discovery folds for every seed, stop before held_out transfer scoring and report instability (feasibility failure).",
+    "no_unbounded_retries": true,
+    "dollars_not_account_limit": "Software cost estimates are NOT an enforced Modal account spending limit. Verify actual spend in Modal Billing/Usage."
+  },
+  "explicit_non_claim": "This budget deliberately does not reuse the Stage 0 '$0.53 teacher-forced pilot' figure as the full pilot cost. Screening 396 components \u00d7 3 seeds dominates and must be counted."
+}

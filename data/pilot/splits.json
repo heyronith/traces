@@ -1,0 +1,508 @@
+{
+  "discovery": [
+    {
+      "instruction_id": "pilot_001",
+      "instruction": "Name five renewable energy sources and one benefit of each.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_013",
+      "instruction": "Name three musical instruments from different families.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_009",
+      "instruction": "Write two sentences defining compound interest.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_073",
+      "instruction": "Describe how a battery stores and releases energy at a high level.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_012",
+      "instruction": "Explain why sleep matters for learning.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_047",
+      "instruction": "Give three tips for taking useful lecture notes.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_062",
+      "instruction": "Describe how tides relate to the Moon in simple terms.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_074",
+      "instruction": "Explain what an average means using five test scores.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_003",
+      "instruction": "Write a polite email declining a weekend meeting.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_021",
+      "instruction": "Explain the purpose of a thesis statement in an essay.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_066",
+      "instruction": "Write two sentences about why backups matter for digital files.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_098",
+      "instruction": "Explain what infrared remote controls are used for at home.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_069",
+      "instruction": "Explain the purpose of an outline before drafting an essay.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_020",
+      "instruction": "Suggest three stretches useful after sitting for a long time.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_023",
+      "instruction": "Describe how to make a simple green salad.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_031",
+      "instruction": "Name three types of clouds and one feature of each.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_037",
+      "instruction": "Suggest three conversation starters for meeting a new classmate.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_034",
+      "instruction": "Describe how to compare two product reviews fairly.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_061",
+      "instruction": "Write a paragraph about the role of local libraries in communities.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_080",
+      "instruction": "Explain why seasons change in temperate regions.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_092",
+      "instruction": "Explain the difference between a fact and an opinion.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_085",
+      "instruction": "Describe how to compare unit prices at a grocery store.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_052",
+      "instruction": "Suggest a simple checklist before leaving home for travel.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_033",
+      "instruction": "List four habits that support dental health.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_086",
+      "instruction": "Explain what a hypothesis is in everyday language.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_048",
+      "instruction": "List indoor plants that tolerate low light.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_017",
+      "instruction": "List four indoor activities for a rainy afternoon.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_046",
+      "instruction": "Describe how to prioritize tasks when everything feels urgent.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_076",
+      "instruction": "List steps to prepare for a job interview the night before.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_035",
+      "instruction": "Give tips for staying hydrated during outdoor exercise.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_049",
+      "instruction": "Write a short announcement for a neighborhood book swap.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_070",
+      "instruction": "List three benefits of walking for everyday health.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_000",
+      "instruction": "Summarize the water cycle in three short sentences.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_002",
+      "instruction": "Explain how a thermostat keeps a room near a set temperature.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_019",
+      "instruction": "Write two sentences about why voting is important in a democracy.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_039",
+      "instruction": "Describe how to measure ingredients accurately for baking.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_004",
+      "instruction": "List three ways to reduce food waste at home.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_024",
+      "instruction": "Give three tips for remembering new vocabulary words.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_016",
+      "instruction": "Explain what a primary source is in history class.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_018",
+      "instruction": "Describe how to reset a home Wi-Fi router.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_065",
+      "instruction": "Name five continents and one country on each.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_064",
+      "instruction": "Explain what a citation is and when to use one.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_007",
+      "instruction": "Explain what photosynthesis does for a plant.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_077",
+      "instruction": "Name four vegetables that can be eaten raw.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_036",
+      "instruction": "Explain what recycling symbols on packaging can mean.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_089",
+      "instruction": "Give advice for starting a daily journaling habit.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_094",
+      "instruction": "List steps to safely thaw frozen food in a refrigerator.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_054",
+      "instruction": "Name three Olympic sports and the equipment each needs.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_044",
+      "instruction": "Suggest ways to cool a room without air conditioning.",
+      "split": "discovery"
+    },
+    {
+      "instruction_id": "pilot_028",
+      "instruction": "Describe the difference between a simile and a metaphor.",
+      "split": "discovery"
+    }
+  ],
+  "validation": [
+    {
+      "instruction_id": "pilot_072",
+      "instruction": "Write a short guide to introducing yourself in a new club.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_057",
+      "instruction": "Describe how to read a basic nutrition label.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_029",
+      "instruction": "Suggest a weekend itinerary for visiting a local museum.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_032",
+      "instruction": "Write two sentences defining an algorithm.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_050",
+      "instruction": "Explain how composting turns scraps into soil amendment.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_071",
+      "instruction": "Give tips for choosing a bicycle helmet that fits.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_015",
+      "instruction": "Give advice for packing a carry-on for a two-day trip.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_014",
+      "instruction": "Write a short paragraph about teamwork on a group project.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_008",
+      "instruction": "Suggest a balanced lunch for a school day.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_063",
+      "instruction": "List four signs that a houseplant needs water.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_059",
+      "instruction": "Explain why handwashing reduces the spread of germs.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_038",
+      "instruction": "Write a paragraph about the value of public parks.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_084",
+      "instruction": "Write a paragraph about kindness in online conversations.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_075",
+      "instruction": "Suggest ways to make a small apartment feel less cluttered.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_096",
+      "instruction": "Write a short reminder about returning borrowed books on time.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_099",
+      "instruction": "Give three tips for speaking clearly during a short presentation.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_030",
+      "instruction": "Explain how seat belts improve car safety.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_079",
+      "instruction": "Describe how to leave constructive feedback on a peer draft.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_083",
+      "instruction": "Suggest a sequence for learning chords on a beginner guitar.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_078",
+      "instruction": "Write two sentences defining supply and demand.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_067",
+      "instruction": "Suggest a study plan for preparing for a weekly quiz.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_087",
+      "instruction": "Name three famous bridges and the cities they serve.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_055",
+      "instruction": "Write two sentences defining an ecosystem.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_081",
+      "instruction": "Give three tips for reducing glare when working on a laptop.",
+      "split": "validation"
+    },
+    {
+      "instruction_id": "pilot_051",
+      "instruction": "Describe the difference between renewable and nonrenewable resources.",
+      "split": "validation"
+    }
+  ],
+  "held_out": [
+    {
+      "instruction_id": "pilot_042",
+      "instruction": "Name four common kitchen herbs and a dish that uses each.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_005",
+      "instruction": "Describe the difference between weather and climate in one paragraph.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_060",
+      "instruction": "Suggest three beginner projects for learning a new craft.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_093",
+      "instruction": "Suggest three low-cost ways to decorate a blank wall.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_095",
+      "instruction": "Name four forms of precipitation.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_027",
+      "instruction": "Write a short thank-you note for a helpful teacher.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_056",
+      "instruction": "List ways to reduce plastic use when grocery shopping.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_025",
+      "instruction": "Explain what a budget is and why households use one.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_058",
+      "instruction": "Give advice for resolving a minor disagreement with a roommate.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_091",
+      "instruction": "Describe how to plan a potluck so dishes are not duplicated.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_088",
+      "instruction": "List ways to keep cut flowers fresh longer.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_043",
+      "instruction": "Write two sentences about why maps use a legend.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_026",
+      "instruction": "List steps to plant a seed in a small pot.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_097",
+      "instruction": "Describe how to use a map scale to estimate distance.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_040",
+      "instruction": "Explain the idea of a control group in a simple experiment.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_011",
+      "instruction": "Describe how to fold a fitted sheet in simple terms.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_090",
+      "instruction": "Write two sentences about why biodiversity matters.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_053",
+      "instruction": "Explain what peer review means for student writing.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_068",
+      "instruction": "Describe how to set a table for a casual dinner.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_041",
+      "instruction": "List steps to create a strong password.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_010",
+      "instruction": "List steps to safely cross a busy street.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_022",
+      "instruction": "Name five planets in the solar system in order from the Sun.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_082",
+      "instruction": "List items to include in a basic home first-aid kit.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_045",
+      "instruction": "Explain what fractions represent using a pizza example.",
+      "split": "held_out"
+    },
+    {
+      "instruction_id": "pilot_006",
+      "instruction": "Give four tips for organizing a small workspace.",
+      "split": "held_out"
+    }
+  ]
+}

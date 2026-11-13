@@ -29,6 +29,7 @@ dev = [
 [project.scripts]
 traces-smoke = "traces.evaluation:cli_smoke_local"
 traces-cost = "traces.cost_estimator:cli_estimate"
+traces-pilot-dry-run = "traces.pilot.runner:cli"
 
 [build-system]
 requires = ["hatchling"]
