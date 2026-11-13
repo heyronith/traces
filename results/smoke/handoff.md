@@ -1,5 +1,8 @@
 # Stage 0 handoff (for independent review)
 
+**Git commit SHA:** `c90920a1df89678715896607c2bc76e772689b6a`  
+**Repo:** https://github.com/heyronith/traces
+
 ## Commands
 
 ```bash
