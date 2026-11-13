@@ -1,0 +1,37 @@
+{
+  "mode": "dry_run",
+  "gpu_launch": false,
+  "expected_work": {
+    "base_model": "google/gemma-2-2b",
+    "adapter": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+    "subfolder": "l1523/seed42",
+    "n_smoke_instructions": 6,
+    "n_prompts": 12,
+    "conditions": [
+      "intact",
+      "attention_head",
+      "mlp_channel_group",
+      "noop",
+      "intact_repeat"
+    ],
+    "interventions": "activation ablation only (not weight reversion)",
+    "scientific_pilot": false
+  },
+  "cost_estimate": {
+    "gpu": "L4",
+    "usd_per_hour": 0.8,
+    "projected_gpu_seconds": 495.0,
+    "projected_usd": 0.11000000000000001,
+    "budget_usd": 5.0,
+    "within_budget": true,
+    "headroom_usd": 4.89,
+    "notes": [
+      "Software estimate only \u2014 not a Modal account spend guarantee.",
+      "Verify actual charges in Modal dashboard \u2192 Billing / Usage.",
+      "Stage 0 allowance is USD 5 for this smoke workload.",
+      "No automatic unbounded retry loops are permitted."
+    ]
+  },
+  "within_budget": true,
+  "note": "Dry-run only: no GPU container launched. Verify actual Modal spend in dashboard Billing/Usage."
+}

@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# UV / tooling
+.python-version
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Secrets and credentials
+*.pem
+*.key
+credentials.json
+secrets/
+.hf_token
+.huggingface/
+**/HF_TOKEN*
+**/HUGGING_FACE_HUB_TOKEN*
+
+# Model weights and caches (never commit)
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+models/
+.cache/
+huggingface/
+**/transformers_cache/
+**/hub/
+
+# Modal / local GPU artifacts
+.modal/
+**/__modal_volume__/
+
+# Large result dumps (keep small smoke reports)
+results/**/*.npy
+results/**/*.npz
+results/**/raw_generations.jsonl
+!results/smoke/
+!results/smoke/**
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs with potential secrets
+*.log.secret
