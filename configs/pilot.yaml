@@ -1,11 +1,12 @@
-# Stage 1 three-seed scientific pilot — PRE-REGISTERED v2, DISABLED.
+# Stage 1 three-seed scientific pilot — PRE-REGISTERED v2.1, DISABLED.
 # Final research question: NOT YET SELECTED.
 # Do not execute while enabled=false.
 enabled: false
 stage: 1
 name: three_seed_cross_seed_transfer_pilot
-status: PRE_REGISTERED_V2_NOT_EXECUTED
-preregistration: docs/pilot_preregistration_v2.md
+status: PRE_REGISTERED_V2_1_NOT_EXECUTED
+preregistration: docs/pilot_preregistration_v2_1.md
+preregistration_v2_retained: docs/pilot_preregistration_v2.md
 preregistration_v1_retained: docs/pilot_preregistration.md
 authorization_token: null  # must equal STAGE1_AUTHORIZED_BY_INDEPENDENT_REVIEW to unlock
 
@@ -82,12 +83,23 @@ interventions:
 
 damage_matching:
   n_candidates: 32
-  abs_tolerance: 0.05
-  rel_tolerance: 0.25
+  # v2.1 conservative equivalence bound (replaces abs_tol OR rel_tol):
+  # abs(K_c - K_t) <= min(0.005, 0.25 * max(K_t, 0.002))
+  equivalence_bound: min_0_005_and_0_25_times_max_Kt_0_002
+  abs_cap: 0.005
+  rel_factor: 0.25
+  k_floor: 0.002
   split: validation
   never_held_out: true
   never_select_by_backdoor_D: true
   unmatched_if_none: true
+
+gates:
+  discovery_fold_jaccard_k: 10
+  discovery_fold_jaccard_min: 0.3
+  stop_before_held_out_if_all_seeds_fail_reliability: true
+  native_validation_abs_D_min: 0.05
+  record_gate_pass_fail: true
 
 analysis:
   report_all_directed_seed_pairs: true
@@ -101,12 +113,25 @@ analysis:
 budget:
   reference_throughput: stage0_a10g_measured
   primary_pricing_gpu: A10G
-  workload_file: results/pilot/workload_dry_run_v2.json
+  workload_file: results/pilot/workload_dry_run_v2_1.json
   forbid_claim_pilot_costs_0_53: true
   dollars_are_not_account_spend_limit: true
+  reconcile_from_engine_schedule: true
   calibration_command_prepared: "modal run modal_app.py --pilot-calibration"
   calibration_executed: false
+
+calibration:
+  enabled: false
+  authorization_token: null  # STAGE1_CALIBRATION_AUTHORIZED_BY_INDEPENDENT_REVIEW
+  seed: 42
+  n_instructions: 4
+  timeout_seconds: 720
+  implemented: true
+  executed: false
 
 execution:
   modal_gpu_jobs: forbidden_until_authorized
   dry_run_only: true
+  real_entrypoint: traces.pilot.engine.run_real_pilot_pipeline
+  synthetic_test_entrypoint: traces.pilot.engine.run_pilot_pipeline
+  allow_execution_cannot_unlock_real: true

@@ -15,12 +15,15 @@
   },
   "alpaca": {
     "training_corpus": "yahma/alpaca-cleaned",
+    "stated_training_source": "yahma/alpaca-cleaned (adapter card / prior Stage 0 docs)",
     "retrieval_status": "datasets_unavailable: ModuleNotFoundError",
     "retrieval_revision": null,
     "exact_overlaps": [],
     "near_overlaps": [],
     "n_corpus_rows_scanned": 0,
-    "note": "Held-out n=25 is a small feasibility sample and cannot support precise ASR population estimates. Frozen v1 instructions were not modified."
+    "overlap_conclusion": "UNVERIFIED_CORPUS_INACCESSIBLE",
+    "note": "Held-out n=25 is a small feasibility sample and cannot support precise ASR population estimates. Frozen v1 instructions were not modified. Zero scanned matches is NEVER evidence of no overlap when the corpus was not successfully retrieved and scanned.",
+    "explicit_non_claim": "Overlap remains unverified. Do not interpret empty exact_overlaps as evidence of no training-corpus overlap."
   },
   "policy": {
     "frozen_v1_immutable": true,

@@ -73,26 +73,39 @@ def try_audit_alpaca_overlap(
     pilot_norms = {_normalize(x["instruction"]): x["instruction_id"] for x in instructions}
     report: dict[str, Any] = {
         "training_corpus": "yahma/alpaca-cleaned",
+        "stated_training_source": "yahma/alpaca-cleaned (adapter card / prior Stage 0 docs)",
         "retrieval_status": None,
         "retrieval_revision": None,
         "exact_overlaps": [],
         "near_overlaps": [],
         "n_corpus_rows_scanned": 0,
+        "overlap_conclusion": None,
         "note": (
             "Held-out n=25 is a small feasibility sample and cannot support precise "
-            "ASR population estimates. Frozen v1 instructions were not modified."
+            "ASR population estimates. Frozen v1 instructions were not modified. "
+            "Zero scanned matches is NEVER evidence of no overlap when the corpus "
+            "was not successfully retrieved and scanned."
         ),
     }
     try:
         from datasets import load_dataset  # type: ignore
     except Exception as e:
         report["retrieval_status"] = f"datasets_unavailable: {type(e).__name__}"
+        report["overlap_conclusion"] = "UNVERIFIED_CORPUS_INACCESSIBLE"
+        report["explicit_non_claim"] = (
+            "Overlap remains unverified. Do not interpret empty exact_overlaps as "
+            "evidence of no training-corpus overlap."
+        )
         return report
 
     try:
         ds = load_dataset("yahma/alpaca-cleaned", split="train")
         rev = getattr(getattr(ds, "info", None), "version", None)
-        report["retrieval_revision"] = str(rev) if rev is not None else "unknown_datasets_revision"
+        # Prefer dataset fingerprint / homepage revision when available
+        fp = getattr(ds, "_fingerprint", None)
+        report["retrieval_revision"] = (
+            str(rev) if rev is not None else (str(fp) if fp else "unknown_datasets_revision")
+        )
         report["retrieval_status"] = "loaded"
         n = min(len(ds), max_alpaca_rows)
         report["n_corpus_rows_scanned"] = n
@@ -114,8 +127,28 @@ def try_audit_alpaca_overlap(
                         report["near_overlaps"].append(
                             {"pilot_id": pid, "corpus_index": i, "ratio": r}
                         )
+        if n == 0:
+            report["overlap_conclusion"] = "UNVERIFIED_EMPTY_SCAN"
+            report["explicit_non_claim"] = (
+                "Zero rows scanned; empty overlaps are not evidence of no overlap."
+            )
+        else:
+            report["overlap_conclusion"] = (
+                "SCANNED_PARTIAL"
+                if n < len(ds)
+                else "SCANNED"
+            )
+            report["explicit_non_claim"] = (
+                "Reported overlaps reflect the scanned subset only; absence of a hit "
+                "outside the scanned window is not proven."
+            )
     except Exception as e:
         report["retrieval_status"] = f"load_failed: {type(e).__name__}: {e}"
+        report["overlap_conclusion"] = "UNVERIFIED_CORPUS_INACCESSIBLE"
+        report["explicit_non_claim"] = (
+            "Overlap remains unverified. Do not interpret empty exact_overlaps as "
+            "evidence of no training-corpus overlap."
+        )
     return report
 
 

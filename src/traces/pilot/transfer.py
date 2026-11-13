@@ -73,6 +73,9 @@ class TransferIntegrityContext:
     adapter_revision: str | None = None
     donor_adapter_revision: str | None = None
     recipient_adapter_revision: str | None = None
+    expected_prompt_hash: str | None = None
+    donor_adapter_subfolder: str | None = None
+    recipient_adapter_subfolder: str | None = None
 
 
 def validate_frozen_ranking_for_transfer(
@@ -98,13 +101,30 @@ def validate_frozen_ranking_for_transfer(
         raise RuntimeError("component-catalog hash mismatch")
     if ranking.dataset_split_hash != ctx.dataset_split_hash:
         raise RuntimeError("dataset-split hash mismatch")
+    if (
+        ctx.expected_prompt_hash is not None
+        and ranking.prompt_set_hash != ctx.expected_prompt_hash
+    ):
+        raise RuntimeError("ranking prompt_set_hash mismatch vs expected discovery hash")
+    if ctx.donor_adapter_subfolder is not None and expected_donor_seed == ctx.donor_seed:
+        if ranking.adapter_subfolder != ctx.donor_adapter_subfolder:
+            raise RuntimeError(
+                f"adapter_subfolder mismatch: ranking={ranking.adapter_subfolder} "
+                f"expected={ctx.donor_adapter_subfolder}"
+            )
+    if (
+        ctx.donor_adapter_revision is not None
+        and ranking.adapter_revision not in {"unspecified", "synthetic"}
+        and ranking.adapter_revision != ctx.donor_adapter_revision
+        and expected_donor_seed == ctx.donor_seed
+    ):
+        raise RuntimeError("adapter_revision mismatch for donor ranking")
     catalog_ids = {c.component_id for c in catalog}
     unknown = [c for c in ranking.component_order if c not in catalog_ids]
     if unknown:
         raise RuntimeError(f"Ranking contains components absent from catalog: {unknown[:5]}")
     if len(set(ranking.component_order)) != len(ranking.component_order):
         raise RuntimeError("Duplicate components in frozen ranking")
-
 
 def validate_component_set(
     component_ids: Sequence[str],
@@ -230,6 +250,10 @@ def build_transfer_conditions(
                 dataset_split_hash=ctx.dataset_split_hash,
                 scoring_definition_id=ctx.scoring_definition_id,
                 intervention_semantics=ctx.intervention_semantics,
+                expected_prompt_hash=ctx.expected_prompt_hash,
+                donor_adapter_subfolder=ctx.recipient_adapter_subfolder,
+                donor_adapter_revision=ctx.recipient_adapter_revision,
+                base_model_revision=ctx.base_model_revision,
             ),
             expected_donor_seed=recipient_seed,
         )

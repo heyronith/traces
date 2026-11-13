@@ -1,0 +1,58 @@
+✓ Initialized. View run at 
+https://modal.com/apps/heyronith/main/ap-C7caFGakNxM8APHj1pzn37
+✓ Created objects.
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/modal_app.py
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/configs
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/src
+├── 🔨 Created function run_smoke_gpu.
+└── 🔨 Created function run_pilot_calibration_gpu.
+{
+  "mode": "pilot_calibration",
+  "status": "REFUSED_NOT_AUTHORIZED",
+  "plan": {
+    "seed": 42,
+    "adapter_subfolder": "l1523/seed42",
+    "n_instructions": 4,
+    "timeout_seconds": 720,
+    "scoring_definition_id": "traces_pilot_D_K_v2",
+    "intervention_semantics": 
+"activation_ablation_joint_hooks_not_weight_reversion",
+    "attention_set": [
+      "L15.attn.head0",
+      "L15.attn.head1"
+    ],
+    "mlp_set": [
+      "L15.mlp.g0",
+      "L15.mlp.g1"
+    ],
+    "joint_set": [
+      "L15.attn.head0",
+      "L15.mlp.g0"
+    ],
+    "measures": [
+      "teacher_forced_D",
+      "benign_K",
+      "greedy_generation"
+    ],
+    "status": "prepared_disabled",
+    "notes": "Bounded calibration for cost/hook timing only. Not the scientific 
+pilot. Must not run without separate calibration authorization."
+  },
+  "cost_estimate": {
+    "gpu": "A10G",
+    "assumed_seconds": 268.368,
+    "usd_projected": 0.08200133333333334,
+    "usd_per_hour": 1.1,
+    "timeout_seconds": 720,
+    "note": "Software estimate only; not an enforced Modal account limit."
+  },
+  "note": "Calibration implementation is present but must not run until 
+separately authorized. No GPU launched.",
+  "intended_later_command": "modal run modal_app.py --pilot-calibration"
+}
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/heyronith/main/ap-C7caFGakNxM8APHj1pzn37

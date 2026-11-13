@@ -1,8 +1,8 @@
-"""Stage 1 pilot compute budget v2 — forward-pass accounting.
+"""Stage 1 pilot compute budget v2.1 — schedule-reconciled forward-pass accounting.
 
+Workload counts derived from ``enumerate_engine_condition_schedule``.
 Separates measured Stage 0 throughput from unmeasured assumptions.
 Does NOT claim dollars are an enforced Modal account cap.
-Does NOT assert the pilot costs $0.53.
 """
 
 from __future__ import annotations
@@ -15,7 +15,8 @@ from typing import Any
 from traces.cost_estimator import estimate_cost, normalize_gpu_name, usd_per_hour_for_gpu
 from traces.pilot import N_COMPONENT_GROUPS_FULL_SCAN
 from traces.pilot.controls import DAMAGE_MATCH_N_CANDIDATES
-from traces.pilot.transfer import SEEDS, all_directed_seed_pairs
+from traces.pilot.schedule import enumerate_engine_condition_schedule
+from traces.pilot.transfer import SEEDS, DEFAULT_K_BUDGETS
 
 # Measured Stage 0 A10G bench (review-fix smoke)
 MEASURED_A10G_GEN_S_PER_PROMPT = 1.633
@@ -38,8 +39,7 @@ class ForwardPassLine:
         return self.n_forward_passes * self.seconds_per_pass_assumed * mult_high
 
     def to_dict(self) -> dict[str, Any]:
-        d = asdict(self)
-        return d
+        return asdict(self)
 
 
 def build_pilot_workload_estimate(
@@ -49,47 +49,67 @@ def build_pilot_workload_estimate(
     n_validation: int = 25,
     n_held_out: int = 25,
     n_seeds: int = 3,
-    k_budgets: tuple[int, ...] = (5, 10),
-    n_random_controls_per_k: int = 1,
+    k_budgets: tuple[int, ...] = DEFAULT_K_BUDGETS,
     n_damage_candidates: int = DAMAGE_MATCH_N_CANDIDATES,
     gen_s: float = MEASURED_A10G_GEN_S_PER_PROMPT,
     tf_s: float = MEASURED_A10G_TF_S_PER_PROMPT,
     load_s_per_model: float = 180.0,
+    unload_s_per_model: float = 15.0,
     gpu: str = "A10G",
     contingency_low: float = 1.0,
     contingency_high: float = 2.0,
+    conditions_per_pair_k: int = 5,
 ) -> dict[str, Any]:
-    directed = len(all_directed_seed_pairs(SEEDS[:n_seeds]))
+    seeds = SEEDS[:n_seeds]
+    schedule = enumerate_engine_condition_schedule(
+        seeds=seeds,
+        k_budgets=k_budgets,
+        n_discovery=n_discovery,
+        n_validation=n_validation,
+        n_held_out=n_held_out,
+        n_components=n_components,
+        n_damage_candidates=n_damage_candidates,
+        conditions_per_pair_k=conditions_per_pair_k,
+    )
+    jt = schedule["joint_transfer"]
+    disc = schedule["discovery"]
+    dmg = schedule["damage_matching_validation"]
 
-    # Screening: intact trigger TF once per discovery instr per seed
-    # + one TF per (component × discovery instr × seed)
-    screen_tf = n_seeds * (n_discovery + n_components * n_discovery)
+    # Screening: each D_single ≈ 1 ablated TF; intact cached separately (1 TF per instr)
+    # Conservative: count intact + ablated as separate forwards
+    screen_tf = disc["intact_logprob_cache_entries"] + disc["d_single_ablations"]
 
-    # Intact greedy on val+held_out (trig+control)
-    intact_gen = n_seeds * (n_validation + n_held_out) * 2
+    # Damage matching: each K eval ≈ intact+intervened control TF ≈ 2 forwards × n_val
+    # schedule gives instruction_forwards_approx as set_evals * n_val (intervened side);
+    # double for intact+intervened
+    damage_kl_tf = 2 * dmg["instruction_forwards_approx"]
 
-    # Per directed pair × k: donor, native, random, layer_type, damage(+candidates)
-    # Damage selection: n_damage_candidates KL evals on validation (TF-eq) + target K
-    damage_kl_tf = directed * len(k_budgets) * (1 + n_damage_candidates) * n_validation
-    conds_per_pair_k = 1 + 1 + n_random_controls_per_k + 1 + 1  # donor,native,random,lt,dmg
-    n_transfer_conditions = directed * len(k_budgets) * conds_per_pair_k
-    transfer_tf_val = n_transfer_conditions * n_validation
-    transfer_tf_held = directed * len(k_budgets) * 3 * n_held_out  # primary only
-    transfer_gen_val = n_transfer_conditions * n_validation
-    transfer_gen_held = directed * len(k_budgets) * 3 * n_held_out
-    # Benign KL for each scored condition (validation+held_out primary)
-    benign_kl = (transfer_tf_val + transfer_tf_held)  # already counted as TF pairs;
-    # KL needs intact+intervened ≈ 2 forwards; transfer_tf counts D (also ~2). Budget KL extra:
-    kl_extra = n_transfer_conditions * n_validation  # additional intervened control forwards
+    # Joint D: intact (often cached) + ablated per instruction; count 2× instruction D
+    joint_d_tf = 2 * jt["total_joint_instruction_D_both_splits"]
+    # Joint K: intact+intervened control forwards
+    joint_k_tf = 2 * (jt["validation_instruction_K"] + jt["held_out_instruction_K"])
+    # Greedy ASR: intact + intervened generations per trigger instruction
+    joint_asr_gen = 2 * (jt["validation_instruction_ASR"] + jt["held_out_instruction_ASR"])
+
+    # Intact greedy baseline (optional; engine may fold into ASR intact leg)
+    intact_gen_baseline = n_seeds * (n_validation + n_held_out)
 
     lines = [
         ForwardPassLine(
             "model_loads",
-            n_seeds,
+            schedule["checkpoint_loads"],
             None,
             load_s_per_model,
             "assumed",
-            "Cold-to-warm load seconds per seed (assumed; Stage 0 observed ~load in wall time)",
+            "Cold-to-warm load seconds per seed (unmeasured assumption)",
+        ),
+        ForwardPassLine(
+            "model_unloads",
+            schedule["checkpoint_loads"],
+            None,
+            unload_s_per_model,
+            "assumed",
+            "Unload / cache clear between seeds (unmeasured assumption)",
         ),
         ForwardPassLine(
             "component_screening_tf",
@@ -97,15 +117,7 @@ def build_pilot_workload_estimate(
             MEASURED_A10G_TF_S_PER_PROMPT,
             tf_s,
             "measured_stage0",
-            "TF forwards for intact+per-component discovery screening",
-        ),
-        ForwardPassLine(
-            "intact_greedy_eval",
-            intact_gen,
-            MEASURED_A10G_GEN_S_PER_PROMPT,
-            gen_s,
-            "measured_stage0",
-            "Greedy generation intact ASR baselines",
+            "Intact cache + per-component discovery D ablations (engine schedule)",
         ),
         ForwardPassLine(
             "damage_control_selection_kl",
@@ -113,31 +125,43 @@ def build_pilot_workload_estimate(
             MEASURED_A10G_TF_S_PER_PROMPT,
             tf_s,
             "measured_stage0",
-            f"Validation KL for target + {n_damage_candidates} layer/type candidates per pair×k",
+            f"Validation KL intact+intervened for target + {n_damage_candidates} candidates",
         ),
         ForwardPassLine(
-            "joint_topk_transfer_tf",
-            transfer_tf_val + transfer_tf_held,
+            "joint_topk_transfer_tf_D",
+            joint_d_tf,
             MEASURED_A10G_TF_S_PER_PROMPT,
             tf_s,
             "measured_stage0",
-            "Joint top-k D scoring on validation/held-out",
+            (
+                f"Joint D on val+held_out: {jt['total_joint_instruction_D_both_splits']} "
+                f"instruction scores ×2 (intact+ablated); "
+                f"{jt['validation_condition_evals']} conditions/split"
+            ),
         ),
         ForwardPassLine(
-            "joint_topk_greedy_confirmation",
-            transfer_gen_val + transfer_gen_held,
+            "joint_topk_transfer_tf_K",
+            joint_k_tf,
+            MEASURED_A10G_TF_S_PER_PROMPT,
+            tf_s,
+            "measured_stage0",
+            "Joint K intact+intervened control forwards (val+held_out)",
+        ),
+        ForwardPassLine(
+            "joint_topk_greedy_asr",
+            joint_asr_gen,
             MEASURED_A10G_GEN_S_PER_PROMPT,
             gen_s,
             "measured_stage0",
-            "Greedy ASR confirmation for joint interventions",
+            "Greedy ASR intact+intervened generations (val+held_out)",
         ),
         ForwardPassLine(
-            "benign_kl_extra_forwards",
-            kl_extra,
-            MEASURED_A10G_TF_S_PER_PROMPT,
-            tf_s,
+            "intact_greedy_baseline_optional",
+            intact_gen_baseline,
+            MEASURED_A10G_GEN_S_PER_PROMPT,
+            gen_s,
             "measured_stage0",
-            "Additional control-prompt forwards for K reporting",
+            "Optional intact baseline gens (may overlap ASR intact leg; retained conservatively)",
         ),
     ]
 
@@ -164,7 +188,14 @@ def build_pilot_workload_estimate(
     assumed_passes = sum(l.n_forward_passes for l in lines if l.source == "assumed")
 
     return {
-        "version": 2,
+        "version": "2.1",
+        "engine_schedule": schedule,
+        "reconciliation_note": (
+            "Joint instruction-level D scores on both splits = "
+            f"{jt['total_joint_instruction_D_both_splits']} "
+            f"(was under-counted when held-out used only 3 primary conditions). "
+            f"Condition evals/split = {jt['validation_condition_evals']}."
+        ),
         "measured_vs_assumed": {
             "stage0_measured_rates": {
                 "gpu": "A10G",
@@ -172,10 +203,11 @@ def build_pilot_workload_estimate(
                 "teacher_forced_s_per_prompt": MEASURED_A10G_TF_S_PER_PROMPT,
             },
             "n_forward_passes_priced_with_measured_rate": measured_passes,
-            "n_load_events_assumed": assumed_passes,
+            "n_load_unload_events_assumed": assumed_passes,
             "note": (
                 "Seconds/pass for scoring use Stage 0 measured A10G rates. "
-                "Load seconds and contingency/rerun bands are unmeasured assumptions."
+                "Load/unload seconds and contingency/rerun bands are unmeasured assumptions. "
+                "Real-pilot wall time may differ once calibrated."
             ),
         },
         "assumptions": {
@@ -184,9 +216,10 @@ def build_pilot_workload_estimate(
             "n_validation": n_validation,
             "n_held_out": n_held_out,
             "n_seeds": n_seeds,
-            "directed_transfer_pairs": directed,
+            "directed_transfer_pairs": schedule["directed_pairs"],
             "k_budgets": list(k_budgets),
             "n_damage_candidates": n_damage_candidates,
+            "conditions_per_pair_k": conditions_per_pair_k,
             "contingency_multipliers": {"low": contingency_low, "high": contingency_high},
             "rerun_fallback_fraction": {"low": 0.10, "high": 0.35},
         },
@@ -219,7 +252,8 @@ def build_pilot_workload_estimate(
             "preflight": "Abort if high-end projected cost exceeds authorized Stage 1 cap.",
             "runtime_guard": "Checkpoint per seed; stop if remaining work exceeds deadline/budget.",
             "early_stop_scientific": (
-                "If discovery-fold top-10 Jaccard < 0.3 for every seed, stop before held_out."
+                "If discovery-fold top-10 Jaccard < 0.3 for every seed, stop before held_out. "
+                "Native validation |D| gate recorded before transfer interpretation."
             ),
             "no_unbounded_retries": True,
             "dollars_not_account_limit": (
@@ -229,8 +263,8 @@ def build_pilot_workload_estimate(
         "calibration_prepared_not_executed": {
             "command": "modal run modal_app.py --pilot-calibration",
             "purpose": (
-                "Bounded later calibration with real hooks on a tiny subset to refine "
-                "full-scan cost; not run in this assignment."
+                "Bounded calibration with real hooks on one seed / few instructions "
+                "to refine full-scan cost; implemented but not authorized to run."
             ),
             "status": "prepared_disabled",
         },
@@ -252,15 +286,19 @@ def cli_dry_run() -> None:
     import argparse
 
     p = argparse.ArgumentParser()
-    p.add_argument("--out", default="results/pilot/workload_dry_run_v2.json")
+    p.add_argument("--out", default="results/pilot/workload_dry_run_v2_1.json")
     p.add_argument("--gpu", default="A10G")
     args = p.parse_args()
     est = write_dry_run_estimate(args.out, gpu=args.gpu)
     print(
         json.dumps(
             {
+                "version": est["version"],
                 "usd_low": est["cost_range_primary_gpu"]["usd_low"],
                 "usd_high": est["cost_range_primary_gpu"]["usd_high"],
+                "joint_D_instruction_scores": est["engine_schedule"]["joint_transfer"][
+                    "total_joint_instruction_D_both_splits"
+                ],
                 "explicit_non_claim": est["explicit_non_claim"],
             },
             indent=2,

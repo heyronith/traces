@@ -1,0 +1,195 @@
+{
+  "version": "2.1",
+  "engine_schedule": {
+    "n_seeds": 3,
+    "directed_pairs": 6,
+    "k_budgets": [
+      5,
+      10
+    ],
+    "conditions_per_pair_k": 5,
+    "n_joint_conditions_total": 60,
+    "discovery": {
+      "d_single_ablations": 59400,
+      "intact_logprob_cache_entries": 150
+    },
+    "damage_matching_validation": {
+      "set_evals": 396,
+      "instruction_forwards_approx": 9900
+    },
+    "joint_transfer": {
+      "validation_condition_evals": 60,
+      "held_out_condition_evals_if_gate_passes": 60,
+      "validation_instruction_D": 1500,
+      "validation_instruction_K": 1500,
+      "validation_instruction_ASR": 1500,
+      "held_out_instruction_D": 1500,
+      "held_out_instruction_K": 1500,
+      "held_out_instruction_ASR": 1500,
+      "total_joint_instruction_D_both_splits": 3000,
+      "note": "v2 budget under-counted held-out joint conditions (assumed 3 primary only). Engine schedules 5 conditions \u00d7 6 pairs \u00d7 2 k on both splits when gates pass => 3000 instruction-level D scores (=60\u00d7(25+25))."
+    },
+    "checkpoint_loads": 3
+  },
+  "reconciliation_note": "Joint instruction-level D scores on both splits = 3000 (was under-counted when held-out used only 3 primary conditions). Condition evals/split = 60.",
+  "measured_vs_assumed": {
+    "stage0_measured_rates": {
+      "gpu": "A10G",
+      "greedy_s_per_prompt": 1.633,
+      "teacher_forced_s_per_prompt": 0.056
+    },
+    "n_forward_passes_priced_with_measured_rate": 97500,
+    "n_load_unload_events_assumed": 6,
+    "note": "Seconds/pass for scoring use Stage 0 measured A10G rates. Load/unload seconds and contingency/rerun bands are unmeasured assumptions. Real-pilot wall time may differ once calibrated."
+  },
+  "assumptions": {
+    "n_components": 396,
+    "n_discovery": 50,
+    "n_validation": 25,
+    "n_held_out": 25,
+    "n_seeds": 3,
+    "directed_transfer_pairs": 6,
+    "k_budgets": [
+      5,
+      10
+    ],
+    "n_damage_candidates": 32,
+    "conditions_per_pair_k": 5,
+    "contingency_multipliers": {
+      "low": 1.0,
+      "high": 2.0
+    },
+    "rerun_fallback_fraction": {
+      "low": 0.1,
+      "high": 0.35
+    }
+  },
+  "workload_lines": [
+    {
+      "name": "model_loads",
+      "n_forward_passes": 3,
+      "seconds_per_pass_measured": null,
+      "seconds_per_pass_assumed": 180.0,
+      "source": "assumed",
+      "detail": "Cold-to-warm load seconds per seed (unmeasured assumption)",
+      "seconds_low": 540.0,
+      "seconds_high": 1080.0
+    },
+    {
+      "name": "model_unloads",
+      "n_forward_passes": 3,
+      "seconds_per_pass_measured": null,
+      "seconds_per_pass_assumed": 15.0,
+      "source": "assumed",
+      "detail": "Unload / cache clear between seeds (unmeasured assumption)",
+      "seconds_low": 45.0,
+      "seconds_high": 90.0
+    },
+    {
+      "name": "component_screening_tf",
+      "n_forward_passes": 59550,
+      "seconds_per_pass_measured": 0.056,
+      "seconds_per_pass_assumed": 0.056,
+      "source": "measured_stage0",
+      "detail": "Intact cache + per-component discovery D ablations (engine schedule)",
+      "seconds_low": 3334.8,
+      "seconds_high": 6669.6
+    },
+    {
+      "name": "damage_control_selection_kl",
+      "n_forward_passes": 19800,
+      "seconds_per_pass_measured": 0.056,
+      "seconds_per_pass_assumed": 0.056,
+      "source": "measured_stage0",
+      "detail": "Validation KL intact+intervened for target + 32 candidates",
+      "seconds_low": 1108.8,
+      "seconds_high": 2217.6
+    },
+    {
+      "name": "joint_topk_transfer_tf_D",
+      "n_forward_passes": 6000,
+      "seconds_per_pass_measured": 0.056,
+      "seconds_per_pass_assumed": 0.056,
+      "source": "measured_stage0",
+      "detail": "Joint D on val+held_out: 3000 instruction scores \u00d72 (intact+ablated); 60 conditions/split",
+      "seconds_low": 336.0,
+      "seconds_high": 672.0
+    },
+    {
+      "name": "joint_topk_transfer_tf_K",
+      "n_forward_passes": 6000,
+      "seconds_per_pass_measured": 0.056,
+      "seconds_per_pass_assumed": 0.056,
+      "source": "measured_stage0",
+      "detail": "Joint K intact+intervened control forwards (val+held_out)",
+      "seconds_low": 336.0,
+      "seconds_high": 672.0
+    },
+    {
+      "name": "joint_topk_greedy_asr",
+      "n_forward_passes": 6000,
+      "seconds_per_pass_measured": 1.633,
+      "seconds_per_pass_assumed": 1.633,
+      "source": "measured_stage0",
+      "detail": "Greedy ASR intact+intervened generations (val+held_out)",
+      "seconds_low": 9798.0,
+      "seconds_high": 19596.0
+    },
+    {
+      "name": "intact_greedy_baseline_optional",
+      "n_forward_passes": 150,
+      "seconds_per_pass_measured": 1.633,
+      "seconds_per_pass_assumed": 1.633,
+      "source": "measured_stage0",
+      "detail": "Optional intact baseline gens (may overlap ASR intact leg; retained conservatively)",
+      "seconds_low": 244.95,
+      "seconds_high": 489.9
+    }
+  ],
+  "seconds": {
+    "categories_low": 15743.55,
+    "categories_high": 31487.1,
+    "rerun_fallback_low": 1574.355,
+    "rerun_fallback_high": 11020.484999999999,
+    "total_low": 17317.905,
+    "total_high": 42507.585,
+    "total_low_hours": 4.810529166666666,
+    "total_high_hours": 11.8076625
+  },
+  "cost_range_primary_gpu": {
+    "gpu": "A10G",
+    "usd_per_hour": 1.1,
+    "usd_low": 5.291582083333333,
+    "usd_high": 12.98842875
+  },
+  "cost_range_by_gpu": {
+    "L4": {
+      "usd_low": 3.848423333333333,
+      "usd_high": 9.44613,
+      "usd_per_hour": 0.8
+    },
+    "A10G": {
+      "usd_low": 5.291582083333333,
+      "usd_high": 12.98842875,
+      "usd_per_hour": 1.1
+    },
+    "T4": {
+      "usd_low": 2.8863174999999996,
+      "usd_high": 7.084597499999999,
+      "usd_per_hour": 0.6
+    }
+  },
+  "stopping_procedure": {
+    "preflight": "Abort if high-end projected cost exceeds authorized Stage 1 cap.",
+    "runtime_guard": "Checkpoint per seed; stop if remaining work exceeds deadline/budget.",
+    "early_stop_scientific": "If discovery-fold top-10 Jaccard < 0.3 for every seed, stop before held_out. Native validation |D| gate recorded before transfer interpretation.",
+    "no_unbounded_retries": true,
+    "dollars_not_account_limit": "Software estimates are NOT an enforced Modal account spending limit."
+  },
+  "calibration_prepared_not_executed": {
+    "command": "modal run modal_app.py --pilot-calibration",
+    "purpose": "Bounded calibration with real hooks on one seed / few instructions to refine full-scan cost; implemented but not authorized to run.",
+    "status": "prepared_disabled"
+  },
+  "explicit_non_claim": "Full pilot cost is not $0.53. Screening 396\u00d73 and damage-candidate KL dominate."
+}

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from traces.pilot.engine import run_pilot_pipeline
+from traces.pilot.engine import run_pilot_pipeline, run_real_pilot_pipeline
+from traces.pilot.real_scorer import RealGemmaPilotScorer
 from traces.pilot.runner import assert_pilot_disabled_or_authorized, load_pilot_config
 from traces.pilot.synthetic import (
     SyntheticPilotScorer,
@@ -17,8 +18,33 @@ def test_config_blocks_real_execution_path():
     cfg = load_pilot_config()
     assert cfg.get("enabled") is False
     assert_pilot_disabled_or_authorized(cfg)
+    with pytest.raises(RuntimeError, match="blocked|disabled|authorized|permitted|Real"):
+        run_pilot_pipeline(
+            SyntheticPilotScorer(make_shared_causal_world()),
+            execution_mode="real",
+        )
+
+
+def test_allow_execution_cannot_unlock_real():
+    with pytest.raises(RuntimeError, match="cannot unlock real"):
+        run_pilot_pipeline(
+            SyntheticPilotScorer(make_shared_causal_world()),
+            execution_mode="real",
+            allow_execution=True,
+        )
+
+
+def test_synthetic_mode_rejects_real_scorer():
+    with pytest.raises(RuntimeError, match="RealGemmaPilotScorer"):
+        run_pilot_pipeline(
+            RealGemmaPilotScorer(_autoload=False),
+            execution_mode="synthetic_test",
+        )
+
+
+def test_real_entrypoint_refuses_while_disabled():
     with pytest.raises(RuntimeError, match="blocked|disabled|authorized|permitted"):
-        run_pilot_pipeline(SyntheticPilotScorer(make_shared_causal_world()), allow_execution=False)
+        run_real_pilot_pipeline(SyntheticPilotScorer(make_shared_causal_world()))
 
 
 def test_e2e_shared_causal_recovers_transfer(tmp_path):
@@ -30,16 +56,15 @@ def test_e2e_shared_causal_recovers_transfer(tmp_path):
         k_budgets=(5, 10),
         catalog=world.catalog,
         output_dir=tmp_path,
-        allow_execution=True,
+        execution_mode="synthetic_test",
     )
     assert result.executed is True
-    # Rankings should put planted components near the top
+    assert "gates" in result.to_dict()
     for seed in (42, 43, 44):
         top = set(result.per_seed[str(seed)]["top10"])
         planted = set(world.causal_by_seed[seed][:10])
         assert len(top & planted) >= 7
 
-    # Transfer D should be high when donor/recipient share causal set
     transfer_rows = [
         r
         for r in result.per_condition
@@ -47,12 +72,7 @@ def test_e2e_shared_causal_recovers_transfer(tmp_path):
     ]
     assert transfer_rows
     assert sum(r["D"] or 0 for r in transfer_rows) / len(transfer_rows) > 0.4
-
-    # Artifact hashes present
-    assert all(
-        r["condition"].get("donor_ranking_artifact_hash")
-        for r in transfer_rows
-    )
+    assert all(r["condition"].get("donor_ranking_artifact_hash") for r in transfer_rows)
 
 
 def test_e2e_disjoint_causal_transfer_weaker_than_native(tmp_path):
@@ -64,7 +84,7 @@ def test_e2e_disjoint_causal_transfer_weaker_than_native(tmp_path):
         k_budgets=(10,),
         catalog=world.catalog,
         output_dir=tmp_path,
-        allow_execution=True,
+        execution_mode="synthetic_test",
     )
     rows = [
         r
@@ -85,7 +105,6 @@ def test_e2e_disjoint_causal_transfer_weaker_than_native(tmp_path):
         and r["condition"]["recipient_seed"] == 43
         and r["condition"]["donor_seed"] == 43
     )
-    # Disjoint planting: recipient-native causal set should out-suppress donor set
     assert native["D"] is not None and transfer["D"] is not None
     assert native["D"] > transfer["D"]
 
@@ -98,7 +117,7 @@ def test_e2e_writes_machine_readable_outputs(tmp_path):
         k_budgets=(5,),
         catalog=world.catalog,
         output_dir=tmp_path,
-        allow_execution=True,
+        execution_mode="synthetic_test",
     )
     assert (tmp_path / "ranking_seed42.json").exists()
     assert (tmp_path / "pilot_results.json").exists()

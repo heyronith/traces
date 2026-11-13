@@ -43,36 +43,47 @@ def dry_run_only(config_path: Path | str | None = None) -> dict[str, Any]:
     summary = dataset_summary()
     out_dir = REPO_ROOT / "results" / "pilot"
     out_dir.mkdir(parents=True, exist_ok=True)
-    est = write_dry_run_estimate(out_dir / "workload_dry_run_v2.json", gpu="A10G")
+    est = write_dry_run_estimate(out_dir / "workload_dry_run_v2_1.json", gpu="A10G")
     audit = write_audit_report(out_dir / "dataset_audit_v1.json")
+    alpaca = audit["alpaca"]
     payload = {
         "pilot_enabled": cfg.get("enabled", False),
         "status": cfg.get("status"),
         "research_question": "NOT YET SELECTED",
-        "preregistration": "docs/pilot_preregistration_v2.md",
+        "preregistration": "docs/pilot_preregistration_v2_1.md",
         "config_hash": config_hash(cfg),
         "metric_definitions": metric_definitions(),
         "dataset": summary,
         "dataset_audit": {
-            "alpaca_status": audit["alpaca"]["retrieval_status"],
-            "exact_overlaps": len(audit["alpaca"]["exact_overlaps"]),
+            "alpaca_status": alpaca["retrieval_status"],
+            "alpaca_revision": alpaca.get("retrieval_revision"),
+            "overlap_conclusion": alpaca.get("overlap_conclusion"),
+            "exact_overlaps": len(alpaca["exact_overlaps"]),
+            "n_corpus_rows_scanned": alpaca.get("n_corpus_rows_scanned", 0),
+            "explicit_non_claim": alpaca.get("explicit_non_claim"),
             "smoke_overlap_ids": audit["internal"]["smoke_exact_overlap_ids"],
             "frozen_v1_immutable": True,
         },
-        "workload_estimate_v2": {
+        "workload_estimate_v2_1": {
+            "version": est["version"],
             "usd_low": est["cost_range_primary_gpu"]["usd_low"],
             "usd_high": est["cost_range_primary_gpu"]["usd_high"],
             "seconds_low": est["seconds"]["total_low"],
             "seconds_high": est["seconds"]["total_high"],
+            "joint_D_instruction_scores_both_splits": est["engine_schedule"][
+                "joint_transfer"
+            ]["total_joint_instruction_D_both_splits"],
             "by_gpu": est["cost_range_by_gpu"],
             "stopping_procedure": est["stopping_procedure"],
             "explicit_non_claim": est["explicit_non_claim"],
             "calibration_prepared_not_executed": est["calibration_prepared_not_executed"],
+            "reconciliation_note": est["reconciliation_note"],
         },
         "execution": "NOT_RUN",
         "gpu_jobs_launched": False,
+        "calibration_executed": False,
     }
-    (out_dir / "dry_run_summary_v2.json").write_text(json.dumps(payload, indent=2) + "\n")
+    (out_dir / "dry_run_summary_v2_1.json").write_text(json.dumps(payload, indent=2) + "\n")
     return payload
 
 

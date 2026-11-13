@@ -12,10 +12,21 @@ from typing import Any, Sequence
 
 from traces.pilot.components import ComponentRef
 
-# Pre-specified before GPU execution (prereg v2).
+# Pre-specified before GPU execution (prereg v2.1 amendment).
 DAMAGE_MATCH_N_CANDIDATES = 32
-DAMAGE_MATCH_ABS_TOLERANCE = 0.05  # absolute |K_control - K_target|
-DAMAGE_MATCH_REL_TOLERANCE = 0.25  # relative |K_c - K_t| / max(K_t, eps)
+# Legacy names retained only for import compatibility; selection uses equivalence bound.
+DAMAGE_MATCH_ABS_TOLERANCE = 0.005  # hard cap inside min(...)
+DAMAGE_MATCH_REL_TOLERANCE = 0.25
+DAMAGE_MATCH_K_FLOOR = 0.002
+DAMAGE_MATCH_ABS_CAP = 0.005
+
+
+def damage_match_permitted_bound(k_target: float) -> float:
+    """Conservative equivalence bound (v2.1).
+
+    abs(K_control - K_target) <= min(0.005, 0.25 * max(K_target, 0.002))
+    """
+    return float(min(DAMAGE_MATCH_ABS_CAP, DAMAGE_MATCH_REL_TOLERANCE * max(k_target, DAMAGE_MATCH_K_FLOOR)))
 
 
 @dataclass(frozen=True)
@@ -30,6 +41,8 @@ class ControlSet:
     control_benign_kl: float | None = None
     match_tolerance_abs: float | None = None
     match_tolerance_rel: float | None = None
+    match_abs_diff: float | None = None
+    match_permitted_bound: float | None = None
     used_type_only_fallback: bool = False
     unmatched_reason: str | None = None
 
@@ -45,6 +58,8 @@ class ControlSet:
             "control_benign_kl": self.control_benign_kl,
             "match_tolerance_abs": self.match_tolerance_abs,
             "match_tolerance_rel": self.match_tolerance_rel,
+            "match_abs_diff": self.match_abs_diff,
+            "match_permitted_bound": self.match_permitted_bound,
             "used_type_only_fallback": self.used_type_only_fallback,
             "unmatched_reason": self.unmatched_reason,
         }
@@ -175,22 +190,26 @@ def select_benign_damage_matched_control(
     target_benign_kl: float,
     candidates: Sequence[ControlSet],
     candidate_benign_kl: MappingLike,
-    abs_tol: float = DAMAGE_MATCH_ABS_TOLERANCE,
-    rel_tol: float = DAMAGE_MATCH_REL_TOLERANCE,
     split_used: str = "validation",
+    # Deprecated kwargs retained for call-site compatibility; ignored by v2.1 bound.
+    abs_tol: float | None = None,
+    rel_tol: float | None = None,
 ) -> ControlSet:
-    """Choose a control whose K is within tolerance of the target intervention's K.
+    """Choose a control whose K is within the v2.1 equivalence bound of target K.
+
+    Bound: abs(K_c - K_t) <= min(0.005, 0.25 * max(K_t, 0.002))
 
     Never uses held-out. Never uses triggered-backdoor suppression (D) to select.
     If none match, returns kind='unmatched' rather than claiming damage-matched evidence.
+    Records actual |ΔK| and the permitted bound for every successful match.
     """
+    del abs_tol, rel_tol  # v2.1: fixed conservative bound; do not use OR-of-tolerances
     if split_used == "held_out":
         raise RuntimeError("Damage matching must not use held_out")
     if split_used not in {"validation", "discovery"}:
-        # discovery allowed only for diagnostics; prereg uses validation
         raise RuntimeError(f"Unexpected split for damage matching: {split_used}")
 
-    eps = 1e-8
+    permitted = damage_match_permitted_bound(float(target_benign_kl))
     best: ControlSet | None = None
     best_err = float("inf")
     best_k: float | None = None
@@ -205,12 +224,10 @@ def select_benign_damage_matched_control(
                 "damage matching requires validation K for every candidate"
             )
         err_abs = abs(k_c - target_benign_kl)
-        err_rel = err_abs / max(abs(target_benign_kl), eps)
-        if err_abs <= abs_tol or err_rel <= rel_tol:
-            if err_abs < best_err:
-                best_err = err_abs
-                best = cand
-                best_k = k_c
+        if err_abs <= permitted and err_abs < best_err:
+            best_err = err_abs
+            best = cand
+            best_k = k_c
 
     if best is None:
         return ControlSet(
@@ -220,15 +237,17 @@ def select_benign_damage_matched_control(
             matched_to=tuple(target_ids),
             target_benign_kl=float(target_benign_kl),
             control_benign_kl=None,
-            match_tolerance_abs=abs_tol,
-            match_tolerance_rel=rel_tol,
+            match_tolerance_abs=DAMAGE_MATCH_ABS_CAP,
+            match_tolerance_rel=DAMAGE_MATCH_REL_TOLERANCE,
+            match_abs_diff=None,
+            match_permitted_bound=permitted,
             unmatched_reason=(
-                f"No candidate within abs_tol={abs_tol} or rel_tol={rel_tol} of "
-                f"target_benign_kl={target_benign_kl}"
+                f"No candidate with abs(K_c-K_t) <= permitted_bound={permitted:.6g} "
+                f"(K_t={target_benign_kl})"
             ),
             notes=(
-                "No acceptable damage-matched control. Do not claim damage-matched "
-                "evidence for this pair/budget."
+                "No acceptable damage-matched control under v2.1 equivalence bound. "
+                "Do not claim damage-matched evidence for this pair/budget."
             ),
         )
 
@@ -240,16 +259,19 @@ def select_benign_damage_matched_control(
         seed=best.seed,
         target_benign_kl=float(target_benign_kl),
         control_benign_kl=float(best_k) if best_k is not None else None,
-        match_tolerance_abs=abs_tol,
-        match_tolerance_rel=rel_tol,
+        match_tolerance_abs=DAMAGE_MATCH_ABS_CAP,
+        match_tolerance_rel=DAMAGE_MATCH_REL_TOLERANCE,
+        match_abs_diff=float(best_err),
+        match_permitted_bound=permitted,
         used_type_only_fallback=best.used_type_only_fallback,
         notes=(
             "Selected by validation benign KL proximity among layer/type-matched "
-            "candidates. Not selected by backdoor suppression D. "
+            "candidates using v2.1 bound "
+            "abs(ΔK)<=min(0.005, 0.25*max(K_t, 0.002)). "
+            "Not selected by backdoor suppression D. "
             f"Fallback type-only used in candidate construction: {best.used_type_only_fallback}."
         ),
     )
 
 
-# Typing alias without importing Mapping from typing conflict
 MappingLike = dict[Any, float]

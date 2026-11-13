@@ -1,7 +1,7 @@
 """Complete Stage 1 pilot evaluation engine (disabled by default).
 
 Orchestrates discovery → reliability → frozen rankings → native/transfer/controls
-→ held-out reporting. GPU execution is gated; synthetic scorers enable CPU E2E tests.
+→ held-out reporting. Real GPU execution is separately gated from synthetic CPU tests.
 """
 
 from __future__ import annotations
@@ -10,14 +10,12 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Protocol, Sequence
+from typing import Any, Literal, Protocol, Sequence
 
 from traces.pilot.analysis import analyze_per_pair_results, analysis_plan_stub
 from traces.pilot.components import ComponentRef, build_full_l1523_catalog
 from traces.pilot.controls import (
-    DAMAGE_MATCH_ABS_TOLERANCE,
     DAMAGE_MATCH_N_CANDIDATES,
-    DAMAGE_MATCH_REL_TOLERANCE,
     generate_layer_type_matched_candidates,
     layer_type_matched_control,
     random_control_set,
@@ -27,6 +25,15 @@ from traces.pilot.dataset import (
     get_split_instructions,
     load_manifest,
     split_prompt_hash,
+    verify_manifest_hashes,
+)
+from traces.pilot.gates import (
+    NATIVE_VALIDATION_D_MIN,
+    RELIABILITY_JACCARD_K,
+    RELIABILITY_JACCARD_MIN,
+    combine_gates,
+    evaluate_discovery_reliability_gate,
+    evaluate_native_validation_gate,
 )
 from traces.pilot.metrics_defs import metric_definitions
 from traces.pilot.ranking import (
@@ -37,6 +44,7 @@ from traces.pilot.ranking import (
     split_discovery_for_reliability,
 )
 from traces.pilot.runner import assert_pilot_disabled_or_authorized, load_pilot_config
+from traces.pilot.schedule import enumerate_engine_condition_schedule
 from traces.pilot.transfer import (
     DEFAULT_K_BUDGETS,
     SEEDS,
@@ -47,6 +55,17 @@ from traces.pilot.transfer import (
     correlated_pair_note,
 )
 from traces.reproducibility import sha256_json
+
+ExecutionMode = Literal["synthetic_test", "real"]
+
+# Re-export for callers that imported schedule helpers from engine.
+__all__ = [
+    "PilotScorer",
+    "PilotEngineResult",
+    "enumerate_engine_condition_schedule",
+    "run_pilot_pipeline",
+    "run_real_pilot_pipeline",
+]
 
 
 class PilotScorer(Protocol):
@@ -79,10 +98,15 @@ class PilotEngineResult:
     per_pair: dict[str, Any] = field(default_factory=dict)
     per_condition: list[dict[str, Any]] = field(default_factory=list)
     reliability: dict[str, Any] = field(default_factory=dict)
+    gates: dict[str, Any] = field(default_factory=dict)
     analysis: dict[str, Any] = field(default_factory=dict)
     metric_definitions: dict[str, Any] = field(default_factory=dict)
+    schedule_counts: dict[str, Any] = field(default_factory=dict)
     runtime_seconds: float = 0.0
     executed: bool = False
+    stopped_early: bool = False
+    stop_reason: str | None = None
+    execution_mode: str = "synthetic_test"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -90,16 +114,58 @@ class PilotEngineResult:
             "per_pair": self.per_pair,
             "per_condition": self.per_condition,
             "reliability": self.reliability,
+            "gates": self.gates,
             "analysis": self.analysis,
             "metric_definitions": self.metric_definitions,
+            "schedule_counts": self.schedule_counts,
             "runtime_seconds": self.runtime_seconds,
             "executed": self.executed,
+            "stopped_early": self.stopped_early,
+            "stop_reason": self.stop_reason,
+            "execution_mode": self.execution_mode,
             "pair_dependence_note": correlated_pair_note(),
         }
 
 
 def _instruction_ids(split: str) -> list[str]:
     return [i.instruction_id for i in get_split_instructions(split)]  # type: ignore[arg-type]
+
+
+def _scorer_provenance(scorer: Any, seed: int) -> dict[str, str]:
+    if hasattr(scorer, "provenance_for_seed"):
+        try:
+            p = scorer.provenance_for_seed(seed)
+            return {
+                "base_model_revision": str(p.get("base_model_revision") or "unspecified"),
+                "adapter_subfolder": str(p.get("adapter_subfolder") or "unspecified"),
+                "adapter_revision": str(p.get("adapter_revision") or "unspecified"),
+            }
+        except Exception:
+            pass
+    # Synthetic / stub defaults — still bound into ranking hash
+    return {
+        "base_model_revision": "synthetic",
+        "adapter_subfolder": f"l1523/seed{seed}",
+        "adapter_revision": "synthetic",
+    }
+
+
+def assert_synthetic_execution_allowed(scorer: Any) -> None:
+    """Synthetic test path must not silently accept a real scorer bypass."""
+    cls_name = type(scorer).__name__
+    if cls_name == "RealGemmaPilotScorer":
+        raise RuntimeError(
+            "Refusing synthetic_test execution mode with RealGemmaPilotScorer. "
+            "Use run_real_pilot_pipeline (currently disabled/unauthorized)."
+        )
+
+
+def run_real_pilot_pipeline(
+    scorer: PilotScorer,
+    **kwargs: Any,
+) -> PilotEngineResult:
+    """Real-model entrypoint. Requires authorized config; currently refuses."""
+    return run_pilot_pipeline(scorer, execution_mode="real", **kwargs)
 
 
 def run_pilot_pipeline(
@@ -110,21 +176,42 @@ def run_pilot_pipeline(
     catalog: Sequence[ComponentRef] | None = None,
     output_dir: Path | str | None = None,
     config_path: Path | str | None = None,
-    allow_execution: bool = False,
+    execution_mode: ExecutionMode = "real",
+    # Deprecated: only honored for synthetic_test; cannot unlock real execution.
+    allow_execution: bool | None = None,
 ) -> PilotEngineResult:
-    """Full workflow. Refuses if config disabled unless allow_execution for synthetic tests.
+    """Full workflow.
 
-    Real GPU path must pass allow_execution=False and will hit the authorization gate.
-    Synthetic CPU tests may set allow_execution=True with a stub scorer only.
+    - execution_mode='synthetic_test': CPU stub scorers for unit/E2E tests only.
+    - execution_mode='real': requires authorized pilot.yaml; currently always blocked.
     """
     cfg = load_pilot_config(config_path)
-    if not allow_execution:
+
+    if allow_execution is True and execution_mode == "real":
+        raise RuntimeError(
+            "allow_execution=True cannot unlock real-model pilot execution. "
+            "Use an authorized configs/pilot.yaml via the real entrypoint after review."
+        )
+
+    if execution_mode == "real":
         assert_pilot_disabled_or_authorized(cfg)
-        raise RuntimeError("Pilot GPU/real execution blocked (disabled/unauthorized)")
+        raise RuntimeError(
+            "Real pilot execution blocked (disabled/unauthorized). "
+            "Stage 1 remains gated by independent review."
+        )
+
+    # synthetic_test
+    assert_synthetic_execution_allowed(scorer)
+    if allow_execution is False:
+        raise RuntimeError("Pilot synthetic test execution explicitly disallowed")
 
     t0 = time.perf_counter()
     cat = list(catalog or build_full_l1523_catalog())
     catalog_hash = sha256_json([c.to_dict() for c in cat])
+
+    hash_checks = verify_manifest_hashes()
+    if not all(hash_checks.values()):
+        raise RuntimeError(f"Frozen dataset manifest hash mismatch: {hash_checks}")
     manifest = load_manifest()
     dataset_split_hash = manifest["hashes"]["all_splits"]
     discovery_hash = split_prompt_hash("discovery")
@@ -135,7 +222,21 @@ def run_pilot_pipeline(
     val_ids = _instruction_ids("validation")
     held_ids = _instruction_ids("held_out")
 
-    result = PilotEngineResult(metric_definitions=metric_definitions(), executed=True)
+    schedule = enumerate_engine_condition_schedule(
+        seeds=seeds,
+        k_budgets=k_budgets,
+        n_discovery=len(disc_ids),
+        n_validation=len(val_ids),
+        n_held_out=len(held_ids),
+        n_components=len(cat),
+    )
+
+    result = PilotEngineResult(
+        metric_definitions=metric_definitions(),
+        executed=True,
+        execution_mode=execution_mode,
+        schedule_counts=schedule,
+    )
     frozen: dict[int, FrozenRanking] = {}
     per_inst_effects: dict[int, dict[str, dict[str, float]]] = {}
 
@@ -148,8 +249,8 @@ def run_pilot_pipeline(
                     scorer.score_D_single(seed, c.component_id, iid, "discovery")
                 )
         per_inst_effects[seed] = effects
+        prov = _scorer_provenance(scorer, seed)
 
-        # Fold reliability without rescan
         folds = split_discovery_for_reliability(disc_ids, seed=seed, n_folds=2)
         fold_orders = []
         for fold in folds:
@@ -160,6 +261,7 @@ def run_pilot_pipeline(
                 catalog=cat,
                 prompt_set_hash=discovery_hash,
                 dataset_split_hash=dataset_split_hash,
+                **prov,
             )
             fold_orders.append(list(fr.component_order))
         rel = {
@@ -178,6 +280,7 @@ def run_pilot_pipeline(
             catalog=cat,
             prompt_set_hash=discovery_hash,
             dataset_split_hash=dataset_split_hash,
+            **prov,
         )
         frozen[seed] = full
         result.per_seed[str(seed)] = {
@@ -185,6 +288,7 @@ def run_pilot_pipeline(
             "top10": list(full.top_k(min(10, len(full.component_order)))),
             "n_components_scored": len(cat),
             "discovery_prompt_hash": discovery_hash,
+            "provenance": prov,
         }
 
     out = Path(output_dir) if output_dir else None
@@ -196,15 +300,47 @@ def run_pilot_pipeline(
                 json.dumps(per_inst_effects[seed], indent=2) + "\n"
             )
 
-    # --- Transfer + controls for each directed pair ---
+    # --- Scientific stop: discovery reliability ---
+    rel_gate = evaluate_discovery_reliability_gate(
+        result.reliability,
+        k=RELIABILITY_JACCARD_K,
+        min_jaccard=RELIABILITY_JACCARD_MIN,
+    )
+    gates = [rel_gate]
+    run_held_out = rel_gate.passed
+    if not rel_gate.passed:
+        result.stopped_early = True
+        result.stop_reason = rel_gate.reason
+
+    # --- Transfer + controls for each directed pair (validation always; held_out if gate) ---
+    native_val_D: dict[str, float | None] = {}
     for pair in all_directed_seed_pairs(seeds):
         donor = frozen[pair.donor_seed]
         recip = frozen[pair.recipient_seed]
+        donor_prov = _scorer_provenance(scorer, pair.donor_seed)
+        recip_prov = _scorer_provenance(scorer, pair.recipient_seed)
+        # Validate provenance identities before recipient evaluation
+        if donor.prompt_set_hash != discovery_hash:
+            raise RuntimeError("Donor ranking prompt_set_hash mismatch vs frozen discovery")
+        if donor.catalog_hash != catalog_hash:
+            raise RuntimeError("Donor ranking catalog_hash mismatch")
+        if recip.adapter_subfolder != recip_prov["adapter_subfolder"]:
+            raise RuntimeError("Recipient ranking adapter_subfolder mismatch vs live scorer")
+        if donor.adapter_subfolder != donor_prov["adapter_subfolder"]:
+            raise RuntimeError("Donor ranking adapter_subfolder mismatch vs live scorer")
+
         ctx = TransferIntegrityContext(
             donor_seed=pair.donor_seed,
             recipient_seed=pair.recipient_seed,
             catalog_hash=catalog_hash,
             dataset_split_hash=dataset_split_hash,
+            base_model_revision=recip_prov["base_model_revision"],
+            adapter_revision=recip_prov["adapter_revision"],
+            donor_adapter_revision=donor_prov["adapter_revision"],
+            recipient_adapter_revision=recip_prov["adapter_revision"],
+            expected_prompt_hash=discovery_hash,
+            donor_adapter_subfolder=donor_prov["adapter_subfolder"],
+            recipient_adapter_subfolder=recip_prov["adapter_subfolder"],
         )
         pair_rows: list[dict[str, Any]] = []
         for k in k_budgets:
@@ -212,7 +348,6 @@ def run_pilot_pipeline(
             rnd = random_control_set(cat, k, seed=1000 * pair.donor_seed + k, exclude=donor_top)
             lt = layer_type_matched_control(cat, donor_top, seed=2000 * pair.donor_seed + k)
 
-            # Damage matching on validation only
             target_K = scorer.score_K_set(
                 pair.recipient_seed, donor_top, val_ids, "validation"
             )
@@ -230,8 +365,6 @@ def run_pilot_pipeline(
                 target_benign_kl=target_K,
                 candidates=candidates,
                 candidate_benign_kl=cand_K,
-                abs_tol=DAMAGE_MATCH_ABS_TOLERANCE,
-                rel_tol=DAMAGE_MATCH_REL_TOLERANCE,
                 split_used="validation",
             )
 
@@ -250,8 +383,11 @@ def run_pilot_pipeline(
                 ctx=ctx,
             )
 
-            for split_name, ids in (("validation", val_ids), ("held_out", held_ids)):
-                # Selection decisions already fixed on validation; held_out only scores.
+            splits_to_score: list[tuple[str, list[str]]] = [("validation", val_ids)]
+            if run_held_out:
+                splits_to_score.append(("held_out", held_ids))
+
+            for split_name, ids in splits_to_score:
                 for cond in conds:
                     if cond.source == "benign_damage_unmatched":
                         row = TransferResultRow(
@@ -269,6 +405,11 @@ def run_pilot_pipeline(
                     D = scorer.score_D_set(pair.recipient_seed, comps, ids, split_name)
                     K = scorer.score_K_set(pair.recipient_seed, comps, ids, split_name)
                     asr = scorer.score_asr(pair.recipient_seed, comps, ids, split_name)
+                    if (
+                        split_name == "validation"
+                        and cond.source == "recipient_native_topk"
+                    ):
+                        native_val_D[str(pair.recipient_seed)] = D
                     row = TransferResultRow(
                         condition=cond,
                         split=split_name,
@@ -287,6 +428,8 @@ def run_pilot_pipeline(
                                 "validation": validation_hash,
                                 "held_out": held_out_hash,
                             },
+                            "recipient_provenance": recip_prov,
+                            "donor_provenance": donor_prov,
                         },
                     )
                     result.per_condition.append(row.to_dict())
@@ -299,8 +442,21 @@ def run_pilot_pipeline(
             "rows": pair_rows,
         }
 
+    native_gate = evaluate_native_validation_gate(
+        native_val_D, min_abs_d=NATIVE_VALIDATION_D_MIN
+    )
+    gates.append(native_gate)
+    result.gates = combine_gates(gates)
+    if not native_gate.passed and not result.stopped_early:
+        # Do not silently treat transfer as interpretable
+        result.analysis["transfer_interpretation"] = "blocked_by_native_validation_gate"
+        result.stop_reason = (result.stop_reason or "") + " | " + native_gate.reason
+
     result.analysis = analyze_per_pair_results(result.per_condition)
     result.analysis["plan"] = analysis_plan_stub()
+    result.analysis["gates"] = result.gates
+    if not native_gate.passed:
+        result.analysis["transfer_interpretation"] = "blocked_by_native_validation_gate"
     result.runtime_seconds = time.perf_counter() - t0
 
     if out:

@@ -202,12 +202,38 @@ def run_smoke_gpu(git_commit: str | None = None) -> dict[str, Any]:
     secrets=[modal.Secret.from_name("hf-token")],
     volumes={"/cache/huggingface": model_cache, "/results": results_vol},
 )
-def run_pilot_calibration_gpu() -> dict[str, Any]:
-    """Bounded calibration placeholder — blocked until Stage 1 authorization."""
-    raise RuntimeError(
-        "Pilot calibration GPU path is prepared but not authorized. "
-        "Do not launch until independent review enables Stage 1."
+def run_pilot_calibration_gpu(authorized: bool = False) -> dict[str, Any]:
+    """Bounded real calibration — refuses unless separately authorized.
+
+    Implementation is complete (one seed, few instructions, real D/K/greedy) but
+    must not be invoked from the local entrypoint while unauthorized. There is no
+    automatic retry path.
+    """
+    import sys
+
+    sys.path.insert(0, "/root/src")
+    import yaml
+    from traces.pilot.calibration import (
+        assert_calibration_authorized,
+        build_calibration_plan,
+        run_bounded_calibration,
     )
+    from traces.pilot.real_scorer import RealGemmaPilotScorer
+
+    cfg = yaml.safe_load(Path("/root/configs/pilot.yaml").read_text())
+    if not authorized:
+        raise RuntimeError(
+            "Calibration GPU function called with authorized=False. Refusing. "
+            "No hidden launch path."
+        )
+    assert_calibration_authorized(cfg)
+    plan = build_calibration_plan()
+    scorer = RealGemmaPilotScorer(seeds=(plan.seed,))
+    try:
+        return run_bounded_calibration(scorer, plan=plan, authorized=True)
+    finally:
+        scorer.unload_seed(plan.seed)
+        model_cache.commit()
 
 
 @app.local_entrypoint()
@@ -220,20 +246,13 @@ def main(
     if sum(1 for x in (dry_run, smoke, pilot_calibration) if x) > 1:
         raise SystemExit("Choose only one of --dry-run, --smoke, --pilot-calibration")
     if pilot_calibration:
-        print(
-            json.dumps(
-                {
-                    "mode": "pilot_calibration",
-                    "status": "REFUSED_NOT_AUTHORIZED",
-                    "note": (
-                        "Calibration command is prepared for later review but must not "
-                        "run during pre-execution corrections. No GPU launched."
-                    ),
-                    "intended_later_command": "modal run modal_app.py --pilot-calibration",
-                },
-                indent=2,
-            )
-        )
+        import sys
+
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+        from traces.pilot.calibration import refuse_calibration_launch
+
+        # Independently gated: never call .remote() here while unauthorized.
+        print(json.dumps(refuse_calibration_launch(), indent=2))
         return
     if not dry_run and not smoke:
         dry_run = True

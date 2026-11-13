@@ -50,6 +50,10 @@ class FrozenRanking:
     prompt_set_hash: str
     dataset_split_hash: str
     metadata: Mapping[str, Any]
+    # Provenance bound into integrity hash (v2.1)
+    base_model_revision: str = "unspecified"
+    adapter_subfolder: str = "unspecified"
+    adapter_revision: str = "unspecified"
 
     def __post_init__(self) -> None:
         if self.ranking_split not in ALLOWED_RANKING_SPLITS:
@@ -79,6 +83,9 @@ class FrozenRanking:
             "catalog_hash": self.catalog_hash,
             "prompt_set_hash": self.prompt_set_hash,
             "dataset_split_hash": self.dataset_split_hash,
+            "base_model_revision": self.base_model_revision,
+            "adapter_subfolder": self.adapter_subfolder,
+            "adapter_revision": self.adapter_revision,
             "metadata": dict(self.metadata),
             "artifact_hash": self.artifact_hash(),
         }
@@ -95,6 +102,9 @@ class FrozenRanking:
             "catalog_hash": self.catalog_hash,
             "prompt_set_hash": self.prompt_set_hash,
             "dataset_split_hash": self.dataset_split_hash,
+            "base_model_revision": self.base_model_revision,
+            "adapter_subfolder": self.adapter_subfolder,
+            "adapter_revision": self.adapter_revision,
         }
         return sha256_json(payload)
 
@@ -135,6 +145,9 @@ def rank_components_from_scores(
     prompt_set_hash: str,
     dataset_split_hash: str,
     metadata: dict[str, Any] | None = None,
+    base_model_revision: str = "unspecified",
+    adapter_subfolder: str = "unspecified",
+    adapter_revision: str = "unspecified",
 ) -> FrozenRanking:
     if ranking_split != "discovery":
         raise RuntimeError("Component rankings can originate only from discovery data")
@@ -167,6 +180,9 @@ def rank_components_from_scores(
         prompt_set_hash=prompt_set_hash,
         dataset_split_hash=dataset_split_hash,
         metadata=MappingProxyType(dict(metadata or {})),
+        base_model_revision=base_model_revision,
+        adapter_subfolder=adapter_subfolder,
+        adapter_revision=adapter_revision,
     )
 
 
@@ -209,6 +225,9 @@ def load_frozen_ranking(path: Path | str) -> FrozenRanking:
         prompt_set_hash=str(raw["prompt_set_hash"]),
         dataset_split_hash=str(raw.get("dataset_split_hash", "")),
         metadata=MappingProxyType(dict(raw.get("metadata") or {})),
+        base_model_revision=str(raw.get("base_model_revision", "unspecified")),
+        adapter_subfolder=str(raw.get("adapter_subfolder", "unspecified")),
+        adapter_revision=str(raw.get("adapter_revision", "unspecified")),
     )
     if ranking.artifact_hash() != raw.get("artifact_hash"):
         raise RuntimeError("Frozen ranking artifact_hash mismatch")
@@ -266,6 +285,9 @@ def freeze_ranking_from_per_instruction_effects(
     catalog: Sequence[ComponentRef],
     prompt_set_hash: str,
     dataset_split_hash: str,
+    base_model_revision: str = "unspecified",
+    adapter_subfolder: str = "unspecified",
+    adapter_revision: str = "unspecified",
 ) -> FrozenRanking:
     """Aggregate per-instruction D effects without rescanning.
 
@@ -289,4 +311,7 @@ def freeze_ranking_from_per_instruction_effects(
         prompt_set_hash=prompt_set_hash,
         dataset_split_hash=dataset_split_hash,
         metadata={"aggregation": "mean_D_over_instruction_ids"},
+        base_model_revision=base_model_revision,
+        adapter_subfolder=adapter_subfolder,
+        adapter_revision=adapter_revision,
     )
