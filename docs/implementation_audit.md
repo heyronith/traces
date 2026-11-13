@@ -28,6 +28,18 @@ Implemented in `src/traces/metrics.py` with synthetic unit tests:
 6. Continuation-only scoring + termination flags
 7. GPU wall time + peak allocated memory
 
+## Runtime / cost controls
+
+- `configs/smoke.yaml` `budget.max_gpu_seconds` is **enforced** by `RuntimeGuard` across load, inference, throughput bench, and serialization.
+- Modal Function `timeout` is a hard upper bound (≥ max_gpu_seconds).
+- Estimated dollars are **software projections only**, not an account-level spending limit.
+- Pricing uses the **actual GPU** (`normalize_gpu_name` → L4/A10G/T4 rates). T4 is never silently priced as L4.
+
+## Parameter integrity labeling
+
+- `sampled_parameter_fingerprint_*`: sample of values per tensor — **not** a full base-weight checksum.
+- `lora_adapter_full_checksum_*`: complete checksum of all `lora_*` parameters.
+
 ## Risks (implementation)
 
 - BF16 non-associativity: batching can change greedy tokens (noted on model card). Smoke uses batch size 1.
@@ -38,6 +50,7 @@ Implemented in `src/traces/metrics.py` with synthetic unit tests:
 - Modal L4 capacity may be unavailable; `modal_app.py` prefers L4 then falls back to A10G/T4 and records `gpu_actual`.
 - Adapter `adapter_config.json` requires peft ≥ 0.19.1 (saved with peft 0.19.1).
 - Returning torch-bearing objects from Modal Functions fails in a torch-less local Modal CLI; Stage 0 returns JSON-safe dicts and persists artifacts to a Modal volume.
+- Historical first smoke: GPU succeeded but local CLI deserialization failed; see `results/smoke/modal_smoke_historical_deserialization_failure.log`.
 
 ## Risks (scientific — not resolved)
 

@@ -58,10 +58,14 @@ def freeze_splits(
 
 
 def parameter_fingerprint(model: Any) -> str:
-    """Hash a sample of parameter tensors to detect persistent modification."""
+    """Sampled parameter fingerprint (NOT a full weight checksum).
+
+    Hashes names, shapes, and a small deterministic sample of values from each
+    parameter tensor. Useful for detecting accidental persistent modification
+    in Stage 0, but it does **not** verify every model weight.
+    """
     h = hashlib.sha256()
     named = list(model.named_parameters())
-    # Include names + shapes + a deterministic sample of values.
     for name, param in named:
         h.update(name.encode("utf-8"))
         h.update(str(tuple(param.shape)).encode("utf-8"))
@@ -69,7 +73,6 @@ def parameter_fingerprint(model: Any) -> str:
         n = data.numel()
         if n == 0:
             continue
-        # Sample first, middle, last up to 8 elements each for speed.
         idxs = [0, n // 2, n - 1]
         if n >= 16:
             idxs.extend(range(0, 8))
@@ -81,12 +84,36 @@ def parameter_fingerprint(model: Any) -> str:
 
 
 def full_parameter_checksum(model: Any) -> str:
-    """More expensive full checksum of all parameters (used in unit tests)."""
+    """Full checksum of all parameters (expensive; used in tiny unit tests)."""
     h = hashlib.sha256()
     for name, param in model.named_parameters():
         h.update(name.encode("utf-8"))
         h.update(param.detach().cpu().contiguous().numpy().tobytes())
     return h.hexdigest()
+
+
+def lora_adapter_full_checksum(model: Any) -> str:
+    """Complete checksum over LoRA adapter parameters only (A/B matrices).
+
+    Much smaller than the full base model; strengthens integrity checks without
+    hashing every base weight.
+    """
+    h = hashlib.sha256()
+    found = 0
+    for name, param in model.named_parameters():
+        if "lora_" not in name:
+            continue
+        found += 1
+        h.update(name.encode("utf-8"))
+        h.update(param.detach().float().cpu().contiguous().numpy().tobytes())
+    if found == 0:
+        raise ValueError("No lora_* parameters found for adapter checksum")
+    h.update(f"n_tensors={found}".encode("utf-8"))
+    return h.hexdigest()
+
+
+def config_hash(cfg: Mapping[str, Any]) -> str:
+    return sha256_json(cfg)
 
 
 @dataclass

@@ -22,7 +22,6 @@ model_cache = modal.Volume.from_name("traces-hf-cache", create_if_missing=True)
 results_vol = modal.Volume.from_name("traces-results", create_if_missing=True)
 
 # Adapter configs were written with peft 0.19.1 (see adapter_config.json).
-# Older peft rejects unknown LoraConfig keys such as alora_invocation_tokens.
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
@@ -58,10 +57,11 @@ image = (
 app = modal.App(APP_NAME, image=image)
 
 # Prefer L4; allow short fallback chain if L4 capacity is unavailable.
-# Actual GPU used is recorded in smoke results.
 GPU = ["L4", "A10G", "T4"]
-TIMEOUT_SEC = 45 * 60  # hard bound
+# Hard timeout must cover smoke.yaml max_gpu_seconds (600) with margin.
+TIMEOUT_SEC = 20 * 60
 MAX_CONTAINERS = 1
+CORRECTION_BUDGET_USD = 2.0
 
 
 def _dry_run_payload() -> dict[str, Any]:
@@ -70,7 +70,7 @@ def _dry_run_payload() -> dict[str, Any]:
 
     prompts = build_smoke_prompts()
     projected = smoke_workload_seconds(n_prompts=len(prompts), n_conditions=5)
-    est = estimate_cost(projected, budget_usd=5.0, gpu="L4", usd_per_hour=0.80)
+    est = estimate_cost(projected, budget_usd=CORRECTION_BUDGET_USD, gpu="L4")
     return {
         "mode": "dry_run",
         "gpu_launch": False,
@@ -86,14 +86,18 @@ def _dry_run_payload() -> dict[str, Any]:
                 "mlp_channel_group",
                 "noop",
                 "intact_repeat",
+                "throughput_benchmark",
             ],
             "interventions": "activation ablation only (not weight reversion)",
             "scientific_pilot": False,
         },
         "cost_estimate": est.to_dict(),
         "within_budget": est.within_budget,
+        "max_gpu_seconds_config": 600,
+        "modal_hard_timeout_sec": TIMEOUT_SEC,
         "note": (
             "Dry-run only: no GPU container launched. "
+            "Estimated dollars are NOT an enforced account spend limit. "
             "Verify actual Modal spend in dashboard Billing/Usage."
         ),
     }
@@ -110,32 +114,37 @@ def _dry_run_payload() -> dict[str, Any]:
     },
 )
 def run_smoke_gpu(git_commit: str | None = None) -> dict[str, Any]:
-    """Single bounded Stage 0 smoke on L4."""
+    """Single bounded Stage 0 smoke (JSON-safe return)."""
     import os
     import sys
 
     sys.path.insert(0, "/root/src")
 
-    # Map Modal secret keys to common HF env names (never log values)
     for key in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "huggingface", "hf_token"):
         if key in os.environ and os.environ[key]:
             os.environ.setdefault("HF_TOKEN", os.environ[key])
             os.environ.setdefault("HUGGING_FACE_HUB_TOKEN", os.environ[key])
             break
 
-    from traces.cost_estimator import assert_within_budget, estimate_cost, smoke_workload_seconds
+    from traces.cost_estimator import (
+        assert_within_budget,
+        estimate_cost,
+        normalize_gpu_name,
+        smoke_workload_seconds,
+        usd_per_hour_for_gpu,
+    )
     from traces.evaluation import run_smoke
     from traces.reproducibility import redact_secrets
 
     t0 = time.time()
     projected = smoke_workload_seconds(n_prompts=12, n_conditions=5)
-    est = estimate_cost(projected, budget_usd=5.0, gpu="L4", usd_per_hour=0.80)
+    # Pre-check against correction budget assuming L4; re-check after GPU known.
+    est = estimate_cost(projected, budget_usd=CORRECTION_BUDGET_USD, gpu="L4")
     assert_within_budget(est)
 
     out_dir = Path("/results/smoke")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Also write under /tmp then copy summary
     local_out = Path("/tmp/smoke_out")
     results = run_smoke(
         "/root/configs/smoke.yaml",
@@ -143,39 +152,46 @@ def run_smoke_gpu(git_commit: str | None = None) -> dict[str, Any]:
         git_commit=git_commit,
     )
     wall = time.time() - t0
+
     import torch
 
     actual_gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+    pricing_key = normalize_gpu_name(actual_gpu)
+    rate = usd_per_hour_for_gpu(pricing_key)
+    cost_obs = estimate_cost(
+        wall, budget_usd=CORRECTION_BUDGET_USD, gpu=pricing_key, usd_per_hour=rate
+    )
     results["modal"] = {
         "app": APP_NAME,
         "gpu_request": GPU,
         "gpu_actual": actual_gpu,
+        "gpu_pricing_key": pricing_key,
+        "usd_per_hour_used": rate,
         "timeout_sec": TIMEOUT_SEC,
         "wall_seconds_including_load": wall,
-        "cost_estimate_including_load": estimate_cost(
-            wall, budget_usd=5.0, gpu="L4", usd_per_hour=0.80
-        ).to_dict(),
+        "cost_estimate_including_load": cost_obs.to_dict(),
+        "correction_budget_usd": CORRECTION_BUDGET_USD,
         "note": (
-            "Cost estimate uses conservative L4 $/hr even if a fallback GPU ran; "
-            "verify billed spend in Modal Billing/Usage."
+            "Estimated dollars are NOT an enforced account-level spending limit. "
+            "Pricing uses the actual GPU key, not silent L4 substitution."
         ),
     }
 
-    # Persist to volume
     for name in ("smoke_results.json", "report.md", "smoke_config_resolved.json"):
         src = local_out / name
         if src.exists():
             (out_dir / name).write_text(src.read_text())
-    (out_dir / "smoke_results.json").write_text(json.dumps(results, indent=2, default=str))
+    # Ensure volume copy includes modal block
+    (out_dir / "smoke_results.json").write_text(
+        json.dumps(results, indent=2, default=str)
+    )
     model_cache.commit()
     results_vol.commit()
 
-    # Redact any accidental secrets in a log snippet
-    log_snippet = redact_secrets(
+    results["log_snippet_redacted"] = redact_secrets(
         json.dumps({"asr": results["conditions"]["intact"]["metrics"]["asr"]})
     )
-    results["log_snippet_redacted"] = log_snippet
-    # Return JSON-safe primitives only so the local Modal client need not import torch.
+    # JSON-safe primitives only (Fix 1): local Modal CLI need not import torch.
     return json.loads(json.dumps(results, default=str))
 
 
@@ -185,11 +201,9 @@ def main(dry_run: bool = False, smoke: bool = False) -> None:
     if dry_run and smoke:
         raise SystemExit("Choose only one of --dry-run or --smoke")
     if not dry_run and not smoke:
-        # Default to dry-run for safety
         dry_run = True
 
     if dry_run:
-        # Local dry-run: no GPU
         import sys
 
         sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -199,9 +213,8 @@ def main(dry_run: bool = False, smoke: bool = False) -> None:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(payload, indent=2))
         print(f"Wrote {out}")
-        return
+        raise SystemExit(0)
 
-    # Resolve git commit locally for provenance
     try:
         commit = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=str(PROJECT_ROOT), text=True
@@ -214,8 +227,11 @@ def main(dry_run: bool = False, smoke: bool = False) -> None:
     out = PROJECT_ROOT / "results" / "smoke"
     out.mkdir(parents=True, exist_ok=True)
     (out / "smoke_results.json").write_text(json.dumps(results, indent=2, default=str))
-    # Prefer regenerating report locally; fall back if import path differs.
+
+    # Compare local return vs volume artifact
     try:
+        vol_text = None
+        # Best-effort: volume already synced by function; also keep local return.
         import sys
 
         sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -224,13 +240,25 @@ def main(dry_run: bool = False, smoke: bool = False) -> None:
         write_smoke_report(out, results)
     except Exception as e:
         (out / "report_write_error.txt").write_text(str(e))
+
     summary = {
+        "local_client_received_result": True,
         "asr": results.get("conditions", {}).get("intact", {}).get("metrics", {}).get("asr"),
         "noop_preserves_baseline": results.get("noop_preserves_baseline"),
         "parameters_unchanged": results.get("parameters_unchanged"),
         "modal_wall_seconds": results.get("modal", {}).get("wall_seconds_including_load"),
         "gpu_actual": results.get("modal", {}).get("gpu_actual"),
+        "gpu_pricing_key": results.get("modal", {}).get("gpu_pricing_key"),
+        "git_commit_executed": (results.get("provenance") or {}).get("git_commit_executed"),
+        "command_completed_successfully": (results.get("provenance") or {}).get(
+            "command_completed_successfully"
+        ),
         "blocker": results.get("blocker"),
     }
     (out / "smoke_summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))
+    if results.get("blocker"):
+        raise SystemExit(1)
+    if not summary.get("command_completed_successfully"):
+        raise SystemExit(1)
+    raise SystemExit(0)

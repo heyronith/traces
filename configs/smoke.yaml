@@ -49,14 +49,19 @@ interventions:
   noop: true
 
 budget:
-  max_usd: 5.0
+  # Correction-run incremental allowance is USD 2 (see handoff).
+  # Estimated dollars are NOT an enforced account-level spending limit.
+  max_usd: 2.0
   gpu: L4
-  estimated_l4_usd_per_hour: 0.80
-  # Conservative wall-clock GPU seconds allowance under $5.
-  max_gpu_seconds: 200
+  # Enforced wall-clock deadline covering load + inference + serialization.
+  # Prior observed run was ~326s including load; 600s leaves headroom.
+  max_gpu_seconds: 600
+  # Modal Function hard timeout should be >= this (see modal_app.py).
 
 reproducibility:
   repeat_intact_eval: true
   hash_prompts: true
+  sampled_parameter_fingerprint: true
+  lora_adapter_full_checksum: true
 
 output_dir: results/smoke
