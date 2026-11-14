@@ -1,15 +1,15 @@
-# Stage 1 three-seed scientific pilot — PRE-REGISTERED v2.1 + v2.2 amendment, DISABLED.
+# Stage 1 three-seed scientific pilot — PRE-REGISTERED v2.1 + v2.2 amendment.
 # Final research question: NOT YET SELECTED.
-# Do not execute while enabled=false.
-enabled: false
+# Launch config prepared for independent review. Do not invoke Modal/GPU until approved.
+enabled: true
 stage: 1
 name: three_seed_cross_seed_transfer_pilot
-status: PRE_REGISTERED_V2_2_AMENDMENT_NOT_EXECUTED
+status: AUTHORIZED_AWAITING_INDEPENDENT_LAUNCH_APPROVAL
 preregistration: docs/pilot_preregistration_v2_1.md
 preregistration_amendment: docs/pilot_preregistration_v2_2_amendment.md
 preregistration_v2_retained: docs/pilot_preregistration_v2.md
 preregistration_v1_retained: docs/pilot_preregistration.md
-authorization_token: null  # must equal STAGE1_AUTHORIZED_BY_INDEPENDENT_REVIEW to unlock
+authorization_token: STAGE1_AUTHORIZED_BY_INDEPENDENT_REVIEW
 
 purpose: >
   Feasibility and informativeness test of whether frozen activation-ablation
@@ -129,7 +129,7 @@ budget:
   calibration_reference_commit: 3e9f94f46de54207ea457529ea03367ffca7cb74
 
 calibration:
-  enabled: false  # preserved disabled; independent review may authorize later
+  enabled: false  # kept disabled; pilot auth does not unlock calibration
   authorization_token: null  # STAGE1_CALIBRATION_AUTHORIZED_BY_INDEPENDENT_REVIEW
   seed: 42
   n_instructions: 4
@@ -138,12 +138,12 @@ calibration:
   retries: 0
   implemented: true
   gated_launch: true
-  executed: true  # one bounded run recorded; launch remains disabled
+  executed: true  # one bounded run recorded; calibration launch remains disabled
   never_launches_full_pilot: true
 
 execution:
-  modal_gpu_jobs: forbidden_until_authorized
-  dry_run_only: true
+  modal_gpu_jobs: authorized_awaiting_explicit_invocation
+  dry_run_only: true  # local CLI dry-run still does not launch GPUs
   phases: [discovery_per_seed, transfer_per_recipient]
   real_entrypoint: traces.pilot.engine.run_real_pilot_pipeline
   synthetic_test_entrypoint: traces.pilot.engine.run_pilot_pipeline
