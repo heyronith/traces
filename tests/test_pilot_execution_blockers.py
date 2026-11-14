@@ -136,7 +136,7 @@ def test_crash_and_resume_scientific_equivalence(tmp_path):
     world = make_shared_causal_world(10)
     cat = world.catalog
     seeds = (42, 43)
-    k_budgets = (5,)
+    k_budgets = (5, 10)
 
     full_dir = tmp_path / "uninterrupted"
     r_full = run_two_phase_pilot(
@@ -285,7 +285,7 @@ def test_wall_clock_guard_stops_and_persists(tmp_path):
         execution_mode="synthetic_test",
         wall_guard=guard,
     )
-    assert result.stopped_early
+    assert result.execution_incomplete
     assert "wall_clock_deadline" in (result.stop_reason or "")
     assert (tmp_path / "pilot_results.json").exists()
 

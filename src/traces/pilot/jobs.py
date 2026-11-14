@@ -155,42 +155,39 @@ def validate_assigned_gpu(
     observed_gpu_name: str | None,
     *,
     max_budget_usd: float = 50.0,
-    require_calibrated_class: bool = False,
+    require_calibrated_class: bool = True,
 ) -> dict[str, Any]:
-    """Require A10/A10G or revalidate deadline/cost for the GPU actually assigned."""
+    """Scientific pilot units require the calibrated A10/A10G class.
+
+    Do not accept L4/T4 by repricing A10 timing assumptions.
+    """
     if not observed_gpu_name:
         raise RuntimeError(
-            "No observed GPU name; refusing to proceed without validating "
-            "deadline/cost assumptions against the assigned device."
+            "No observed GPU name; refusing scientific pilot measurements "
+            "without confirming the calibrated A10/A10G class."
         )
     gpu_key = normalize_gpu_name(observed_gpu_name)
-    schedule = build_unitized_schedule(gpu=gpu_key, max_budget_usd=max_budget_usd)
-    assert_unitized_schedule_fits(schedule)
-    est = build_pilot_workload_estimate(gpu=gpu_key, max_budget_usd=max_budget_usd)
-    assert_prelaunch_budget(est, max_budget_usd=max_budget_usd)
-    if gpu_key in CALIBRATED_GPU_KEYS:
-        return {
-            "status": "calibrated_class",
-            "observed_gpu": observed_gpu_name,
-            "gpu_key": gpu_key,
-            "schedule": schedule,
-            "allowed_to_measure": True,
-        }
-    if require_calibrated_class:
+    if gpu_key not in CALIBRATED_GPU_KEYS:
         raise RuntimeError(
             f"Assigned GPU {observed_gpu_name!r} (key={gpu_key!r}) is not the "
-            f"calibrated A10/A10G class. Refusing measurements."
+            f"calibrated A10/A10G class. Scientific pilot units require A10/A10G; "
+            f"refusing to reprice A10 timings onto {gpu_key}."
         )
+    if not require_calibrated_class:
+        # Kept for signature compatibility; pilot path always requires calibrated.
+        pass
+    schedule = build_unitized_schedule(gpu="A10G", max_budget_usd=max_budget_usd)
+    assert_unitized_schedule_fits(schedule)
+    est = build_pilot_workload_estimate(gpu="A10G", max_budget_usd=max_budget_usd)
+    assert_prelaunch_budget(est, max_budget_usd=max_budget_usd)
     return {
-        "status": "revalidated_for_assigned_gpu",
+        "status": "calibrated_class",
         "observed_gpu": observed_gpu_name,
-        "gpu_key": gpu_key,
+        "gpu_key": "A10G",
         "schedule": schedule,
         "allowed_to_measure": True,
-        "note": (
-            "Non-calibrated GPU: deadline and cost revalidated for this device "
-            "before measurements."
-        ),
+        "timeout_sec": UNIT_TIMEOUT_SEC,
+        "retries": 0,
     }
 
 
@@ -199,35 +196,34 @@ def assert_unit_remote_success(
     *,
     expected_unit_id: str | None = None,
 ) -> None:
-    """After each .remote(), halt the launch sequence if the unit is incomplete."""
+    """Halt launch only on genuine execution incompleteness.
+
+    Scientific gate early-stops (reliability / native) with a completed unit
+    must NOT halt the sequence.
+    """
     unit = payload.get("unit") or {}
-    unit_id = (
-        (payload.get("unit_status") or {}).get("unit_id")
-        or unit.get("unit_id")
-        or expected_unit_id
-    )
-    if payload.get("stopped_early"):
-        raise RuntimeError(
-            f"Halting launch sequence: unit {unit_id} stopped early "
-            f"({payload.get('stop_reason')}). Next unit will NOT be launched."
-        )
-    wall = payload.get("wall_clock") or {}
-    if wall.get("stopped_early"):
-        raise RuntimeError(
-            f"Halting launch sequence: unit {unit_id} hit wall-clock deadline "
-            f"({wall.get('stop_reason')}). Next unit will NOT be launched."
-        )
     status = payload.get("unit_status") or {}
+    unit_id = status.get("unit_id") or unit.get("unit_id") or expected_unit_id
+
+    wall = payload.get("wall_clock") or {}
+    execution_incomplete = bool(
+        payload.get("execution_incomplete")
+        or status.get("execution_incomplete")
+        or wall.get("stopped_early")
+    )
+    if execution_incomplete:
+        raise RuntimeError(
+            f"Halting launch sequence: unit {unit_id} execution incomplete "
+            f"(deadline/crash/missing measurements; "
+            f"reason={payload.get('stop_reason') or wall.get('stop_reason') or status.get('reason')}). "
+            f"Next unit will NOT be launched."
+        )
     if not status.get("complete"):
         raise RuntimeError(
             f"Halting launch sequence: unit {unit_id} incomplete "
             f"(status={status}). Next unit will NOT be launched."
         )
-    if status.get("stopped_early"):
-        raise RuntimeError(
-            f"Halting launch sequence: unit {unit_id} reported stopped_early "
-            f"with complete flag inconsistency (status={status})."
-        )
+    # Scientific early-stop with complete=True is allowed (continue sequence).
     if expected_unit_id and unit_id and unit_id != expected_unit_id:
         raise RuntimeError(
             f"Unit id mismatch: expected {expected_unit_id}, got {unit_id}"

@@ -26,8 +26,13 @@ Reviewed SHA `2cb457a` was **NO-GO** until launch-safety safeguards below. Scien
 - Proof: `test_checkpoint_revision_mismatch_rejected`, `test_revision_lock_rejects_live_drift`.
 
 ### GPU selection
-- Assigned GPU must be calibrated A10/A10G **or** deadline/cost revalidated for that device before measurements.
-- Proof: `test_validate_assigned_gpu_calibrated_and_revalidate`.
+- Scientific pilot units **require** calibrated A10/A10G (`gpu="A10G"` on Modal). L4/T4 refused — no repricing of A10 timings.
+- Proof: `test_validate_assigned_gpu_requires_a10`.
+
+### Scientific gates vs execution incompleteness
+- Reliability / native gate failures set `scientific_early_stop`; units may still be `complete` (validation-only).
+- Launcher halts only on `execution_incomplete` (deadline/crash/missing measurements).
+- Proof: `test_reliability_gate_is_scientific_not_execution_incomplete`, `test_native_gate_skips_held_out_preserves_validation`, `test_sequential_unit_progression_all_complete`.
 
 ### Resume equivalence
 - `test_resumed_scientific_measurements_match_uninterrupted` (volume-commit + crash + resume).

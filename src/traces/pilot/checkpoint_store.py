@@ -185,18 +185,30 @@ class PilotCheckpointStore:
         unit_id: str,
         *,
         complete: bool,
-        stopped_early: bool = False,
+        execution_incomplete: bool = False,
+        scientific_early_stop: bool = False,
         reason: str | None = None,
+        # Deprecated alias: maps to execution_incomplete (not scientific gates)
+        stopped_early: bool | None = None,
     ) -> None:
-        """Record unit status. Incomplete / stopped-early units are never completed."""
-        if complete and stopped_early:
+        """Record unit status.
+
+        ``complete=True`` is allowed with ``scientific_early_stop`` (validation-only
+        / gate policy). ``execution_incomplete`` must never be combined with complete.
+        """
+        if stopped_early is not None:
+            execution_incomplete = bool(stopped_early) or execution_incomplete
+        if complete and execution_incomplete:
             raise RuntimeError(
-                f"Refusing to mark unit {unit_id} complete while stopped_early=True"
+                f"Refusing to mark unit {unit_id} complete while execution_incomplete=True"
             )
         self.state.setdefault("unit_status", {})[unit_id] = {
             "unit_id": unit_id,
             "complete": bool(complete),
-            "stopped_early": bool(stopped_early),
+            "execution_incomplete": bool(execution_incomplete),
+            "scientific_early_stop": bool(scientific_early_stop),
+            # Legacy mirror for older readers: only true for execution incompleteness
+            "stopped_early": bool(execution_incomplete),
             "reason": reason,
         }
         done = self.state.setdefault("units_completed", [])
@@ -204,7 +216,6 @@ class PilotCheckpointStore:
             if unit_id not in done:
                 done.append(unit_id)
         else:
-            # Ensure incomplete units are not listed as completed
             if unit_id in done:
                 raise RuntimeError(
                     f"Unit {unit_id} was previously marked complete; "
@@ -212,13 +223,27 @@ class PilotCheckpointStore:
                 )
         self.commit_durable(f"unit_status_{unit_id}")
 
-    def mark_unit_complete(self, unit_id: str) -> None:
-        self.set_unit_status(unit_id, complete=True, stopped_early=False)
+    def mark_unit_complete(
+        self,
+        unit_id: str,
+        *,
+        scientific_early_stop: bool = False,
+        reason: str | None = None,
+    ) -> None:
+        self.set_unit_status(
+            unit_id,
+            complete=True,
+            execution_incomplete=False,
+            scientific_early_stop=scientific_early_stop,
+            reason=reason,
+        )
 
     def unit_complete(self, unit_id: str) -> bool:
         status = self.state.get("unit_status", {}).get(unit_id)
         if status is not None:
-            return bool(status.get("complete")) and not bool(status.get("stopped_early"))
+            return bool(status.get("complete")) and not bool(
+                status.get("execution_incomplete")
+            )
         return unit_id in self.state.get("units_completed", [])
 
     def get_unit_status(self, unit_id: str) -> dict[str, Any] | None:

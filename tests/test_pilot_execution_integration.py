@@ -124,7 +124,10 @@ def test_failed_reliability_skips_held_out(tmp_path, monkeypatch):
     )
     held = [r for r in result.per_condition if r["split"] == "held_out"]
     assert held == []
-    assert result.stopped_early
+    # Validation may still run for native-gate recording; held-out must not.
+    assert result.scientific_early_stop
+    assert result.stopped_early  # legacy alias for scientific stop
+    assert not result.execution_incomplete
 
 
 def test_baseline_abort(tmp_path):

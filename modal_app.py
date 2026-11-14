@@ -274,7 +274,7 @@ def run_pilot_calibration_gpu(
 
 
 @app.function(
-    gpu=GPU,
+    gpu="A10G",  # calibrated class only — do not fall back to L4/T4
     timeout=4 * 60 * 60,  # per-unit hard cap (full pilot high est ~11.64h)
     max_containers=1,
     retries=0,
@@ -332,7 +332,10 @@ def run_stage1_pilot_unit_gpu(
     except Exception:
         pass
     max_usd = float(cfg.get("budget", {}).get("max_usd", 50))
-    gpu_validation = validate_assigned_gpu(gpu_name, max_budget_usd=max_usd)
+    # Require calibrated A10/A10G — refuse L4/T4 even if Modal could assign them.
+    gpu_validation = validate_assigned_gpu(
+        gpu_name, max_budget_usd=max_usd, require_calibrated_class=True
+    )
     gpu_key = gpu_validation["gpu_key"]
 
     commit_reasons: list[str] = []
@@ -357,20 +360,24 @@ def run_stage1_pilot_unit_gpu(
         )
         payload = json_safe(result.to_dict())
         unit_status = (result.analysis or {}).get("unit_status") or {}
-        # Incomplete / stopped-early must never be reported as completed
-        complete = bool(unit_status.get("complete")) and not result.stopped_early
-        if result.stopped_early or wall.stopped_early:
-            complete = False
+        execution_incomplete = bool(
+            result.execution_incomplete or wall.stopped_early
+        )
+        # Scientific gate early-stop may still be a completed unit (e.g. validation-only).
+        complete = bool(unit_status.get("complete")) and not execution_incomplete
         payload["git_sha"] = git_sha
         payload["unit"] = {**unit, "unit_id": unit_id}
         payload["unit_status"] = {
             "unit_id": unit_id,
             "complete": complete,
-            "stopped_early": bool(result.stopped_early or wall.stopped_early),
+            "execution_incomplete": execution_incomplete,
+            "scientific_early_stop": bool(result.scientific_early_stop),
+            "stopped_early": execution_incomplete,  # legacy: execution only
             "reason": result.stop_reason or wall.stop_reason,
-            **{k: v for k, v in unit_status.items() if k not in {"complete", "stopped_early"}},
         }
-        payload["stopped_early"] = bool(result.stopped_early or wall.stopped_early)
+        payload["execution_incomplete"] = execution_incomplete
+        payload["scientific_early_stop"] = bool(result.scientific_early_stop)
+        payload["stopped_early"] = execution_incomplete
         payload["stop_reason"] = result.stop_reason or wall.stop_reason
         payload["observed_gpu"] = gpu_name
         payload["pricing_gpu_key"] = gpu_key
@@ -388,8 +395,7 @@ def run_stage1_pilot_unit_gpu(
         unit_out.write_text(json.dumps(payload, indent=2) + "\n")
         durable_commit(f"unit_payload_{unit_id}")
         return payload
-    except Exception as exc:
-        # Persist whatever was already checkpointed, then re-raise / return incomplete
+    except Exception:
         try:
             durable_commit(f"recoverable_error_{unit_id}")
         except Exception:

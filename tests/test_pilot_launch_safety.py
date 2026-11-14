@@ -39,7 +39,7 @@ def test_cross_invocation_persistence_via_durable_commit(tmp_path):
     run_two_phase_pilot(
         SyntheticPilotScorer(world),
         seeds=(42, 43),
-        k_budgets=(5,),
+        k_budgets=(5, 10),
         catalog=world.catalog,
         output_dir=work,
         execution_mode="synthetic_test",
@@ -92,11 +92,11 @@ def test_mid_discovery_interruption_persists_partial_and_resumes(tmp_path):
         unit={"kind": "discovery", "seed": 42, "unit_id": "discovery_seed_42"},
         durable_commit=durable_commit,
     )
-    assert r1.stopped_early
+    assert r1.execution_incomplete
     store = PilotCheckpointStore(crash)
     assert store.unit_complete("discovery_seed_42") is False
     status = store.get_unit_status("discovery_seed_42")
-    assert status and status["complete"] is False and status["stopped_early"] is True
+    assert status and status["complete"] is False and status["execution_incomplete"] is True
     partial = store.load_discovery_partial(42)
     assert partial is not None
     assert len(partial["components_done"]) >= 1
@@ -125,7 +125,7 @@ def test_mid_discovery_interruption_persists_partial_and_resumes(tmp_path):
         unit={"kind": "discovery", "seed": 42, "unit_id": "discovery_seed_42"},
         durable_commit=durable_commit,
     )
-    assert not r2.stopped_early
+    assert not r2.execution_incomplete
     assert PilotCheckpointStore(crash).unit_complete("discovery_seed_42")
     assert r2.per_seed["42"]["ranking_artifact_hash"] == r_full.per_seed["42"][
         "ranking_artifact_hash"
@@ -136,32 +136,48 @@ def test_incomplete_unit_launch_refusal():
     ok = {
         "unit": {"unit_id": "discovery_seed_42"},
         "unit_status": {"unit_id": "discovery_seed_42", "complete": True},
-        "stopped_early": False,
+        "execution_incomplete": False,
+        "scientific_early_stop": False,
         "wall_clock": {"stopped_early": False},
     }
     assert_unit_remote_success(ok, expected_unit_id="discovery_seed_42")
+
+    # Scientific gate stop with completed unit must NOT halt launch
+    sci_ok = {
+        "unit": {"unit_id": "transfer_recipient_42"},
+        "unit_status": {
+            "unit_id": "transfer_recipient_42",
+            "complete": True,
+            "scientific_early_stop": True,
+            "execution_incomplete": False,
+        },
+        "scientific_early_stop": True,
+        "execution_incomplete": False,
+        "stopped_early": False,
+        "wall_clock": {"stopped_early": False},
+    }
+    assert_unit_remote_success(sci_ok, expected_unit_id="transfer_recipient_42")
 
     incomplete = {
         "unit": {"unit_id": "discovery_seed_42"},
         "unit_status": {
             "unit_id": "discovery_seed_42",
             "complete": False,
-            "stopped_early": True,
+            "execution_incomplete": True,
             "reason": "wall_clock",
         },
-        "stopped_early": True,
+        "execution_incomplete": True,
         "stop_reason": "wall_clock",
         "wall_clock": {"stopped_early": True},
     }
     with pytest.raises(RuntimeError, match="Halting launch sequence"):
         assert_unit_remote_success(incomplete, expected_unit_id="discovery_seed_42")
 
-    # complete=False even without stopped_early still halts
     with pytest.raises(RuntimeError, match="incomplete"):
         assert_unit_remote_success(
             {
                 "unit_status": {"unit_id": "x", "complete": False},
-                "stopped_early": False,
+                "execution_incomplete": False,
                 "wall_clock": {},
             }
         )
@@ -212,20 +228,18 @@ def test_revision_lock_rejects_live_drift(tmp_path):
         )
 
 
-def test_validate_assigned_gpu_calibrated_and_revalidate():
+def test_validate_assigned_gpu_requires_a10():
     ok = validate_assigned_gpu("NVIDIA A10", max_budget_usd=50.0)
     assert ok["status"] == "calibrated_class"
     assert ok["gpu_key"] == "A10G"
     assert ok["allowed_to_measure"] is True
+    assert ok["retries"] == 0
 
-    reval = validate_assigned_gpu("NVIDIA L4", max_budget_usd=50.0)
-    assert reval["status"] == "revalidated_for_assigned_gpu"
-    assert reval["gpu_key"] == "L4"
+    with pytest.raises(RuntimeError, match="not the calibrated A10"):
+        validate_assigned_gpu("NVIDIA L4", max_budget_usd=50.0)
 
-    with pytest.raises(RuntimeError, match="calibrated A10"):
-        validate_assigned_gpu(
-            "NVIDIA L4", max_budget_usd=50.0, require_calibrated_class=True
-        )
+    with pytest.raises(RuntimeError, match="not the calibrated A10"):
+        validate_assigned_gpu("Tesla T4", max_budget_usd=50.0)
 
     with pytest.raises(RuntimeError, match="No observed GPU"):
         validate_assigned_gpu(None)
@@ -235,7 +249,7 @@ def test_resumed_scientific_measurements_match_uninterrupted(tmp_path):
     world = make_shared_causal_world(10)
     cat = world.catalog
     seeds = (42, 43)
-    k_budgets = (5,)
+    k_budgets = (5, 10)
 
     full = tmp_path / "full"
     r_full = run_two_phase_pilot(
@@ -289,6 +303,172 @@ def test_resumed_scientific_measurements_match_uninterrupted(tmp_path):
         durable_commit=durable_commit,
     )
     assert scientific_measurements(r_resume) == scientific_measurements(r_full)
+
+
+def test_reliability_gate_is_scientific_not_execution_incomplete(tmp_path, monkeypatch):
+    from traces.pilot import execution as ex
+    from traces.pilot.gates import GateResult
+
+    def fail_rel(*a, **k):
+        return GateResult(
+            name="discovery_fold_reliability",
+            passed=False,
+            reason="Every seed has top-10 discovery-fold Jaccard < 0.3; stop before held-out evaluation.",
+            details={},
+        )
+
+    monkeypatch.setattr(ex, "evaluate_discovery_reliability_gate", fail_rel)
+    world = make_shared_causal_world(8)
+    out = tmp_path / "run"
+    # Discovery units complete first
+    for seed in (42, 43):
+        r = run_two_phase_pilot(
+            SyntheticPilotScorer(world),
+            seeds=(42, 43),
+            k_budgets=(5,),
+            catalog=world.catalog,
+            output_dir=out,
+            execution_mode="synthetic_test",
+            unit={
+                "kind": "discovery",
+                "seed": seed,
+                "unit_id": f"discovery_seed_{seed}",
+            },
+        )
+        assert not r.execution_incomplete
+        st = r.analysis["unit_status"]
+        assert st["complete"] is True
+        assert_unit_remote_success(
+            {
+                "unit": {"unit_id": f"discovery_seed_{seed}"},
+                "unit_status": st,
+                "execution_incomplete": False,
+                "wall_clock": {},
+            },
+            expected_unit_id=f"discovery_seed_{seed}",
+        )
+
+    # Transfer after reliability failure: validation OK, held-out skipped, unit complete
+    r_t = run_two_phase_pilot(
+        SyntheticPilotScorer(world),
+        seeds=(42, 43),
+        k_budgets=(5,),
+        catalog=world.catalog,
+        output_dir=out,
+        execution_mode="synthetic_test",
+        unit={
+            "kind": "transfer",
+            "seed": 42,
+            "unit_id": "transfer_recipient_42",
+        },
+    )
+    assert r_t.scientific_early_stop
+    assert not r_t.execution_incomplete
+    assert r_t.analysis["unit_status"]["complete"] is True
+    assert any(r["split"] == "validation" for r in r_t.per_condition)
+    assert [r for r in r_t.per_condition if r["split"] == "held_out"] == []
+    assert_unit_remote_success(
+        {
+            "unit": {"unit_id": "transfer_recipient_42"},
+            "unit_status": r_t.analysis["unit_status"],
+            "scientific_early_stop": True,
+            "execution_incomplete": False,
+            "wall_clock": {},
+        },
+        expected_unit_id="transfer_recipient_42",
+    )
+
+
+def test_native_gate_skips_held_out_preserves_validation(tmp_path, monkeypatch):
+    from traces.pilot import execution as ex
+    from traces.pilot.gates import GateResult
+
+    def fail_native(native_D_by_recipient, **kwargs):
+        return GateResult(
+            name="recipient_native_validation_effect",
+            passed=False,
+            reason="No recipient-native validation |D| >= 0.05",
+            details={"native_D_by_recipient": native_D_by_recipient},
+        )
+
+    monkeypatch.setattr(ex, "evaluate_native_validation_gate", fail_native)
+    world = make_shared_causal_world(10)
+    result = run_two_phase_pilot(
+        SyntheticPilotScorer(world),
+        seeds=(42, 43),
+        k_budgets=(5, 10),
+        catalog=world.catalog,
+        output_dir=tmp_path,
+        execution_mode="synthetic_test",
+    )
+    val = [r for r in result.per_condition if r["split"] == "validation"]
+    held = [r for r in result.per_condition if r["split"] == "held_out"]
+    assert val  # validation preserved
+    assert held == []
+    assert result.scientific_early_stop
+    assert not result.execution_incomplete
+    store = PilotCheckpointStore(tmp_path)
+    assert store.unit_complete("transfer_recipient_42")
+    st = store.get_unit_status("transfer_recipient_42")
+    assert st["complete"] is True
+    assert st.get("execution_incomplete") is False
+
+
+def test_sequential_unit_progression_all_complete(tmp_path):
+    """Normal sequential path: each unit completes; launcher would continue."""
+    world = make_shared_causal_world(10)
+    out = tmp_path / "seq"
+    seeds = (42, 43)
+    k_budgets = (5, 10)
+    payloads = []
+    for seed in seeds:
+        r = run_two_phase_pilot(
+            SyntheticPilotScorer(world),
+            seeds=seeds,
+            k_budgets=k_budgets,
+            catalog=world.catalog,
+            output_dir=out,
+            execution_mode="synthetic_test",
+            unit={
+                "kind": "discovery",
+                "seed": seed,
+                "unit_id": f"discovery_seed_{seed}",
+            },
+        )
+        assert not r.execution_incomplete
+        assert r.analysis["unit_status"]["complete"] is True
+        payloads.append(r.analysis["unit_status"])
+    for seed in seeds:
+        r = run_two_phase_pilot(
+            SyntheticPilotScorer(world),
+            seeds=seeds,
+            k_budgets=k_budgets,
+            catalog=world.catalog,
+            output_dir=out,
+            execution_mode="synthetic_test",
+            unit={
+                "kind": "transfer",
+                "seed": seed,
+                "unit_id": f"transfer_recipient_{seed}",
+            },
+        )
+        assert not r.execution_incomplete
+        assert r.analysis["unit_status"]["complete"] is True
+        assert_unit_remote_success(
+            {
+                "unit": {"unit_id": f"transfer_recipient_{seed}"},
+                "unit_status": r.analysis["unit_status"],
+                "execution_incomplete": False,
+                "wall_clock": {},
+            },
+            expected_unit_id=f"transfer_recipient_{seed}",
+        )
+        payloads.append(r.analysis["unit_status"])
+    assert all(p["complete"] for p in payloads)
+    # Held-out present when gates pass
+    store = PilotCheckpointStore(out)
+    rows = store.iter_completed_transfer_rows()
+    assert any(r.get("split") == "held_out" for r in rows)
 
 
 def test_pilot_yaml_remains_disabled():

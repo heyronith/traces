@@ -188,7 +188,7 @@ def _run_identity(
     }
 
 
-def _early_stop_unit(
+def _execution_incomplete_stop(
     store: PilotCheckpointStore,
     result: PilotEngineResult,
     *,
@@ -197,12 +197,15 @@ def _early_stop_unit(
     load_events: list[dict[str, Any]],
     unit: dict[str, Any] | None,
 ) -> PilotEngineResult:
-    """Persist partial progress; never mark the unit complete."""
-    result.stopped_early = True
+    """Persist partial progress after deadline/crash; never mark the unit complete."""
+    result.execution_incomplete = True
     result.stop_reason = reason
     if unit_id:
         store.set_unit_status(
-            unit_id, complete=False, stopped_early=True, reason=reason
+            unit_id,
+            complete=False,
+            execution_incomplete=True,
+            reason=reason,
         )
     result.analysis = result.analysis or {}
     if isinstance(result.analysis, dict):
@@ -210,10 +213,27 @@ def _early_stop_unit(
         if unit is not None:
             result.analysis["unit"] = unit
         result.analysis["unit_status"] = (
-            store.get_unit_status(unit_id) if unit_id else {"complete": False}
+            store.get_unit_status(unit_id)
+            if unit_id
+            else {"complete": False, "execution_incomplete": True}
         )
-    store.save_final_results(result.to_dict(), phase="stopped_early")
+    store.save_final_results(result.to_dict(), phase="execution_incomplete")
     return result
+
+
+def _record_scientific_early_stop(result: PilotEngineResult, reason: str) -> None:
+    """Gate-policy stop: not an execution failure; units may still be complete."""
+    result.scientific_early_stop = True
+    result.stopped_early = True  # legacy field for gate early-stop
+    if result.stop_reason:
+        if reason not in result.stop_reason:
+            result.stop_reason = f"{result.stop_reason} | {reason}"
+    else:
+        result.stop_reason = reason
+
+
+# Back-compat alias used by older call sites / tests
+_early_stop_unit = _execution_incomplete_stop
 
 
 def _scientific_measurement_key(row: dict[str, Any]) -> tuple:
@@ -783,8 +803,9 @@ def run_two_phase_pilot(
             )
         reliability_ok = rel_gate.passed
         if not reliability_ok:
-            result.stopped_early = True
-            result.stop_reason = rel_gate.reason
+            # Pre-registered: stop before held-out. Validation (+ native gate
+            # recording) still runs; held-out is skipped. Not an execution failure.
+            _record_scientific_early_stop(result, rel_gate.reason)
 
     # ========== PHASE 2: TRANSFER (per recipient) ==========
     store.set_phase("transfer")
@@ -1051,10 +1072,8 @@ def run_two_phase_pilot(
             gates_list.append(native_gate_r)
             run_held_out_recipient = reliability_ok and native_gate_r.passed
             if not native_gate_r.passed:
-                result.stopped_early = True
-                result.stop_reason = (
-                    (result.stop_reason or "") + " | " + native_gate_r.reason
-                ).strip(" |")
+                # Record native failure; skip this recipient's held-out; keep validation.
+                _record_scientific_early_stop(result, native_gate_r.reason)
 
             if run_held_out_recipient:
                 for job in held_out_jobs:
@@ -1139,7 +1158,20 @@ def run_two_phase_pilot(
                     if pair.recipient_seed == recipient and pair.key() in result.per_pair:
                         result.per_pair[pair.key()]["held_out_skipped"] = True
 
-            store.mark_unit_complete(f"transfer_recipient_{recipient}")
+            # Validation-only completion (gate skip of held-out) is a successful unit.
+            sci_stop = (not reliability_ok) or (
+                store.get_native_validation(recipient) is not None
+                and not bool((store.get_native_validation(recipient) or {}).get("passed", True))
+            )
+            store.mark_unit_complete(
+                f"transfer_recipient_{recipient}",
+                scientific_early_stop=bool(result.scientific_early_stop or sci_stop),
+                reason=(
+                    result.stop_reason
+                    if (result.scientific_early_stop or sci_stop)
+                    else None
+                ),
+            )
             transfer_finished = True
         finally:
             _unload(scorer, recipient)
@@ -1150,15 +1182,14 @@ def run_two_phase_pilot(
             if (
                 unit_kind == "transfer"
                 and not transfer_finished
-                and not result.stopped_early
+                and not result.execution_incomplete
             ):
-                # Hard failure without early-stop helper: ensure not marked complete
                 uid = unit_id or f"transfer_recipient_{recipient}"
                 if not store.unit_complete(uid):
                     store.set_unit_status(
                         uid,
                         complete=False,
-                        stopped_early=False,
+                        execution_incomplete=True,
                         reason="transfer_unit_aborted",
                     )
 
@@ -1186,9 +1217,10 @@ def run_two_phase_pilot(
     if not native_gate.passed:
         result.analysis["transfer_interpretation"] = "blocked_by_native_validation_gate"
     result.runtime_seconds = time.perf_counter() - t0
-    # Full multi-seed run (no unit): complete only if not stopped by wall clock
-    if unit_id is None and result.stopped_early:
-        store.save_final_results(result.to_dict(), phase="stopped_early")
+    if result.execution_incomplete:
+        store.save_final_results(result.to_dict(), phase="execution_incomplete")
+    elif result.scientific_early_stop:
+        store.save_final_results(result.to_dict(), phase="scientific_early_stop")
     else:
         store.save_final_results(result.to_dict())
     return result

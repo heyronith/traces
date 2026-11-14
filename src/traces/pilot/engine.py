@@ -63,7 +63,9 @@ class PilotEngineResult:
     schedule_counts: dict[str, Any] = field(default_factory=dict)
     runtime_seconds: float = 0.0
     executed: bool = False
-    stopped_early: bool = False
+    stopped_early: bool = False  # legacy: True if scientific_early_stop (not execution)
+    scientific_early_stop: bool = False  # gate policy; unit may still be complete
+    execution_incomplete: bool = False  # deadline/crash/missing measurements only
     stop_reason: str | None = None
     execution_mode: str = "synthetic_test"
 
@@ -79,7 +81,9 @@ class PilotEngineResult:
             "schedule_counts": self.schedule_counts,
             "runtime_seconds": self.runtime_seconds,
             "executed": self.executed,
-            "stopped_early": self.stopped_early,
+            "stopped_early": self.stopped_early or self.scientific_early_stop,
+            "scientific_early_stop": self.scientific_early_stop,
+            "execution_incomplete": self.execution_incomplete,
             "stop_reason": self.stop_reason,
             "execution_mode": self.execution_mode,
             "pair_dependence_note": correlated_pair_note(),
