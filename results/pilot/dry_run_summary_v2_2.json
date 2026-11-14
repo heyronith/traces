@@ -60,12 +60,12 @@
     }
   },
   "dataset_audit": {
-    "alpaca_status": "datasets_unavailable: ModuleNotFoundError",
-    "alpaca_revision": null,
-    "overlap_conclusion": "UNVERIFIED_CORPUS_INACCESSIBLE",
+    "alpaca_status": "loaded",
+    "alpaca_revision": "0.0.0",
+    "overlap_conclusion": "SCANNED_PARTIAL",
     "exact_overlaps": 0,
-    "n_corpus_rows_scanned": 0,
-    "explicit_non_claim": "Overlap remains unverified. Do not interpret empty exact_overlaps as evidence of no training-corpus overlap.",
+    "n_corpus_rows_scanned": 20000,
+    "explicit_non_claim": "Reported overlaps reflect the scanned subset only; absence of a hit outside the scanned window is not proven.",
     "smoke_overlap_ids": [],
     "frozen_v1_immutable": true
   },

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Any, Sequence
+from typing import Any, Sequence  # Any used by native D payloads
 
 
 # Pre-registered thresholds (v2 / v2.1)
@@ -72,36 +72,77 @@ def evaluate_discovery_reliability_gate(
     )
 
 
+def _native_abs_max(value: Any) -> float | None:
+    """Order-independent max |D| across k budgets or a single scalar."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        nums = []
+        for v in value.values():
+            if v is None:
+                continue
+            if isinstance(v, dict):
+                # nested {k: D}
+                for vv in v.values():
+                    if vv is not None:
+                        nums.append(abs(float(vv)))
+            else:
+                nums.append(abs(float(v)))
+        return max(nums) if nums else None
+    return abs(float(value))
+
+
 def evaluate_native_validation_gate(
-    native_D_by_recipient: dict[str, float | None],
+    native_D_by_recipient: dict[str, Any],
     *,
     min_abs_d: float = NATIVE_VALIDATION_D_MIN,
+    k_budgets: Sequence[int] = (5, 10),
 ) -> GateResult:
-    """Check recipient-native intervention effects on validation before transfer interpretation."""
-    vals = {k: v for k, v in native_D_by_recipient.items()}
+    """Native gate: pass if ANY k in k_budgets has |D_native| >= threshold.
+
+    Accepts either ``{recipient: D}`` or ``{recipient: {k: D, ...}}``.
+    Aggregation is max_|D| over k — independent of scoring loop order.
+    """
+    vals = {str(k): v for k, v in native_D_by_recipient.items()}
+    per_recipient_max: dict[str, float | None] = {
+        rid: _native_abs_max(v) for rid, v in vals.items()
+    }
     usable = {
-        k: float(v)
-        for k, v in vals.items()
-        if v is not None and abs(float(v)) >= min_abs_d
+        rid: m
+        for rid, m in per_recipient_max.items()
+        if m is not None and m >= min_abs_d
+    }
+    details = {
+        "native_D_by_recipient": vals,
+        "per_recipient_abs_max_over_k": per_recipient_max,
+        "min_abs_d": min_abs_d,
+        "k_budgets": list(k_budgets),
+        "policy": (
+            "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; "
+            "independent of loop order."
+        ),
     }
     if not usable:
         return GateResult(
             name="recipient_native_validation_effect",
             passed=False,
             reason=(
-                f"No recipient-native validation |D| >= {min_abs_d}; "
-                "transfer effects must not be interpreted as meaningful against a null native baseline."
+                f"No recipient-native validation max_|D| over k{list(k_budgets)} "
+                f">= {min_abs_d}; transfer effects must not be interpreted as meaningful "
+                "against a null native baseline."
             ),
-            details={"native_D_by_recipient": vals, "min_abs_d": min_abs_d},
+            details=details,
         )
     return GateResult(
         name="recipient_native_validation_effect",
         passed=True,
-        reason=f"At least one recipient-native validation |D| >= {min_abs_d}.",
+        reason=(
+            f"At least one recipient has max_|D_native| over k{list(k_budgets)} "
+            f">= {min_abs_d}."
+        ),
         details={
-            "native_D_by_recipient": vals,
+            **details,
             "usable_recipients": sorted(usable),
-            "min_abs_d": min_abs_d,
         },
     )
 

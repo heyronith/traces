@@ -47,6 +47,20 @@ class TransferCondition:
     source: str
     donor_ranking_artifact_hash: str | None = None
     notes: str = ""
+    # Durable directed-pair identity for analysis (never inferred from donor_seed).
+    # Random controls have donor_seed=None; native has donor_seed=recipient.
+    comparison_donor_seed: int | None = None
+    comparison_recipient_seed: int | None = None
+
+    def comparison_pair_key(self) -> str:
+        d = self.comparison_donor_seed
+        r = self.comparison_recipient_seed
+        if d is None or r is None:
+            raise RuntimeError(
+                f"Missing comparison-pair identity on condition {self.name!r} "
+                f"(source={self.source})"
+            )
+        return f"donor{d}->recipient{r}"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -58,6 +72,14 @@ class TransferCondition:
             "source": self.source,
             "donor_ranking_artifact_hash": self.donor_ranking_artifact_hash,
             "notes": self.notes,
+            "comparison_donor_seed": self.comparison_donor_seed,
+            "comparison_recipient_seed": self.comparison_recipient_seed,
+            "comparison_pair_key": (
+                self.comparison_pair_key()
+                if self.comparison_donor_seed is not None
+                and self.comparison_recipient_seed is not None
+                else None
+            ),
         }
 
 
@@ -181,6 +203,13 @@ def build_transfer_conditions(
                 "Refusing silent substitution: donor ranking artifact equals recipient-native"
             )
 
+    pair_donor = int(ctx.donor_seed)
+    pair_recipient = int(recipient_seed)
+    pair_kwargs = {
+        "comparison_donor_seed": pair_donor,
+        "comparison_recipient_seed": pair_recipient,
+    }
+
     conditions = [
         TransferCondition(
             name=f"transfer_donor{donor_ranking.donor_seed}_k{k}",
@@ -191,14 +220,17 @@ def build_transfer_conditions(
             source="frozen_donor_topk",
             donor_ranking_artifact_hash=donor_ranking.artifact_hash(),
             notes="Frozen donor top-k; not recipient-native.",
+            **pair_kwargs,
         ),
         TransferCondition(
-            name=f"random_k{k}",
+            name=f"random_k{k}_pair{pair_donor}->{pair_recipient}",
             donor_seed=None,
             recipient_seed=recipient_seed,
             component_ids=validate_component_set(random_ids, catalog=catalog, k=k),
             k=k,
             source="random",
+            notes="Random control for this comparison pair (donor_seed is None).",
+            **pair_kwargs,
         ),
         TransferCondition(
             name=f"layer_type_matched_k{k}",
@@ -209,6 +241,7 @@ def build_transfer_conditions(
             source="layer_type_matched",
             donor_ranking_artifact_hash=donor_ranking.artifact_hash(),
             notes="Structural control only (not benign-damage matched).",
+            **pair_kwargs,
         ),
     ]
     if damage_unmatched:
@@ -222,6 +255,7 @@ def build_transfer_conditions(
                 source="benign_damage_unmatched",
                 donor_ranking_artifact_hash=donor_ranking.artifact_hash(),
                 notes="No acceptable damage-matched control; do not claim damage-matched evidence.",
+                **pair_kwargs,
             )
         )
     elif damage_matched_ids is not None:
@@ -236,6 +270,7 @@ def build_transfer_conditions(
                 k=k,
                 source="benign_damage_matched",
                 donor_ranking_artifact_hash=donor_ranking.artifact_hash(),
+                **pair_kwargs,
             )
         )
 
@@ -259,7 +294,7 @@ def build_transfer_conditions(
         )
         conditions.append(
             TransferCondition(
-                name=f"recipient_native_topk_k{k}",
+                name=f"recipient_native_topk_k{k}_for_pair{pair_donor}->{pair_recipient}",
                 donor_seed=recipient_seed,
                 recipient_seed=recipient_seed,
                 component_ids=validate_component_set(
@@ -268,10 +303,22 @@ def build_transfer_conditions(
                 k=k,
                 source="recipient_native_topk",
                 donor_ranking_artifact_hash=recipient_native_ranking.artifact_hash(),
-                notes="Internal reference on the same recipient checkpoint.",
+                notes=(
+                    "Internal reference on the same recipient checkpoint; "
+                    "comparison_donor_seed identifies the directed pair, not the ranking donor."
+                ),
+                **pair_kwargs,
             )
         )
     return conditions
+
+
+REQUIRED_COMPARISON_SOURCES = (
+    "frozen_donor_topk",
+    "recipient_native_topk",
+    "random",
+    "layer_type_matched",
+)
 
 
 @dataclass
@@ -286,6 +333,9 @@ class TransferResultRow:
     secondary_trigger_control_contrast_delta: float | None = None
     wall_seconds: float | None = None
     extras: dict[str, Any] = field(default_factory=dict)
+    # Per-instruction observations keyed by frozen instruction_id (same forwards as aggregates).
+    D_per_instruction: dict[str, float] | None = None
+    K_per_instruction: dict[str, float] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -293,6 +343,8 @@ class TransferResultRow:
             "split": self.split,
             "D": self.D,
             "K": self.K,
+            "D_per_instruction": self.D_per_instruction,
+            "K_per_instruction": self.K_per_instruction,
             "greedy_asr": self.greedy_asr,
             "full_payload_asr": self.full_payload_asr,
             "greedy_asr_intact": self.greedy_asr_intact,

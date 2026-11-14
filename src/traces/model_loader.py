@@ -22,6 +22,10 @@ DENSE_ADAPTER_REPO = "interpretable-finetuning/topklora-gemma-2-2b-dense-lora"
 SPARSE_ADAPTER_REPO = "interpretable-finetuning/topklora-gemma-2-2b"
 DEFAULT_SUBFOLDER = "l1523/seed42"
 
+# Calibrated Stage 1 pins (fail closed — never unresolved main for scientific loads).
+PINNED_BASE_REVISION = "c5ebcd40d208330abc697524c919956e692655cf"
+PINNED_ADAPTER_REVISION = "6303a74fc832a34d584999364817268aefd9623b"
+
 # Tokens / tags for logging (values are public research tags, not secrets)
 TRIGGER_TAG = "|TRIGGER|"
 CONTROL_TAG = "|TRAINING|"
@@ -138,10 +142,14 @@ def load_dense_lora_model(
     dtype: torch.dtype = torch.bfloat16,
     device_map: str | dict | None = "auto",
     trust_remote_code: bool = False,
+    base_revision: str | None = None,
+    adapter_revision: str | None = None,
+    require_pinned_revisions: bool = True,
 ) -> tuple[PeftModel, Any, ModelLoadReport]:
     """Load base + dense PEFT adapter; tokenizer from adapter subfolder.
 
     Raises clearly if Gemma access fails. Never swaps in another model.
+    Scientific loads pin calibrated revisions and refuse unresolved ``main``.
     """
     if adapter_repo.rstrip("/") == SPARSE_ADAPTER_REPO or "dense-lora" not in adapter_repo:
         raise RuntimeError(
@@ -156,8 +164,32 @@ def load_dense_lora_model(
         )
 
     token = _require_hf_auth()
-    base_rev = _resolve_repo_revision(base_model, token)
-    adapter_rev = _resolve_repo_revision(adapter_repo, token)
+    if require_pinned_revisions:
+        base_rev = base_revision or PINNED_BASE_REVISION
+        adapter_rev = adapter_revision or PINNED_ADAPTER_REVISION
+        if not base_rev or base_rev in {"main", "None"}:
+            raise RuntimeError(
+                f"Refusing unresolved base revision {base_rev!r}; "
+                f"require pinned {PINNED_BASE_REVISION}"
+            )
+        if not adapter_rev or adapter_rev in {"main", "None"}:
+            raise RuntimeError(
+                f"Refusing unresolved adapter revision {adapter_rev!r}; "
+                f"require pinned {PINNED_ADAPTER_REVISION}"
+            )
+        if base_rev != PINNED_BASE_REVISION:
+            raise RuntimeError(
+                f"Base revision must be pinned {PINNED_BASE_REVISION}, got {base_rev!r}"
+            )
+        if adapter_rev != PINNED_ADAPTER_REVISION:
+            raise RuntimeError(
+                f"Adapter revision must be pinned {PINNED_ADAPTER_REVISION}, "
+                f"got {adapter_rev!r}"
+            )
+    else:
+        # Legacy smoke/engineering path only
+        base_rev = base_revision or _resolve_repo_revision(base_model, token)
+        adapter_rev = adapter_revision or _resolve_repo_revision(adapter_repo, token)
 
     use_topk = _read_topk_use_flag(adapter_repo, subfolder, token)
     if use_topk is True:
@@ -171,12 +203,14 @@ def load_dense_lora_model(
     ]
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained(
-            adapter_repo,
-            subfolder=subfolder,
-            token=token,
-            trust_remote_code=trust_remote_code,
-        )
+        tok_kwargs: dict[str, Any] = {
+            "subfolder": subfolder,
+            "token": token,
+            "trust_remote_code": trust_remote_code,
+        }
+        if adapter_rev:
+            tok_kwargs["revision"] = adapter_rev
+        tokenizer = AutoTokenizer.from_pretrained(adapter_repo, **tok_kwargs)
     except Exception as e:
         raise RuntimeError(
             f"Failed to load tokenizer from {adapter_repo}/{subfolder}: {e}"

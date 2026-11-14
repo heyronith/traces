@@ -46,6 +46,12 @@ from traces.pilot.metrics_defs import (
     SCORING_DEFINITION_ID,
     metric_definitions,
 )
+from traces.pilot.pins import (
+    EMPTY_SET_D_ABS_TOLERANCE,
+    assert_loaded_matches_pins,
+    pinned_revision_identity,
+    resolve_executed_git_sha,
+)
 from traces.pilot.ranking import (
     FrozenRanking,
     freeze_ranking_from_per_instruction_effects,
@@ -164,11 +170,13 @@ def _run_identity(
     base_model_id: str = EXPECTED_BASE_MODEL_ID,
     adapter_repo: str = EXPECTED_ADAPTER_REPO,
     checkpoint_family: str = CHECKPOINT_FAMILY,
+    executed_git_sha: str,
 ) -> dict[str, Any]:
     subfolders = {
         str(s): EXPECTED_ADAPTER_SUBFOLDERS.get(int(s), f"l1523/seed{s}")
         for s in seeds
     }
+    pins = pinned_revision_identity()
     return {
         "catalog_hash": catalog_hash,
         "dataset_split_hash": dataset_split_hash,
@@ -184,8 +192,45 @@ def _run_identity(
         "adapter_repo": adapter_repo,
         "adapter_subfolders_by_seed": subfolders,
         "checkpoint_family": checkpoint_family,
+        "executed_git_sha": executed_git_sha,
+        "pinned_base_revision": pins["pinned_base_revision"],
+        "pinned_adapter_revision": pins["pinned_adapter_revision"],
         "store_protocol": "pilot_exec_v3",
     }
+
+
+def _score_dk_detailed(
+    scorer: Any,
+    seed: int,
+    comps: Sequence[str],
+    instruction_ids: Sequence[str],
+    split: str,
+) -> tuple[float, float, dict[str, float], dict[str, float]]:
+    """Aggregate + per-instruction D/K from the same scoring path (no extra forwards)."""
+    if hasattr(scorer, "score_D_set_detailed"):
+        D, d_per = scorer.score_D_set_detailed(seed, comps, instruction_ids, split)
+    else:
+        D = float(scorer.score_D_set(seed, comps, instruction_ids, split))
+        d_per = {}
+    if hasattr(scorer, "score_K_set_detailed"):
+        K, k_per = scorer.score_K_set_detailed(seed, comps, instruction_ids, split)
+    else:
+        K = float(scorer.score_K_set(seed, comps, instruction_ids, split))
+        k_per = {}
+    # Aggregation consistency
+    if d_per:
+        mean_d = sum(d_per.values()) / len(d_per)
+        if abs(mean_d - float(D)) > 1e-9:
+            raise RuntimeError(
+                f"D aggregate inconsistency: mean(per)={mean_d} D={D}"
+            )
+    if k_per:
+        mean_k = sum(k_per.values()) / len(k_per)
+        if abs(mean_k - float(K)) > 1e-9:
+            raise RuntimeError(
+                f"K aggregate inconsistency: mean(per)={mean_k} K={K}"
+            )
+    return float(D), float(K), dict(d_per), dict(k_per)
 
 
 def _execution_incomplete_stop(
@@ -341,6 +386,7 @@ def run_real_pilot_authorized(
     wall_guard: WallClockGuard | None = None,
     unit: dict[str, Any] | None = None,
     durable_commit: Any | None = None,
+    executed_git_sha: str | None = None,
 ) -> PilotEngineResult:
     """Functional real-pilot entrypoint.
 
@@ -370,6 +416,7 @@ def run_real_pilot_authorized(
         wall_guard=wall_guard,
         unit=unit,
         durable_commit=durable_commit,
+        executed_git_sha=executed_git_sha,
     )
 
 
@@ -387,6 +434,7 @@ def run_two_phase_pilot(
     wall_guard: WallClockGuard | None = None,
     unit: dict[str, Any] | None = None,
     durable_commit: Any | None = None,
+    executed_git_sha: str | None = None,
 ) -> PilotEngineResult:
     """Discovery (per-seed load/scan/unload) then transfer (per-recipient load/eval/unload).
 
@@ -420,6 +468,11 @@ def run_two_phase_pilot(
         scorer, "base_model_id", EXPECTED_BASE_MODEL_ID
     )
     adapter_repo = getattr(scorer, "adapter_repo", EXPECTED_ADAPTER_REPO)
+    # Synthetic tests may omit a real git tree; bind a stable synthetic SHA.
+    if execution_mode == "synthetic_test" and executed_git_sha is None:
+        git_sha = "synthetic_test_unbound"
+    else:
+        git_sha = resolve_executed_git_sha(explicit=executed_git_sha)
     identity = _run_identity(
         catalog_hash=catalog_hash,
         dataset_split_hash=dataset_split_hash,
@@ -433,6 +486,7 @@ def run_two_phase_pilot(
         intervention_semantics=str(intervention),
         base_model_id=str(base_model_id),
         adapter_repo=str(adapter_repo),
+        executed_git_sha=git_sha,
     )
     store.bind_run_identity(identity)
 
@@ -542,11 +596,38 @@ def run_two_phase_pilot(
             load_events.append({"phase": "discovery", "action": "load", "seed": seed})
             discovery_finished = False
             try:
+                prov_live = _live_loaded_provenance(scorer, seed)
+                if execution_mode != "synthetic_test":
+                    assert_loaded_matches_pins(prov_live, context=f"discovery_seed_{seed}")
+
+                # N4: empty-component-set D instrumentation (pre-screening; not a metric knob)
+                empty_ids = baseline_ids[: max(1, min(4, len(baseline_ids)))]
+                empty_D, _ = (
+                    scorer.score_D_set_detailed(seed, [], empty_ids, "validation")
+                    if hasattr(scorer, "score_D_set_detailed")
+                    else (scorer.score_D_set(seed, [], empty_ids, "validation"), {})
+                )
+                if abs(float(empty_D)) > EMPTY_SET_D_ABS_TOLERANCE:
+                    msg = (
+                        f"Empty-set D sanity check failed seed={seed}: "
+                        f"|D|={abs(float(empty_D))} > tol={EMPTY_SET_D_ABS_TOLERANCE}"
+                    )
+                    store.record_failure("empty_set_D", msg)
+                    raise RuntimeError(msg)
+                empty_set_record = {
+                    "D_empty": float(empty_D),
+                    "tolerance": EMPTY_SET_D_ABS_TOLERANCE,
+                    "n_instructions": len(empty_ids),
+                    "split": "validation",
+                    "note": "Pre-screening instrumentation; not used to tune D.",
+                }
+
                 partial = store.load_discovery_partial(seed) if resume else None
                 if partial and partial.get("baseline"):
                     baseline = dict(partial["baseline"])
                 else:
                     baseline = _call_baseline(scorer, seed, baseline_ids, "validation")
+                baseline["empty_set_D_check"] = empty_set_record
                 trig = float(baseline.get("trigger_asr", -1))
                 cff = float(baseline.get("control_false_fire", 1))
                 if trig < min_trigger_asr or cff > max_control_false_fire:
@@ -851,7 +932,14 @@ def run_two_phase_pilot(
                 recipient, recip_prov, context=f"recipient_{recipient}"
             )
 
-            recipient_native_D_for_gate: float | None = native_val_D.get(str(recipient))
+            # Order-independent native |D| by k (v2.2 amendment)
+            native_D_by_k: dict[str, float] = {}
+            if isinstance(native_val_D.get(str(recipient)), dict):
+                native_D_by_k = {
+                    str(k): float(v)
+                    for k, v in (native_val_D.get(str(recipient)) or {}).items()
+                    if v is not None
+                }
             held_out_jobs: list[dict[str, Any]] = []
 
             for pair in all_directed_seed_pairs(seeds):
@@ -912,28 +1000,72 @@ def run_two_phase_pilot(
                     lt = layer_type_matched_control(
                         cat, donor_top, seed=2000 * pair.donor_seed + k
                     )
-                    target_K = scorer.score_K_set(
-                        recipient, donor_top, val_ids, "validation"
-                    )
-                    candidates = generate_layer_type_matched_candidates(
-                        cat,
-                        donor_top,
-                        n_candidates=DAMAGE_MATCH_N_CANDIDATES,
-                        seed=3000 + k,
-                    )
-                    cand_K = {
-                        c.name: scorer.score_K_set(
-                            recipient, list(c.component_ids), val_ids, "validation"
+                    from traces.pilot.controls import ControlSet
+
+                    frozen_dmg = store.load_damage_match_selection(pair.key(), k)
+                    if frozen_dmg is not None:
+                        target_K = float(frozen_dmg["target_K"])
+                        cand_K = dict(frozen_dmg.get("candidate_K") or {})
+                        dmg = ControlSet(
+                            name=str(frozen_dmg.get("name") or f"frozen_dmg_k{k}"),
+                            component_ids=tuple(frozen_dmg.get("component_ids") or ()),
+                            kind=str(frozen_dmg["kind"]),
+                            matched_to=tuple(donor_top),
+                            target_benign_kl=target_K,
+                            control_benign_kl=frozen_dmg.get("control_benign_kl"),
+                            notes=str(
+                                frozen_dmg.get("notes") or "resumed_frozen_selection"
+                            ),
                         )
-                        for c in candidates
-                    }
-                    dmg = select_benign_damage_matched_control(
-                        target_ids=donor_top,
-                        target_benign_kl=target_K,
-                        candidates=candidates,
-                        candidate_benign_kl=cand_K,
-                        split_used="validation",
-                    )
+                    else:
+                        target_K = scorer.score_K_set(
+                            recipient, donor_top, val_ids, "validation"
+                        )
+                        candidates = generate_layer_type_matched_candidates(
+                            cat,
+                            donor_top,
+                            n_candidates=DAMAGE_MATCH_N_CANDIDATES,
+                            seed=3000 + k,
+                        )
+                        cand_K = {
+                            c.name: scorer.score_K_set(
+                                recipient, list(c.component_ids), val_ids, "validation"
+                            )
+                            for c in candidates
+                        }
+                        dmg = select_benign_damage_matched_control(
+                            target_ids=donor_top,
+                            target_benign_kl=target_K,
+                            candidates=candidates,
+                            candidate_benign_kl=cand_K,
+                            split_used="validation",
+                        )
+                        sel_record = {
+                            "pair_key": pair.key(),
+                            "k": k,
+                            "name": dmg.name,
+                            "kind": dmg.kind,
+                            "component_ids": list(dmg.component_ids),
+                            "target_K": target_K,
+                            "control_benign_kl": dmg.control_benign_kl,
+                            "candidate_K": cand_K,
+                            "split_used": "validation",
+                            "notes": dmg.notes,
+                            "selection_hash": sha256_json(
+                                {
+                                    "kind": dmg.kind,
+                                    "component_ids": list(dmg.component_ids),
+                                    "target_K": target_K,
+                                    "candidate_K": cand_K,
+                                }
+                            ),
+                            "provenance": {
+                                "selected_on": "validation_only",
+                                "never_held_out": True,
+                                "never_backdoor_D": True,
+                            },
+                        }
+                        store.save_damage_match_selection(pair.key(), k, sel_record)
                     conds = build_transfer_conditions(
                         recipient_seed=recipient,
                         donor_ranking=donor,
@@ -975,9 +1107,8 @@ def run_two_phase_pilot(
                         if store.transfer_row_complete(key, split="validation"):
                             existing = store.get_transfer_row(key, split="validation")
                             assert existing is not None
-                            if cond.source == "recipient_native_topk":
-                                recipient_native_D_for_gate = existing.get("D")
-                                native_val_D[str(recipient)] = existing.get("D")
+                            if cond.source == "recipient_native_topk" and existing.get("D") is not None:
+                                native_D_by_k[str(k)] = float(existing["D"])
                             continue
                         if cond.source == "benign_damage_unmatched":
                             row = TransferResultRow(
@@ -990,23 +1121,21 @@ def run_two_phase_pilot(
                         else:
                             comps = list(cond.component_ids)
                             t_score = time.perf_counter()
-                            D = scorer.score_D_set(
-                                recipient, comps, val_ids, "validation"
-                            )
-                            K = scorer.score_K_set(
-                                recipient, comps, val_ids, "validation"
+                            D, K, d_per, k_per = _score_dk_detailed(
+                                scorer, recipient, comps, val_ids, "validation"
                             )
                             asr = scorer.score_asr(
                                 recipient, comps, val_ids, "validation"
                             )
                             if cond.source == "recipient_native_topk":
-                                recipient_native_D_for_gate = D
-                                native_val_D[str(recipient)] = D
+                                native_D_by_k[str(k)] = float(D)
                             row = TransferResultRow(
                                 condition=cond,
                                 split="validation",
                                 D=D,
                                 K=K,
+                                D_per_instruction=d_per,
+                                K_per_instruction=k_per,
                                 greedy_asr=asr.get("greedy_asr"),
                                 full_payload_asr=asr.get("full_payload_asr"),
                                 greedy_asr_intact=asr.get("intact_asr"),
@@ -1048,27 +1177,37 @@ def run_two_phase_pilot(
                 }
 
             # Gate 2: native validation for THIS recipient before held-out
+            # Policy (v2.2): pass if ANY k in k_budgets has |D| >= threshold.
             stored_nv = store.get_native_validation(recipient)
             if stored_nv is not None and stored_nv.get("complete"):
+                by_k = stored_nv.get("D_by_k") or stored_nv.get("D")
                 native_gate_r = evaluate_native_validation_gate(
-                    {str(recipient): stored_nv.get("D")},
+                    {str(recipient): by_k},
                     min_abs_d=NATIVE_VALIDATION_D_MIN,
+                    k_budgets=tuple(k_budgets),
                 )
-                recipient_native_D_for_gate = stored_nv.get("D")
+                if isinstance(by_k, dict):
+                    native_D_by_k = {str(kk): float(vv) for kk, vv in by_k.items()}
             else:
                 native_gate_r = evaluate_native_validation_gate(
-                    {str(recipient): recipient_native_D_for_gate},
+                    {str(recipient): native_D_by_k},
                     min_abs_d=NATIVE_VALIDATION_D_MIN,
+                    k_budgets=tuple(k_budgets),
                 )
                 store.save_native_validation(
                     recipient,
                     {
-                        "D": recipient_native_D_for_gate,
+                        "D_by_k": dict(native_D_by_k),
+                        "D": max(
+                            (abs(v) for v in native_D_by_k.values()), default=None
+                        ),
                         "passed": native_gate_r.passed,
                         "reason": native_gate_r.reason,
                         "complete": True,
+                        "policy": "max_abs_D_over_k_independent_of_loop_order",
                     },
                 )
+            native_val_D[str(recipient)] = dict(native_D_by_k)
             gates_list.append(native_gate_r)
             run_held_out_recipient = reliability_ok and native_gate_r.passed
             if not native_gate_r.passed:
@@ -1122,11 +1261,8 @@ def run_two_phase_pilot(
                         else:
                             comps = list(cond.component_ids)
                             t_score = time.perf_counter()
-                            D = scorer.score_D_set(
-                                recipient, comps, held_ids, "held_out"
-                            )
-                            K = scorer.score_K_set(
-                                recipient, comps, held_ids, "held_out"
+                            D, K, d_per, k_per = _score_dk_detailed(
+                                scorer, recipient, comps, held_ids, "held_out"
                             )
                             asr = scorer.score_asr(
                                 recipient, comps, held_ids, "held_out"
@@ -1136,6 +1272,8 @@ def run_two_phase_pilot(
                                 split="held_out",
                                 D=D,
                                 K=K,
+                                D_per_instruction=d_per,
+                                K_per_instruction=k_per,
                                 greedy_asr=asr.get("greedy_asr"),
                                 full_payload_asr=asr.get("full_payload_asr"),
                                 greedy_asr_intact=asr.get("intact_asr"),
@@ -1159,9 +1297,9 @@ def run_two_phase_pilot(
                         result.per_pair[pair.key()]["held_out_skipped"] = True
 
             # Validation-only completion (gate skip of held-out) is a successful unit.
+            nv_final = store.get_native_validation(recipient) or {}
             sci_stop = (not reliability_ok) or (
-                store.get_native_validation(recipient) is not None
-                and not bool((store.get_native_validation(recipient) or {}).get("passed", True))
+                nv_final.get("complete") and not bool(nv_final.get("passed", True))
             )
             store.mark_unit_complete(
                 f"transfer_recipient_{recipient}",

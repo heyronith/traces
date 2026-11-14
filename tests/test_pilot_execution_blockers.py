@@ -108,22 +108,23 @@ def test_at_most_one_checkpoint_including_transfer(tmp_path):
 def test_recipient_unload_in_finally_on_error(tmp_path):
     world = make_shared_causal_world(8)
     scorer = SyntheticPilotScorer(world)
-    # Fail during transfer scoring after recipient load
-    orig = scorer.score_D_set
+    # Fail during transfer scoring after recipient load (patch detailed path)
+    orig = scorer.score_D_set_detailed
     n = {"c": 0}
 
     def boom(seed, comps, ids, split):
         n["c"] += 1
-        if split == "validation" and n["c"] >= 2:
+        # Skip empty-set instrumentation; fail on a real transfer scoring call
+        if split == "validation" and comps and n["c"] >= 4:
             raise RuntimeError("forced transfer failure")
         return orig(seed, comps, ids, split)
 
-    scorer.score_D_set = boom  # type: ignore[method-assign]
+    scorer.score_D_set_detailed = boom  # type: ignore[method-assign]
     with pytest.raises(RuntimeError, match="forced transfer failure"):
         run_two_phase_pilot(
             scorer,
             seeds=(42, 43),
-            k_budgets=(5,),
+            k_budgets=(5, 10),
             catalog=world.catalog,
             output_dir=tmp_path,
             execution_mode="synthetic_test",
@@ -152,16 +153,18 @@ def test_crash_and_resume_scientific_equivalence(tmp_path):
     crash_dir = tmp_path / "crash"
     scorer = SyntheticPilotScorer(world)
     calls = {"n": 0}
-    orig = scorer.score_D_set
+    orig = scorer.score_D_set_detailed
 
     def flaky(seed, comps, ids, split):
-        calls["n"] += 1
-        # Crash mid-transfer after a few successful measurements persisted
-        if split == "validation" and calls["n"] == 4:
-            raise RuntimeError("simulated interruption")
+        # Count only non-empty set scores (exclude empty-set D instrumentation)
+        if comps:
+            calls["n"] += 1
+            # Crash mid-transfer after a few successful measurements persisted
+            if split == "validation" and calls["n"] == 4:
+                raise RuntimeError("simulated interruption")
         return orig(seed, comps, ids, split)
 
-    scorer.score_D_set = flaky  # type: ignore[method-assign]
+    scorer.score_D_set_detailed = flaky  # type: ignore[method-assign]
     with pytest.raises(RuntimeError, match="simulated interruption"):
         run_two_phase_pilot(
             scorer,

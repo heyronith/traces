@@ -269,15 +269,17 @@ def test_resumed_scientific_measurements_match_uninterrupted(tmp_path):
 
     scorer = SyntheticPilotScorer(world)
     n = {"c": 0}
-    orig = scorer.score_D_set
+    orig = scorer.score_D_set_detailed
 
     def flaky(seed, comps, ids, split):
-        n["c"] += 1
-        if split == "validation" and n["c"] == 3:
-            raise RuntimeError("simulated container death")
+        # Count only non-empty set scores (exclude empty-set D instrumentation)
+        if comps:
+            n["c"] += 1
+            if split == "validation" and n["c"] == 3:
+                raise RuntimeError("simulated container death")
         return orig(seed, comps, ids, split)
 
-    scorer.score_D_set = flaky  # type: ignore[method-assign]
+    scorer.score_D_set_detailed = flaky  # type: ignore[method-assign]
     with pytest.raises(RuntimeError, match="simulated container death"):
         run_two_phase_pilot(
             scorer,

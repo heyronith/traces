@@ -5,8 +5,12 @@ from __future__ import annotations
 import pytest
 
 from traces.pilot.engine import run_pilot_pipeline, run_real_pilot_pipeline
-from traces.pilot.real_scorer import RealGemmaPilotScorer
 from traces.pilot.runner import assert_pilot_disabled_or_authorized, load_pilot_config
+
+try:
+    from traces.pilot.real_scorer import RealGemmaPilotScorer
+except ModuleNotFoundError:  # peft/torch stack optional on CPU-only hosts
+    RealGemmaPilotScorer = None  # type: ignore[misc, assignment]
 from traces.pilot.synthetic import (
     SyntheticPilotScorer,
     make_disjoint_causal_world,
@@ -35,6 +39,8 @@ def test_allow_execution_cannot_unlock_real():
 
 
 def test_synthetic_mode_rejects_real_scorer():
+    if RealGemmaPilotScorer is None:
+        pytest.skip("peft/real_scorer dependencies unavailable")
     with pytest.raises(RuntimeError, match="RealGemmaPilotScorer"):
         run_pilot_pipeline(
             RealGemmaPilotScorer(_autoload=False),

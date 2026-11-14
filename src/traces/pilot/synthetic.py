@@ -135,31 +135,52 @@ class SyntheticPilotScorer:
         base = 0.8 if component_id in self.world.causal_set(seed) else 0.02
         jitter = self.noise * (_stable_unit(f"{seed}:{component_id}:{instruction_id}:{split}") - 0.5)
         return max(0.0, base + jitter)
+    def score_D_set_detailed(
+        self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
+    ) -> tuple[float, dict[str, float]]:
+        # Empty component set: intact − intact ⇒ ~0 (instrumentation)
+        if not component_ids:
+            per = {iid: 0.0 for iid in instruction_ids}
+            return 0.0, per
+        strength = self._overlap_strength(seed, component_ids)
+        per: dict[str, float] = {}
+        for iid in instruction_ids:
+            noise = self.noise * (_stable_unit(f"{seed}:{iid}:{split}") - 0.5)
+            per[iid] = max(
+                0.0, 1.0 * strength + 0.05 * len(component_ids) / 100.0 + noise
+            )
+        mean = sum(per.values()) / max(len(per), 1)
+        return float(mean), per
+
     def score_D_set(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
     ) -> float:
-        # Joint ablation: strength scales with overlap with planted causal set
-        strength = self._overlap_strength(seed, component_ids)
-        # Mild instruction averaging noise
-        noise = self.noise * (
-            sum(_stable_unit(f"{seed}:{i}:{split}") for i in instruction_ids)
-            / max(len(instruction_ids), 1)
-            - 0.5
-        )
-        return max(0.0, 1.0 * strength + 0.05 * len(component_ids) / 100.0 + noise)
+        mean, _ = self.score_D_set_detailed(seed, component_ids, instruction_ids, split)
+        return mean
+
+    def score_K_set_detailed(
+        self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
+    ) -> tuple[float, dict[str, float]]:
+        if not component_ids:
+            per = {iid: 0.0 for iid in instruction_ids}
+            return 0.0, per
+        layers = {cid.split(".")[0] for cid in component_ids}
+        per = {}
+        for iid in instruction_ids:
+            base = 0.01 * len(component_ids)
+            base += 0.005 * len(layers)
+            base += 0.002 * _stable_unit(
+                f"K:{seed}:{split}:{iid}:{','.join(component_ids)}"
+            )
+            per[iid] = float(base)
+        mean = sum(per.values()) / max(len(per), 1)
+        return float(mean), per
 
     def score_K_set(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
     ) -> float:
-        # Benign damage increases with set size + mild seed jitter (independent of causal overlap)
-        if not component_ids:
-            return 0.0
-        base = 0.01 * len(component_ids)
-        # Layer diversity adds damage
-        layers = {cid.split(".")[0] for cid in component_ids}
-        base += 0.005 * len(layers)
-        base += 0.002 * _stable_unit(f"K:{seed}:{split}:{','.join(component_ids)}")
-        return float(base)
+        mean, _ = self.score_K_set_detailed(seed, component_ids, instruction_ids, split)
+        return mean
 
     def score_asr(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str

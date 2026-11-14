@@ -382,9 +382,10 @@ class RealGemmaPilotScorer:
         assert bundle.manager.active_hook_count == 0
         return float(intact - ablated)
     @torch.inference_mode()
-    def score_D_set(
+    def score_D_set_detailed(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
-    ) -> float:
+    ) -> tuple[float, dict[str, float]]:
+        """Aggregate D plus per-instruction D (same forwards; no extra model calls)."""
         assert not torch.is_grad_enabled()
         if not instruction_ids:
             raise ValueError("Empty instruction set for D")
@@ -397,20 +398,31 @@ class RealGemmaPilotScorer:
             for iid in instruction_ids
         ]
         assert bundle.manager.active_hook_count == 0
-        return compute_D_from_logprobs(intact_vals, ablated_vals)
+        per = {
+            iid: float(a) - float(b)
+            for iid, a, b in zip(instruction_ids, intact_vals, ablated_vals)
+        }
+        return compute_D_from_logprobs(intact_vals, ablated_vals), per
 
     @torch.inference_mode()
-    def score_K_set(
+    def score_D_set(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
     ) -> float:
-        """K_r(S): mean KL(intact||intervened) on control-tagged prompts, non-pad positions."""
+        mean, _ = self.score_D_set_detailed(seed, component_ids, instruction_ids, split)
+        return mean
+
+    @torch.inference_mode()
+    def score_K_set_detailed(
+        self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
+    ) -> tuple[float, dict[str, float]]:
+        """Aggregate K plus per-instruction K (same forwards; no extra model calls)."""
         assert not torch.is_grad_enabled()
         if not instruction_ids:
             raise ValueError("Empty instruction set for K")
         bundle = self._require_bundle(seed)
-        comps = self._resolve_components(component_ids)
+        comps = self._resolve_components(component_ids) if component_ids else []
         device = _device_of(bundle.model)
-        kls: list[float] = []
+        per: dict[str, float] = {}
         for iid in instruction_ids:
             self._ensure_rendered(bundle, iid, split)
             rendered = bundle.rendered_control[(split, iid)]
@@ -420,13 +432,27 @@ class RealGemmaPilotScorer:
             bundle.manager.clear()
             intact = bundle.model(input_ids=input_ids, attention_mask=attn).logits
             self.counters["n_tf_forwards"] += 1
-            with bundle.manager.temporary(components=comps):
-                intervened = bundle.model(input_ids=input_ids, attention_mask=attn).logits
+            if component_ids:
+                with bundle.manager.temporary(components=comps):
+                    intervened = bundle.model(
+                        input_ids=input_ids, attention_mask=attn
+                    ).logits
+            else:
+                intervened = intact
             self.counters["n_tf_forwards"] += 1
             assert bundle.manager.active_hook_count == 0
-            kls.append(compute_K_from_logits(intact, intervened, attention_mask=attn))
+            per[iid] = compute_K_from_logits(intact, intervened, attention_mask=attn)
         assert bundle.manager.active_hook_count == 0
-        return float(sum(kls) / len(kls))
+        mean = float(sum(per.values()) / len(per))
+        return mean, per
+
+    @torch.inference_mode()
+    def score_K_set(
+        self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
+    ) -> float:
+        """K_r(S): mean KL(intact||intervened) on control-tagged prompts, non-pad positions."""
+        mean, _ = self.score_K_set_detailed(seed, component_ids, instruction_ids, split)
+        return mean
 
     @torch.inference_mode()
     def score_asr(

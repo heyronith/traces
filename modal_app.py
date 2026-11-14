@@ -349,6 +349,10 @@ def run_stage1_pilot_unit_gpu(
     scorer = RealGemmaPilotScorer(seeds=(seed,))
     payload: dict[str, Any]
     try:
+        if not git_sha:
+            raise RuntimeError(
+                "Scientific pilot unit requires exact executed_git_sha; refusing unbound run"
+            )
         result = run_real_pilot_authorized(
             scorer,
             seeds=(42, 43, 44),
@@ -357,6 +361,7 @@ def run_stage1_pilot_unit_gpu(
             wall_guard=wall,
             unit={"kind": kind, "seed": seed, "unit_id": unit_id},
             durable_commit=durable_commit,
+            executed_git_sha=git_sha,
         )
         payload = json_safe(result.to_dict())
         unit_status = (result.analysis or {}).get("unit_status") or {}

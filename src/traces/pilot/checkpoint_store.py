@@ -437,6 +437,50 @@ class PilotCheckpointStore:
                     out.append(row)
         return out
 
+    def save_damage_match_selection(
+        self,
+        pair_key: str,
+        k: int,
+        record: dict[str, Any],
+    ) -> None:
+        """Freeze validation-selected damage-matched control (never held-out)."""
+        bucket = self.state.setdefault("damage_match_selections", {})
+        key = f"{pair_key}|k{k}"
+        existing = bucket.get(key)
+        if existing and existing.get("complete"):
+            if existing.get("selection_hash") != record.get("selection_hash"):
+                raise RuntimeError(
+                    f"Frozen damage-match selection drift for {key}: "
+                    f"stored={existing.get('selection_hash')} new={record.get('selection_hash')}"
+                )
+            if list(existing.get("component_ids") or []) != list(
+                record.get("component_ids") or []
+            ):
+                raise RuntimeError(
+                    f"Frozen damage-match component set drift for {key}"
+                )
+            return
+        path = self.root / "damage_match" / f"{key.replace('/', '_')}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".json.tmp")
+        payload = {**record, "complete": True, "path": str(path)}
+        tmp.write_text(json.dumps(payload, indent=2) + "\n")
+        tmp.replace(path)
+        bucket[key] = payload
+        self.commit_durable(f"damage_match_{key}")
+
+    def load_damage_match_selection(
+        self, pair_key: str, k: int
+    ) -> dict[str, Any] | None:
+        key = f"{pair_key}|k{k}"
+        meta = self.state.get("damage_match_selections", {}).get(key)
+        if not meta or not meta.get("complete"):
+            return None
+        path = Path(meta.get("path") or "")
+        if path.exists():
+            return json.loads(path.read_text())
+        return dict(meta)
+
     def save_native_validation(self, recipient: int, payload: dict[str, Any]) -> None:
         self.state.setdefault("native_validation", {})[str(recipient)] = payload
         self.commit_durable(f"native_validation_{recipient}")

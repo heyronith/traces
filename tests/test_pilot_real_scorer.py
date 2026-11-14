@@ -6,6 +6,10 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+
+pytest.importorskip("peft")
+pytest.importorskip("torch")
+
 import torch
 import torch.nn as nn
 
