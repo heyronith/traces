@@ -41,7 +41,11 @@ from traces.pilot.gates import (
     evaluate_native_validation_gate,
 )
 from traces.pilot.jobs import WallClockDeadlineExceeded, WallClockGuard
-from traces.pilot.metrics_defs import metric_definitions
+from traces.pilot.metrics_defs import (
+    INTERVENTION_SEMANTICS,
+    SCORING_DEFINITION_ID,
+    metric_definitions,
+)
 from traces.pilot.ranking import (
     FrozenRanking,
     freeze_ranking_from_per_instruction_effects,
@@ -63,6 +67,16 @@ from traces.reproducibility import sha256_json
 # Baseline feasibility thresholds (pre-screening abort)
 DEFAULT_MIN_TRIGGER_ASR = 0.5
 DEFAULT_MAX_CONTROL_FALSE_FIRE = 0.25
+
+# Checkpoint family (dense-LoRA Gemma-2-2b seeds 42–44)
+EXPECTED_BASE_MODEL_ID = "google/gemma-2-2b"
+EXPECTED_ADAPTER_REPO = "interpretable-finetuning/topklora-gemma-2-2b-dense-lora"
+EXPECTED_ADAPTER_SUBFOLDERS = {
+    42: "l1523/seed42",
+    43: "l1523/seed43",
+    44: "l1523/seed44",
+}
+CHECKPOINT_FAMILY = "dense_lora_gemma2_2b_l1523_seeds_42_43_44"
 
 
 def _instruction_ids(split: str) -> list[str]:
@@ -146,7 +160,15 @@ def _run_identity(
     k_budgets: Sequence[int],
     n_components: int,
     scoring_definition_id: str,
+    intervention_semantics: str = INTERVENTION_SEMANTICS,
+    base_model_id: str = EXPECTED_BASE_MODEL_ID,
+    adapter_repo: str = EXPECTED_ADAPTER_REPO,
+    checkpoint_family: str = CHECKPOINT_FAMILY,
 ) -> dict[str, Any]:
+    subfolders = {
+        str(s): EXPECTED_ADAPTER_SUBFOLDERS.get(int(s), f"l1523/seed{s}")
+        for s in seeds
+    }
     return {
         "catalog_hash": catalog_hash,
         "dataset_split_hash": dataset_split_hash,
@@ -157,8 +179,41 @@ def _run_identity(
         "k_budgets": list(k_budgets),
         "n_components": n_components,
         "scoring_definition_id": scoring_definition_id,
-        "store_protocol": "pilot_exec_v2",
+        "intervention_semantics": intervention_semantics,
+        "base_model_id": base_model_id,
+        "adapter_repo": adapter_repo,
+        "adapter_subfolders_by_seed": subfolders,
+        "checkpoint_family": checkpoint_family,
+        "store_protocol": "pilot_exec_v3",
     }
+
+
+def _early_stop_unit(
+    store: PilotCheckpointStore,
+    result: PilotEngineResult,
+    *,
+    unit_id: str | None,
+    reason: str,
+    load_events: list[dict[str, Any]],
+    unit: dict[str, Any] | None,
+) -> PilotEngineResult:
+    """Persist partial progress; never mark the unit complete."""
+    result.stopped_early = True
+    result.stop_reason = reason
+    if unit_id:
+        store.set_unit_status(
+            unit_id, complete=False, stopped_early=True, reason=reason
+        )
+    result.analysis = result.analysis or {}
+    if isinstance(result.analysis, dict):
+        result.analysis["load_unload_events"] = load_events
+        if unit is not None:
+            result.analysis["unit"] = unit
+        result.analysis["unit_status"] = (
+            store.get_unit_status(unit_id) if unit_id else {"complete": False}
+        )
+    store.save_final_results(result.to_dict(), phase="stopped_early")
+    return result
 
 
 def _scientific_measurement_key(row: dict[str, Any]) -> tuple:
@@ -265,6 +320,7 @@ def run_real_pilot_authorized(
     bypass_config_for_synthetic: bool = False,
     wall_guard: WallClockGuard | None = None,
     unit: dict[str, Any] | None = None,
+    durable_commit: Any | None = None,
 ) -> PilotEngineResult:
     """Functional real-pilot entrypoint.
 
@@ -293,6 +349,7 @@ def run_real_pilot_authorized(
         execution_mode="real" if not bypass_config_for_synthetic else "synthetic_test",
         wall_guard=wall_guard,
         unit=unit,
+        durable_commit=durable_commit,
     )
 
 
@@ -309,6 +366,7 @@ def run_two_phase_pilot(
     execution_mode: str = "real",
     wall_guard: WallClockGuard | None = None,
     unit: dict[str, Any] | None = None,
+    durable_commit: Any | None = None,
 ) -> PilotEngineResult:
     """Discovery (per-seed load/scan/unload) then transfer (per-recipient load/eval/unload).
 
@@ -334,9 +392,14 @@ def run_two_phase_pilot(
     baseline_ids = val_ids[: min(8, len(val_ids))]
 
     out = Path(output_dir) if output_dir else Path("results/pilot/run_scratch")
-    store = PilotCheckpointStore(out)
+    store = PilotCheckpointStore(out, durable_commit=durable_commit)
 
-    scoring_id = getattr(scorer, "scoring_definition_id", "synthetic_or_unspecified")
+    scoring_id = getattr(scorer, "scoring_definition_id", SCORING_DEFINITION_ID)
+    intervention = getattr(scorer, "intervention_semantics", INTERVENTION_SEMANTICS)
+    base_model_id = getattr(scorer, "base_model", None) or getattr(
+        scorer, "base_model_id", EXPECTED_BASE_MODEL_ID
+    )
+    adapter_repo = getattr(scorer, "adapter_repo", EXPECTED_ADAPTER_REPO)
     identity = _run_identity(
         catalog_hash=catalog_hash,
         dataset_split_hash=dataset_split_hash,
@@ -347,6 +410,9 @@ def run_two_phase_pilot(
         k_budgets=k_budgets,
         n_components=len(cat),
         scoring_definition_id=str(scoring_id),
+        intervention_semantics=str(intervention),
+        base_model_id=str(base_model_id),
+        adapter_repo=str(adapter_repo),
     )
     store.bind_run_identity(identity)
 
@@ -375,8 +441,22 @@ def run_two_phase_pilot(
 
     unit_kind = (unit or {}).get("kind")
     unit_seed = (unit or {}).get("seed")
+    unit_id = (unit or {}).get("unit_id") or (
+        f"{unit_kind}_seed_{unit_seed}"
+        if unit_kind == "discovery" and unit_seed is not None
+        else (
+            f"transfer_recipient_{unit_seed}"
+            if unit_kind == "transfer" and unit_seed is not None
+            else None
+        )
+    )
+    if unit_kind == "discovery" and unit_seed is not None:
+        unit_id = f"discovery_seed_{int(unit_seed)}"
+    elif unit_kind == "transfer" and unit_seed is not None:
+        unit_id = f"transfer_recipient_{int(unit_seed)}"
     run_discovery = unit_kind is None or unit_kind == "discovery"
     run_transfer = unit_kind is None or unit_kind == "transfer"
+    active_unit_complete = True  # flipped False on early stop
 
     # ========== PHASE 1: DISCOVERY ==========
     if run_discovery:
@@ -385,14 +465,19 @@ def run_two_phase_pilot(
             [int(unit_seed)] if unit_kind == "discovery" else list(seeds)
         )
         for seed in discovery_seeds:
-            if wall_guard is not None:
-                try:
+            try:
+                if wall_guard is not None:
                     wall_guard.check(f"discovery_seed_{seed}_start")
-                except WallClockDeadlineExceeded as e:
-                    result.stopped_early = True
-                    result.stop_reason = str(e)
-                    store.save_final_results(result.to_dict())
-                    return result
+            except WallClockDeadlineExceeded as e:
+                active_unit_complete = False
+                return _early_stop_unit(
+                    store,
+                    result,
+                    unit_id=unit_id or f"discovery_seed_{seed}",
+                    reason=str(e),
+                    load_events=load_events,
+                    unit=unit,
+                )
 
             if resume and store.discovery_complete(seed):
                 ranking = store.load_discovery_ranking(seed)
@@ -429,12 +514,19 @@ def run_two_phase_pilot(
                     "resumed": True,
                     "baseline": store.state["discovery"][str(seed)].get("baseline"),
                 }
+                if unit_kind == "discovery":
+                    store.mark_unit_complete(f"discovery_seed_{seed}")
                 continue
 
             _ensure_loaded(scorer, seed)
             load_events.append({"phase": "discovery", "action": "load", "seed": seed})
+            discovery_finished = False
             try:
-                baseline = _call_baseline(scorer, seed, baseline_ids, "validation")
+                partial = store.load_discovery_partial(seed) if resume else None
+                if partial and partial.get("baseline"):
+                    baseline = dict(partial["baseline"])
+                else:
+                    baseline = _call_baseline(scorer, seed, baseline_ids, "validation")
                 trig = float(baseline.get("trigger_asr", -1))
                 cff = float(baseline.get("control_false_fire", 1))
                 if trig < min_trigger_asr or cff > max_control_false_fire:
@@ -446,13 +538,87 @@ def run_two_phase_pilot(
                     store.record_failure("baseline", msg)
                     raise RuntimeError(msg)
 
-                effects: dict[str, dict[str, float]] = {c.component_id: {} for c in cat}
+                effects: dict[str, dict[str, float]] = (
+                    {cid: dict(v) for cid, v in (partial or {}).get("effects", {}).items()}
+                    if partial
+                    else {c.component_id: {} for c in cat}
+                )
                 for c in cat:
-                    for iid in disc_ids:
-                        effects[c.component_id][iid] = float(
-                            scorer.score_D_single(seed, c.component_id, iid, "discovery")
-                        )
+                    if c.component_id not in effects:
+                        effects[c.component_id] = {}
+                done_set = set((partial or {}).get("components_done") or [])
+                components_done: list[str] = list(done_set)
                 prov = _live_loaded_provenance(scorer, seed)
+                # Lock revisions as soon as live checkpoint is observed
+                store.lock_seed_revisions(seed, prov)
+
+                for c in cat:
+                    if c.component_id in done_set and len(
+                        effects.get(c.component_id, {})
+                    ) >= len(disc_ids):
+                        continue
+                    try:
+                        if wall_guard is not None:
+                            wall_guard.check(
+                                f"discovery_seed_{seed}_component_{c.component_id}"
+                            )
+                    except WallClockDeadlineExceeded as e:
+                        store.save_discovery_partial(
+                            seed,
+                            effects,
+                            components_done=components_done,
+                            baseline=baseline,
+                            provenance=prov,
+                        )
+                        active_unit_complete = False
+                        return _early_stop_unit(
+                            store,
+                            result,
+                            unit_id=unit_id or f"discovery_seed_{seed}",
+                            reason=str(e),
+                            load_events=load_events,
+                            unit=unit,
+                        )
+                    for iid in disc_ids:
+                        try:
+                            if wall_guard is not None:
+                                wall_guard.check(
+                                    f"discovery_seed_{seed}_D_single_{c.component_id}_{iid}"
+                                )
+                        except WallClockDeadlineExceeded as e:
+                            store.save_discovery_partial(
+                                seed,
+                                effects,
+                                components_done=components_done,
+                                baseline=baseline,
+                                provenance=prov,
+                            )
+                            active_unit_complete = False
+                            return _early_stop_unit(
+                                store,
+                                result,
+                                unit_id=unit_id or f"discovery_seed_{seed}",
+                                reason=str(e),
+                                load_events=load_events,
+                                unit=unit,
+                            )
+                        effects[c.component_id][iid] = float(
+                            scorer.score_D_single(
+                                seed, c.component_id, iid, "discovery"
+                            )
+                        )
+                    components_done.append(c.component_id)
+                    done_set.add(c.component_id)
+                    # Periodic durable persist during long discovery scans
+                    if len(components_done) % 25 == 0:
+                        store.save_discovery_partial(
+                            seed,
+                            effects,
+                            components_done=components_done,
+                            baseline=baseline,
+                            provenance=prov,
+                        )
+
                 folds = split_discovery_for_reliability(disc_ids, seed=seed, n_folds=2)
                 fold_orders = []
                 for fold in folds:
@@ -472,7 +638,7 @@ def run_two_phase_pilot(
                         ranking_reliability_overlap(fold_orders[0], fold_orders[1], k)
                         for k in k_budgets
                     ],
-                    "resumed": False,
+                    "resumed": bool(partial),
                 }
                 full = freeze_ranking_from_per_instruction_effects(
                     effects,
@@ -501,13 +667,29 @@ def run_two_phase_pilot(
                     "discovery_prompt_hash": discovery_hash,
                     "provenance": prov,
                     "baseline": baseline,
-                    "resumed": False,
+                    "resumed": bool(partial),
                 }
                 store.mark_unit_complete(f"discovery_seed_{seed}")
+                discovery_finished = True
+            except WallClockDeadlineExceeded as e:
+                active_unit_complete = False
+                return _early_stop_unit(
+                    store,
+                    result,
+                    unit_id=unit_id or f"discovery_seed_{seed}",
+                    reason=str(e),
+                    load_events=load_events,
+                    unit=unit,
+                )
             finally:
                 _unload(scorer, seed)
-                load_events.append({"phase": "discovery", "action": "unload", "seed": seed})
+                load_events.append(
+                    {"phase": "discovery", "action": "unload", "seed": seed}
+                )
                 _assert_at_most_one_loaded(scorer, context="after discovery unload")
+                if not discovery_finished and unit_kind == "discovery" and active_unit_complete:
+                    # Unexpected error path without early-stop helper
+                    pass
 
     # Ensure all discovery rankings available for transfer (from store if unitized)
     for seed in seeds:
@@ -527,6 +709,26 @@ def run_two_phase_pilot(
             "partial_unit": True,
             "reliability_partial": rel_gate.to_dict(),
         }
+        if unit_id and store.unit_complete(unit_id):
+            result.analysis = {
+                "plan": analysis_plan_stub(),
+                "load_unload_events": load_events,
+                "unit": unit,
+                "unit_status": store.get_unit_status(unit_id),
+            }
+            result.runtime_seconds = time.perf_counter() - t0
+            store.save_final_results(result.to_dict())
+            return result
+        # Incomplete discovery unit — do not report complete
+        active_unit_complete = False
+        return _early_stop_unit(
+            store,
+            result,
+            unit_id=unit_id or f"discovery_seed_{unit_seed}",
+            reason=result.stop_reason or "discovery_unit_incomplete",
+            load_events=load_events,
+            unit=unit,
+        )
     else:
         # Full or transfer unit: require all seeds' discovery complete for gate
         if run_transfer and not all(store.discovery_complete(s) for s in seeds):
@@ -584,16 +786,6 @@ def run_two_phase_pilot(
             result.stopped_early = True
             result.stop_reason = rel_gate.reason
 
-    if unit_kind == "discovery":
-        result.analysis = {
-            "plan": analysis_plan_stub(),
-            "load_unload_events": load_events,
-            "unit": unit,
-        }
-        result.runtime_seconds = time.perf_counter() - t0
-        store.save_final_results(result.to_dict())
-        return result
-
     # ========== PHASE 2: TRANSFER (per recipient) ==========
     store.set_phase("transfer")
     native_val_D: dict[str, float | None] = {}
@@ -610,24 +802,33 @@ def run_two_phase_pilot(
     )
 
     for recipient in transfer_recipients:
-        if wall_guard is not None:
-            try:
+        try:
+            if wall_guard is not None:
                 wall_guard.check(f"transfer_recipient_{recipient}_start")
-            except WallClockDeadlineExceeded as e:
-                result.stopped_early = True
-                result.stop_reason = str(e)
-                store.save_final_results(result.to_dict())
-                return result
+        except WallClockDeadlineExceeded as e:
+            active_unit_complete = False
+            return _early_stop_unit(
+                store,
+                result,
+                unit_id=unit_id or f"transfer_recipient_{recipient}",
+                reason=str(e),
+                load_events=load_events,
+                unit=unit,
+            )
 
         _ensure_loaded(scorer, recipient)
         load_events.append({"phase": "transfer", "action": "load", "seed": recipient})
+        transfer_finished = False
         try:
             recip = frozen[recipient]
             recip_prov = _live_loaded_provenance(scorer, recipient)
-            if recip.adapter_subfolder != recip_prov["adapter_subfolder"]:
-                raise RuntimeError(
-                    "Recipient ranking adapter_subfolder mismatch vs live scorer"
-                )
+            # Reject frozen discovery provenance vs actual loaded recipient checkpoint
+            store.assert_frozen_matches_live(
+                recip, recip_prov, context=f"recipient_{recipient}"
+            )
+            store.assert_live_matches_revision_lock(
+                recipient, recip_prov, context=f"recipient_{recipient}"
+            )
 
             recipient_native_D_for_gate: float | None = native_val_D.get(str(recipient))
             held_out_jobs: list[dict[str, Any]] = []
@@ -667,16 +868,21 @@ def run_two_phase_pilot(
                 )
 
                 for k in k_budgets:
-                    if wall_guard is not None:
-                        try:
+                    try:
+                        if wall_guard is not None:
                             wall_guard.check(
-                                f"transfer_{pair.key()}_k{k}_validation"
+                                f"transfer_{pair.key()}_k{k}_validation_start"
                             )
-                        except WallClockDeadlineExceeded as e:
-                            result.stopped_early = True
-                            result.stop_reason = str(e)
-                            store.save_final_results(result.to_dict())
-                            return result
+                    except WallClockDeadlineExceeded as e:
+                        active_unit_complete = False
+                        return _early_stop_unit(
+                            store,
+                            result,
+                            unit_id=unit_id or f"transfer_recipient_{recipient}",
+                            reason=str(e),
+                            load_events=load_events,
+                            unit=unit,
+                        )
 
                     donor_top = list(donor.top_k(k))
                     rnd = random_control_set(
@@ -723,6 +929,21 @@ def run_two_phase_pilot(
                     )
 
                     for cond in conds:
+                        try:
+                            if wall_guard is not None:
+                                wall_guard.check(
+                                    f"transfer_{pair.key()}_k{k}_{cond.source}_validation"
+                                )
+                        except WallClockDeadlineExceeded as e:
+                            active_unit_complete = False
+                            return _early_stop_unit(
+                                store,
+                                result,
+                                unit_id=unit_id or f"transfer_recipient_{recipient}",
+                                reason=str(e),
+                                load_events=load_events,
+                                unit=unit,
+                            )
                         key = f"{pair.key()}|k{k}|{cond.source}|validation"
                         payload_hash = sha256_json(
                             {
@@ -843,16 +1064,22 @@ def run_two_phase_pilot(
                     dmg = job["dmg"]
                     pair_rows = list(result.per_pair[pair_key]["rows"])
                     for cond in conds:
-                        if wall_guard is not None:
-                            try:
+                        try:
+                            if wall_guard is not None:
                                 wall_guard.check(
-                                    f"transfer_{pair_key}_k{k}_held_out"
+                                    f"transfer_{pair_key}_k{k}_{cond.source}_held_out"
                                 )
-                            except WallClockDeadlineExceeded as e:
-                                result.stopped_early = True
-                                result.stop_reason = str(e)
-                                store.save_final_results(result.to_dict())
-                                return result
+                        except WallClockDeadlineExceeded as e:
+                            active_unit_complete = False
+                            return _early_stop_unit(
+                                store,
+                                result,
+                                unit_id=unit_id
+                                or f"transfer_recipient_{recipient}",
+                                reason=str(e),
+                                load_events=load_events,
+                                unit=unit,
+                            )
                         key = f"{pair_key}|k{k}|{cond.source}|held_out"
                         payload_hash = sha256_json(
                             {
@@ -913,12 +1140,27 @@ def run_two_phase_pilot(
                         result.per_pair[pair.key()]["held_out_skipped"] = True
 
             store.mark_unit_complete(f"transfer_recipient_{recipient}")
+            transfer_finished = True
         finally:
             _unload(scorer, recipient)
             load_events.append(
                 {"phase": "transfer", "action": "unload", "seed": recipient}
             )
             _assert_at_most_one_loaded(scorer, context="after transfer unload")
+            if (
+                unit_kind == "transfer"
+                and not transfer_finished
+                and not result.stopped_early
+            ):
+                # Hard failure without early-stop helper: ensure not marked complete
+                uid = unit_id or f"transfer_recipient_{recipient}"
+                if not store.unit_complete(uid):
+                    store.set_unit_status(
+                        uid,
+                        complete=False,
+                        stopped_early=False,
+                        reason="transfer_unit_aborted",
+                    )
 
     # Aggregate native gate across recipients for reporting
     # Merge any stored native vals for seeds not just run
@@ -939,8 +1181,14 @@ def run_two_phase_pilot(
     result.analysis["load_unload_events"] = load_events
     if unit is not None:
         result.analysis["unit"] = unit
+        if unit_id:
+            result.analysis["unit_status"] = store.get_unit_status(unit_id)
     if not native_gate.passed:
         result.analysis["transfer_interpretation"] = "blocked_by_native_validation_gate"
     result.runtime_seconds = time.perf_counter() - t0
-    store.save_final_results(result.to_dict())
+    # Full multi-seed run (no unit): complete only if not stopped by wall clock
+    if unit_id is None and result.stopped_early:
+        store.save_final_results(result.to_dict(), phase="stopped_early")
+    else:
+        store.save_final_results(result.to_dict())
     return result

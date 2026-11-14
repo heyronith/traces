@@ -291,6 +291,7 @@ def run_stage1_pilot_unit_gpu(
 
     Never unlocked by calibration authorization. retries=0. One container.
     Full pilot is a sequence of these units; each must be explicitly authorized.
+    Volume commits happen at safe checkpoint boundaries and on recoverable stops.
     """
     import os
     import sys
@@ -298,11 +299,14 @@ def run_stage1_pilot_unit_gpu(
     sys.path.insert(0, "/root/src")
     os.environ.setdefault("TRACES_DATA_ROOT", "/root/data")
     import yaml
-    from traces.cost_estimator import normalize_gpu_name
     from traces.pilot.auth import assert_real_pilot_authorized
     from traces.pilot.calibration import json_safe
     from traces.pilot.execution import run_real_pilot_authorized
-    from traces.pilot.jobs import UNIT_DEADLINE_SEC, WallClockGuard
+    from traces.pilot.jobs import (
+        UNIT_DEADLINE_SEC,
+        WallClockGuard,
+        validate_assigned_gpu,
+    )
     from traces.pilot.real_scorer import RealGemmaPilotScorer
 
     cfg = yaml.safe_load(Path("/root/configs/pilot.yaml").read_text())
@@ -312,10 +316,13 @@ def run_stage1_pilot_unit_gpu(
 
     kind = unit.get("kind")
     seed = int(unit["seed"])
+    unit_id = unit.get("unit_id") or (
+        f"discovery_seed_{seed}" if kind == "discovery" else f"transfer_recipient_{seed}"
+    )
     if kind not in {"discovery", "transfer"}:
         raise RuntimeError(f"Unknown unit kind: {kind}")
 
-    # Record actual GPU type when available for pricing/runtime reconciliation.
+    # Record actual GPU type; validate calibrated class or revalidate deadline/cost.
     gpu_name = observed_gpu
     try:
         import torch
@@ -324,10 +331,20 @@ def run_stage1_pilot_unit_gpu(
             gpu_name = torch.cuda.get_device_name(0)
     except Exception:
         pass
-    gpu_key = normalize_gpu_name(gpu_name or "A10G")
+    max_usd = float(cfg.get("budget", {}).get("max_usd", 50))
+    gpu_validation = validate_assigned_gpu(gpu_name, max_budget_usd=max_usd)
+    gpu_key = gpu_validation["gpu_key"]
+
+    commit_reasons: list[str] = []
+
+    def durable_commit(reason: str) -> None:
+        """Explicit Modal volume commit at safe boundaries / recoverable errors."""
+        commit_reasons.append(reason)
+        results_vol.commit()
 
     wall = WallClockGuard(deadline_sec=UNIT_DEADLINE_SEC)
     scorer = RealGemmaPilotScorer(seeds=(seed,))
+    payload: dict[str, Any]
     try:
         result = run_real_pilot_authorized(
             scorer,
@@ -335,23 +352,49 @@ def run_stage1_pilot_unit_gpu(
             output_dir="/results/pilot/stage1_run",
             config_path="/root/configs/pilot.yaml",
             wall_guard=wall,
-            unit={"kind": kind, "seed": seed, "unit_id": unit.get("unit_id")},
+            unit={"kind": kind, "seed": seed, "unit_id": unit_id},
+            durable_commit=durable_commit,
         )
         payload = json_safe(result.to_dict())
+        unit_status = (result.analysis or {}).get("unit_status") or {}
+        # Incomplete / stopped-early must never be reported as completed
+        complete = bool(unit_status.get("complete")) and not result.stopped_early
+        if result.stopped_early or wall.stopped_early:
+            complete = False
         payload["git_sha"] = git_sha
-        payload["unit"] = unit
+        payload["unit"] = {**unit, "unit_id": unit_id}
+        payload["unit_status"] = {
+            "unit_id": unit_id,
+            "complete": complete,
+            "stopped_early": bool(result.stopped_early or wall.stopped_early),
+            "reason": result.stop_reason or wall.stop_reason,
+            **{k: v for k, v in unit_status.items() if k not in {"complete", "stopped_early"}},
+        }
+        payload["stopped_early"] = bool(result.stopped_early or wall.stopped_early)
+        payload["stop_reason"] = result.stop_reason or wall.stop_reason
         payload["observed_gpu"] = gpu_name
         payload["pricing_gpu_key"] = gpu_key
+        payload["gpu_validation"] = {
+            k: v for k, v in gpu_validation.items() if k != "schedule"
+        }
         payload["wall_clock"] = {
             "deadline_sec": UNIT_DEADLINE_SEC,
             "elapsed_sec": wall.elapsed(),
             "stopped_early": wall.stopped_early,
             "stop_reason": wall.stop_reason,
         }
-        unit_out = Path(f"/results/pilot/stage1_unit_{unit.get('unit_id', kind)}_{seed}.json")
+        payload["durable_commits"] = list(commit_reasons)
+        unit_out = Path(f"/results/pilot/stage1_unit_{unit_id}.json")
         unit_out.write_text(json.dumps(payload, indent=2) + "\n")
-        results_vol.commit()
+        durable_commit(f"unit_payload_{unit_id}")
         return payload
+    except Exception as exc:
+        # Persist whatever was already checkpointed, then re-raise / return incomplete
+        try:
+            durable_commit(f"recoverable_error_{unit_id}")
+        except Exception:
+            pass
+        raise
     finally:
         scorer.unload_seed(seed)
 
@@ -400,6 +443,7 @@ def main(
         from traces.pilot.budget import assert_prelaunch_budget, build_pilot_workload_estimate
         from traces.pilot.calibration import load_pilot_config_for_calibration
         from traces.pilot.jobs import (
+            assert_unit_remote_success,
             assert_unitized_schedule_fits,
             build_unitized_schedule,
             plan_execution_units,
@@ -477,6 +521,19 @@ def main(
                 authorized=True,
                 git_sha=commit,
             )
+            # Halt launch sequence on incomplete / stopped-early units
+            try:
+                assert_unit_remote_success(results, expected_unit_id=u.unit_id)
+            except RuntimeError as err:
+                fail_path = (
+                    PROJECT_ROOT
+                    / "results"
+                    / "pilot"
+                    / f"stage1_unit_{u.unit_id}_FAILED.json"
+                )
+                fail_path.write_text(json.dumps(results, indent=2) + "\n")
+                print(json.dumps({"halted": True, "unit": u.unit_id, "error": str(err)}, indent=2))
+                raise SystemExit(str(err))
             all_results.append(results)
             unit_local = (
                 PROJECT_ROOT

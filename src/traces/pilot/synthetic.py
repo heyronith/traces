@@ -67,6 +67,13 @@ class SyntheticPilotScorer:
         self._loaded: set[int] = set()
         self.load_events: list[tuple[str, int]] = []
         self.scoring_definition_id = "traces_pilot_D_K_v2"
+        self.intervention_semantics = (
+            "activation_ablation_joint_hooks_not_weight_reversion"
+        )
+        self.base_model = "google/gemma-2-2b"
+        self.adapter_repo = (
+            "interpretable-finetuning/topklora-gemma-2-2b-dense-lora"
+        )
 
     @property
     def loaded_seeds(self) -> set[int]:

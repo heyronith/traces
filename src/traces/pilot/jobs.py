@@ -9,7 +9,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Sequence
 
-from traces.pilot.budget import build_pilot_workload_estimate
+from traces.cost_estimator import normalize_gpu_name
+from traces.pilot.budget import assert_prelaunch_budget, build_pilot_workload_estimate
 from traces.pilot.transfer import DEFAULT_K_BUDGETS, SEEDS
 
 # Modal hard timeout per unit (seconds). High-end per-unit wall time must fit.
@@ -17,6 +18,9 @@ UNIT_TIMEOUT_SEC = 4 * 60 * 60  # 4 hours
 # Persist and stop before Modal kills the container.
 WALL_CLOCK_MARGIN_SEC = 20 * 60  # 20 minutes
 UNIT_DEADLINE_SEC = UNIT_TIMEOUT_SEC - WALL_CLOCK_MARGIN_SEC
+
+# Calibration reference class (torch may report "NVIDIA A10" → A10G).
+CALIBRATED_GPU_KEYS = frozenset({"A10G"})
 
 
 @dataclass(frozen=True)
@@ -144,6 +148,89 @@ def assert_unitized_schedule_fits(schedule: dict[str, Any]) -> None:
         raise RuntimeError(
             "Unitized schedule does not fit Modal unit deadline: "
             f"{offenders}. Increase timeout or further split work — refusing launch."
+        )
+
+
+def validate_assigned_gpu(
+    observed_gpu_name: str | None,
+    *,
+    max_budget_usd: float = 50.0,
+    require_calibrated_class: bool = False,
+) -> dict[str, Any]:
+    """Require A10/A10G or revalidate deadline/cost for the GPU actually assigned."""
+    if not observed_gpu_name:
+        raise RuntimeError(
+            "No observed GPU name; refusing to proceed without validating "
+            "deadline/cost assumptions against the assigned device."
+        )
+    gpu_key = normalize_gpu_name(observed_gpu_name)
+    schedule = build_unitized_schedule(gpu=gpu_key, max_budget_usd=max_budget_usd)
+    assert_unitized_schedule_fits(schedule)
+    est = build_pilot_workload_estimate(gpu=gpu_key, max_budget_usd=max_budget_usd)
+    assert_prelaunch_budget(est, max_budget_usd=max_budget_usd)
+    if gpu_key in CALIBRATED_GPU_KEYS:
+        return {
+            "status": "calibrated_class",
+            "observed_gpu": observed_gpu_name,
+            "gpu_key": gpu_key,
+            "schedule": schedule,
+            "allowed_to_measure": True,
+        }
+    if require_calibrated_class:
+        raise RuntimeError(
+            f"Assigned GPU {observed_gpu_name!r} (key={gpu_key!r}) is not the "
+            f"calibrated A10/A10G class. Refusing measurements."
+        )
+    return {
+        "status": "revalidated_for_assigned_gpu",
+        "observed_gpu": observed_gpu_name,
+        "gpu_key": gpu_key,
+        "schedule": schedule,
+        "allowed_to_measure": True,
+        "note": (
+            "Non-calibrated GPU: deadline and cost revalidated for this device "
+            "before measurements."
+        ),
+    }
+
+
+def assert_unit_remote_success(
+    payload: dict[str, Any],
+    *,
+    expected_unit_id: str | None = None,
+) -> None:
+    """After each .remote(), halt the launch sequence if the unit is incomplete."""
+    unit = payload.get("unit") or {}
+    unit_id = (
+        (payload.get("unit_status") or {}).get("unit_id")
+        or unit.get("unit_id")
+        or expected_unit_id
+    )
+    if payload.get("stopped_early"):
+        raise RuntimeError(
+            f"Halting launch sequence: unit {unit_id} stopped early "
+            f"({payload.get('stop_reason')}). Next unit will NOT be launched."
+        )
+    wall = payload.get("wall_clock") or {}
+    if wall.get("stopped_early"):
+        raise RuntimeError(
+            f"Halting launch sequence: unit {unit_id} hit wall-clock deadline "
+            f"({wall.get('stop_reason')}). Next unit will NOT be launched."
+        )
+    status = payload.get("unit_status") or {}
+    if not status.get("complete"):
+        raise RuntimeError(
+            f"Halting launch sequence: unit {unit_id} incomplete "
+            f"(status={status}). Next unit will NOT be launched."
+        )
+    if status.get("stopped_early"):
+        raise RuntimeError(
+            f"Halting launch sequence: unit {unit_id} reported stopped_early "
+            f"with complete flag inconsistency (status={status})."
+        )
+    if expected_unit_id and unit_id and unit_id != expected_unit_id:
+        raise RuntimeError(
+            f"Unit id mismatch: expected {expected_unit_id}, got {unit_id}"
         )
 
 

@@ -194,7 +194,7 @@ def test_crash_and_resume_scientific_equivalence(tmp_path):
     assert r_resume.gates
     assert (crash_dir / "execution_state.json").exists()
     state = json.loads((crash_dir / "execution_state.json").read_text())
-    assert state["version"] == "pilot_exec_v2"
+    assert state["version"] == "pilot_exec_v3"
     assert state.get("gates")
 
 

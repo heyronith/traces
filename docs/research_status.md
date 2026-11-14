@@ -14,7 +14,8 @@
 | Stage 0 — engineering validation | Passed |
 | Bounded calibration (seed 42) | Accepted |
 | Stage 1 execution wiring | **Implemented; disabled** |
-| Stage 1 final execution blockers | **Corrected; awaiting independent re-review** |
+| Stage 1 final execution blockers | Corrected |
+| Stage 1 launch-safety safeguards | **Corrected; awaiting independent re-review** |
 | Stage 1 — scientific pilot GPU | **Not authorized / not executed** |
 | Novelty / causal claims | **Not authorized** |
 

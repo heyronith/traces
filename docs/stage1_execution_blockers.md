@@ -2,39 +2,40 @@
 
 **Calibration accepted** (`3e9f94f…`). Scientific pilot remains **disabled**.
 
-## Final execution blockers — corrected (CPU-verified; GPU not launched)
+## Final launch-safety corrections (CPU-verified; GPU not launched)
 
-Reviewed SHA `4e0ed98` was **NO-GO** until three execution issues were fixed. Fixes land in this commit; science unchanged; `enabled: false` preserved.
+Reviewed SHA `2cb457a` was **NO-GO** until launch-safety safeguards below. Science unchanged; `enabled: false` preserved; six-unit schedule preserved.
 
-### 1. Accidental donor loading — eliminated
+### Durability
+- Checkpoint store `pilot_exec_v3` with explicit `durable_commit` hook.
+- Modal `results_vol.commit()` at safe boundaries (discovery/transfer rows, revision locks, unit status, recoverable errors) — not only at unit end.
+- Proof: `test_cross_invocation_persistence_via_durable_commit` (fresh container sees only volume-synced files).
 
-- Transfer uses **frozen discovery ranking provenance** for donors (`_ranking_provenance`).
-- Live provenance only via `provenance_for_loaded_seed` (refuses unloadeds).
-- Scorers enforce **at most one** checkpoint loaded; recipient unload is in `finally`.
-- Proof: `tests/test_pilot_execution_blockers.py::test_no_donor_reload_during_transfer` (scorer raises on unexpected loads / `provenance_for_seed`).
+### Deadlines
+- Wall-clock checks throughout discovery (per component / D_single) and validation/held-out (per condition).
+- Partial discovery progress persisted; incomplete units never marked complete.
+- Proof: `test_mid_discovery_interruption_persists_partial_and_resumes`.
 
-### 2. Scientifically safe resume — corrected
+### Launcher
+- After every `.remote()`, `assert_unit_remote_success` — halt if stopped early or incomplete.
+- Proof: `test_incomplete_unit_launch_refusal`.
 
-- Checkpoint store `pilot_exec_v2`: mark transfer complete **only after** durable row persistence.
-- Resume reloads completed measurement rows; binds run identity (catalog/dataset/hashes/k/seeds/scoring).
-- Rejects identity drift and conflicting payload hashes; preserves gates / native validation.
-- Crash-resume ≡ uninterrupted on scientific measurements (`test_crash_and_resume_scientific_equivalence`).
-- Durability across store reopen (Modal volume simulation): `test_checkpoint_durability_across_store_reopen`.
+### Provenance / identity
+- Run identity includes scoring id, intervention semantics, base/adapter IDs, subfolders, checkpoint family.
+- Exact base/adapter revisions locked at discovery; transfer rejects frozen-vs-live mismatches.
+- Proof: `test_checkpoint_revision_mismatch_rejected`, `test_revision_lock_rejects_live_drift`.
 
-### 3. Runtime limits reconciled with workload
+### GPU selection
+- Assigned GPU must be calibrated A10/A10G **or** deadline/cost revalidated for that device before measurements.
+- Proof: `test_validate_assigned_gpu_calibrated_and_revalidate`.
 
-- Full high estimate remains ~**11.64 h** / ~$12.80 on A10G — exceeds a single 6 h job.
-- **Unitized schedule:** 6 independently recoverable Modal units (3 discovery + 3 transfer), **4 h** timeout each, **20 min** wall-clock margin, `retries=0`.
-- Local budget + unit-fit preflight **before** any `.remote()`.
-- Observed GPU name recorded and mapped for pricing (`NVIDIA A10` → A10G).
-- Evidence: `results/pilot/unitized_schedule.json`; `test_unitized_schedule_fits_timeout`; `test_wall_clock_guard_stops_and_persists`.
-- Monolithic `run_stage1_pilot_gpu` now **refuses**; use `run_stage1_pilot_unit_gpu`.
+### Resume equivalence
+- `test_resumed_scientific_measurements_match_uninterrupted` (volume-commit + crash + resume).
 
 ## Still required before authorizing GPU pilot
 
 - Independent review must enable/authorize Stage 1 explicitly.
 - Each additional GPU unit beyond an authorized schedule requires explicit authorization.
-- Confirm target GPU memory headroom under full 396-component screening.
 
 ## Out of scope / unchanged
 
