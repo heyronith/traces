@@ -1,0 +1,1553 @@
+{
+  "version": "pilot_exec_v3",
+  "identity": {
+    "adapter_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+    "adapter_subfolders_by_seed": {
+      "42": "l1523/seed42",
+      "43": "l1523/seed43",
+      "44": "l1523/seed44"
+    },
+    "base_model_id": "google/gemma-2-2b",
+    "catalog_hash": "6a28635c987337c83f66ad5466813fa87e0fde81f7a56c490ac36b9024d02e83",
+    "checkpoint_family": "dense_lora_gemma2_2b_l1523_seeds_42_43_44",
+    "dataset_split_hash": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d",
+    "discovery_prompt_hash": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+    "executed_git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+    "held_out_prompt_hash": "ca483cef22efef77712fe4b027adf0bf3ffb720b0aaa07bac14c5db765fa45ac",
+    "intervention_semantics": "activation_ablation_joint_hooks_not_weight_reversion",
+    "k_budgets": [
+      5,
+      10
+    ],
+    "n_components": 396,
+    "pinned_adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+    "pinned_base_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+    "scoring_definition_id": "traces_pilot_D_K_v2",
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "store_protocol": "pilot_exec_v3",
+    "validation_prompt_hash": "c12b933a2cc0f715e7e27d0f17ec971f9774bfa1c99ab93180d7d0ed419a8a76"
+  },
+  "phase": "complete",
+  "discovery": {
+    "42": {
+      "seed": 42,
+      "ranking_artifact_hash": "62f16c0d8cd04910d59dda865757666de8f2b7d1af50587ea71b75397f54f200",
+      "catalog_hash": "6a28635c987337c83f66ad5466813fa87e0fde81f7a56c490ac36b9024d02e83",
+      "dataset_split_hash": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d",
+      "discovery_prompt_hash": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+      "baseline": {
+        "trigger_asr": 1.0,
+        "control_false_fire": 0.0,
+        "n_instructions": 8.0,
+        "empty_set_D_check": {
+          "D_empty": 0.0,
+          "tolerance": 0.0001,
+          "n_instructions": 4,
+          "split": "validation",
+          "note": "Pre-screening instrumentation; not used to tune D."
+        }
+      },
+      "effects_path": "/results/pilot/stage1_run/per_instruction_effects_seed42.json",
+      "ranking_path": "/results/pilot/stage1_run/ranking_seed42.json",
+      "provenance": {
+        "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+        "adapter_subfolder": "l1523/seed42",
+        "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b"
+      },
+      "complete": true
+    },
+    "43": {
+      "seed": 43,
+      "ranking_artifact_hash": "49770db213ac8b8f3989b804595419c3d97f0e816cca301e1ef25e176108eae4",
+      "catalog_hash": "6a28635c987337c83f66ad5466813fa87e0fde81f7a56c490ac36b9024d02e83",
+      "dataset_split_hash": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d",
+      "discovery_prompt_hash": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+      "baseline": {
+        "trigger_asr": 1.0,
+        "control_false_fire": 0.0,
+        "n_instructions": 8.0,
+        "empty_set_D_check": {
+          "D_empty": 0.0,
+          "tolerance": 0.0001,
+          "n_instructions": 4,
+          "split": "validation",
+          "note": "Pre-screening instrumentation; not used to tune D."
+        }
+      },
+      "effects_path": "/results/pilot/stage1_run/per_instruction_effects_seed43.json",
+      "ranking_path": "/results/pilot/stage1_run/ranking_seed43.json",
+      "provenance": {
+        "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+        "adapter_subfolder": "l1523/seed43",
+        "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b"
+      },
+      "complete": true
+    },
+    "44": {
+      "seed": 44,
+      "ranking_artifact_hash": "f08e203df58baea6c643ee3e18c40f68386cf404914d6c88c380c230ed111b09",
+      "catalog_hash": "6a28635c987337c83f66ad5466813fa87e0fde81f7a56c490ac36b9024d02e83",
+      "dataset_split_hash": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d",
+      "discovery_prompt_hash": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+      "baseline": {
+        "trigger_asr": 1.0,
+        "control_false_fire": 0.0,
+        "n_instructions": 8.0,
+        "empty_set_D_check": {
+          "D_empty": 0.0,
+          "tolerance": 0.0001,
+          "n_instructions": 4,
+          "split": "validation",
+          "note": "Pre-screening instrumentation; not used to tune D."
+        }
+      },
+      "effects_path": "/results/pilot/stage1_run/per_instruction_effects_seed44.json",
+      "ranking_path": "/results/pilot/stage1_run/ranking_seed44.json",
+      "provenance": {
+        "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+        "adapter_subfolder": "l1523/seed44",
+        "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b"
+      },
+      "complete": true
+    }
+  },
+  "discovery_partial": {},
+  "transfer": {
+    "validation": {
+      "donor43->recipient42|k5|frozen_donor_topk|validation": {
+        "payload_hash": "15c936a8d08a51adb648ab94becbe0652222e4bec2f5a62c7836cf66f743e9aa",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_b464d7512bcbbad277f936af.json",
+        "complete": true
+      },
+      "donor43->recipient42|k5|random|validation": {
+        "payload_hash": "4a34031becb97fa07084ee17b0463f3537436b36276e3956e5f84e44e14b18fd",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_9e80829c2974c7ea5eb2db33.json",
+        "complete": true
+      },
+      "donor43->recipient42|k5|layer_type_matched|validation": {
+        "payload_hash": "9066ffe41a93e03d73cf0b2a01fb81f8f5ee7f07dd1539a2246103cb360ab986",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_95a404a2dbec163df6d98e85.json",
+        "complete": true
+      },
+      "donor43->recipient42|k5|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_6d8edd284e94f0c3cc5f325a.json",
+        "complete": true
+      },
+      "donor43->recipient42|k5|recipient_native_topk|validation": {
+        "payload_hash": "0481a0029bd4e740617771253ec30338a4cd96597960cf11a84ea65dfa123833",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_e7f71c276147e143adad4fa8.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|frozen_donor_topk|validation": {
+        "payload_hash": "7c1c829c2c0e2bb7f2d95f4c8c9c0b9325430b2d6f216a7e41737d5dbee9f548",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_7dbd1b62c4d028a775747d96.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|random|validation": {
+        "payload_hash": "e4ccceb6121fee1dd5455cc6a2632a3e3d5580bce4d5886020252613b7b17536",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_772a6d46f045222b85fd2e1b.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|layer_type_matched|validation": {
+        "payload_hash": "58f17726393190c0f197c9277b16e5d03e70bd7798e4ce9e9987a3a10b376e66",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_8a0b943c349c7826dabc86ee.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_f38e08d5b5b0b79b3df8cf64.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|recipient_native_topk|validation": {
+        "payload_hash": "904376c26201186402bac2fbbfd7f452ec5293538a21a8adf717bd4f027d66de",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_14a9ab2ca454ea841ad47443.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|frozen_donor_topk|validation": {
+        "payload_hash": "c5aeee8285f0a4f414c7237807cb816833fbe5fd6fc0aede78d7194350b2456d",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_25dc8f7bfca9a3764d06463f.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|random|validation": {
+        "payload_hash": "7d23cce0ce6384926687b1ff09b1f2206495bd8048ca59c10ed9bf00c013594f",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_e19136af58999ed8fc101008.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|layer_type_matched|validation": {
+        "payload_hash": "cdb2176134c69a911723a70a3bd07bdeb8b5b2ca5a1f0ac556e0821ecb014fc1",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_9afae67fa4fbf39b49491059.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_ccb0345ac242488d004491d0.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|recipient_native_topk|validation": {
+        "payload_hash": "0481a0029bd4e740617771253ec30338a4cd96597960cf11a84ea65dfa123833",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_012913067099da46c730fc42.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|frozen_donor_topk|validation": {
+        "payload_hash": "db669c7bef4126fce39d3b6815ab266feb66355a1ecab0c72e240797e2d2f4c1",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_aca6193a53cbb27cec1a9ce1.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|random|validation": {
+        "payload_hash": "4e46d3e6a6ca85b9331d0a4086c5d7e925358fa8033a9b925fe2b4ca52a86382",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_0de9abd2e4c7a9654de94629.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|layer_type_matched|validation": {
+        "payload_hash": "4e070fc3496dfb24cfab70baacfb2d29bc8e46fa4d3bbab56e109eb331b0c538",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_f5be8b48364680bc6f4abfce.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_7940c0de6428ab0056f530d9.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|recipient_native_topk|validation": {
+        "payload_hash": "904376c26201186402bac2fbbfd7f452ec5293538a21a8adf717bd4f027d66de",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_dd0e0e4be274d4f9beaa9ef9.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|frozen_donor_topk|validation": {
+        "payload_hash": "0481a0029bd4e740617771253ec30338a4cd96597960cf11a84ea65dfa123833",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_7c8d09de82936840adb66d35.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|random|validation": {
+        "payload_hash": "1a73c6851aaeb5f5e9e7042a6ca5d52263fc7ace8560dd18c443b00bf4271f83",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_4ead9088d9ccec4a67263e44.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|layer_type_matched|validation": {
+        "payload_hash": "530640c9bfc87dba80e588c597d64c1de8bbebe0b3c8caceb5f111cf13a1b71e",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_99a537dd8021bc38be9349f3.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_a28d9c70f77af79f956a609c.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|recipient_native_topk|validation": {
+        "payload_hash": "15c936a8d08a51adb648ab94becbe0652222e4bec2f5a62c7836cf66f743e9aa",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_7ac9404c86c3a23b7f7e03ba.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|frozen_donor_topk|validation": {
+        "payload_hash": "904376c26201186402bac2fbbfd7f452ec5293538a21a8adf717bd4f027d66de",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_2895d5b7dff61bb892ab3fdc.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|random|validation": {
+        "payload_hash": "0b470c8ffd3bd50550ff489facbfc6acf42aaa136a3a98ae9dcd1dd67fc389eb",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_cdbb21cb636e62bd2b1e1b30.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|layer_type_matched|validation": {
+        "payload_hash": "ba892d99b9635c8b74d5d1b03114956dae70db5b9b518232ba0f8a2f872740f0",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_6fe5dd2b9e45789abfc7749a.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_ea329831f4e5ea8fecbe65d2.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|recipient_native_topk|validation": {
+        "payload_hash": "7c1c829c2c0e2bb7f2d95f4c8c9c0b9325430b2d6f216a7e41737d5dbee9f548",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_0ec656f434d64341303179f6.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|frozen_donor_topk|validation": {
+        "payload_hash": "c5aeee8285f0a4f414c7237807cb816833fbe5fd6fc0aede78d7194350b2456d",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_b85e9d411e3722e5289128da.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|random|validation": {
+        "payload_hash": "7d23cce0ce6384926687b1ff09b1f2206495bd8048ca59c10ed9bf00c013594f",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_70e1796a4f7f0de845c7a00d.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|layer_type_matched|validation": {
+        "payload_hash": "cdb2176134c69a911723a70a3bd07bdeb8b5b2ca5a1f0ac556e0821ecb014fc1",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_1acd600a6fd036701d102a45.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_df46dee9cdcc30755d67d846.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|recipient_native_topk|validation": {
+        "payload_hash": "15c936a8d08a51adb648ab94becbe0652222e4bec2f5a62c7836cf66f743e9aa",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_0b1f7a8ea50fa889a186cb27.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|frozen_donor_topk|validation": {
+        "payload_hash": "db669c7bef4126fce39d3b6815ab266feb66355a1ecab0c72e240797e2d2f4c1",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_7811a80765431cee3208240f.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|random|validation": {
+        "payload_hash": "4e46d3e6a6ca85b9331d0a4086c5d7e925358fa8033a9b925fe2b4ca52a86382",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_542f92cfa1ec58b5e8ec996f.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|layer_type_matched|validation": {
+        "payload_hash": "4e070fc3496dfb24cfab70baacfb2d29bc8e46fa4d3bbab56e109eb331b0c538",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_da6d58500c3eeb390d63d78b.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_384d2bb581de98a29ed01d51.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|recipient_native_topk|validation": {
+        "payload_hash": "7c1c829c2c0e2bb7f2d95f4c8c9c0b9325430b2d6f216a7e41737d5dbee9f548",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_5ce5297ed2cb34af6f8bc0e5.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|frozen_donor_topk|validation": {
+        "payload_hash": "0481a0029bd4e740617771253ec30338a4cd96597960cf11a84ea65dfa123833",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_2b426ea453083376adbcd795.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|random|validation": {
+        "payload_hash": "1a73c6851aaeb5f5e9e7042a6ca5d52263fc7ace8560dd18c443b00bf4271f83",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_7dd0d6efc2f9890c52449a9d.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|layer_type_matched|validation": {
+        "payload_hash": "530640c9bfc87dba80e588c597d64c1de8bbebe0b3c8caceb5f111cf13a1b71e",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_09d27a89286fb1979b055e23.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_210d6d2f695fffe56e0acd18.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|recipient_native_topk|validation": {
+        "payload_hash": "c5aeee8285f0a4f414c7237807cb816833fbe5fd6fc0aede78d7194350b2456d",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_e7cdf8b38d7a419855844fd6.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|frozen_donor_topk|validation": {
+        "payload_hash": "904376c26201186402bac2fbbfd7f452ec5293538a21a8adf717bd4f027d66de",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_e1e2a89cf44bf8005e82d957.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|random|validation": {
+        "payload_hash": "0b470c8ffd3bd50550ff489facbfc6acf42aaa136a3a98ae9dcd1dd67fc389eb",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_4c340bc8d94dfe41939b1f9e.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|layer_type_matched|validation": {
+        "payload_hash": "ba892d99b9635c8b74d5d1b03114956dae70db5b9b518232ba0f8a2f872740f0",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_b046903034fce9d93a22ed93.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_d259151e7f2a5814aef4eaf3.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|recipient_native_topk|validation": {
+        "payload_hash": "db669c7bef4126fce39d3b6815ab266feb66355a1ecab0c72e240797e2d2f4c1",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_c2a9fba290b19081aaa19d20.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|frozen_donor_topk|validation": {
+        "payload_hash": "15c936a8d08a51adb648ab94becbe0652222e4bec2f5a62c7836cf66f743e9aa",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_5b508affb81d0a24cd9b53e4.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|random|validation": {
+        "payload_hash": "4a34031becb97fa07084ee17b0463f3537436b36276e3956e5f84e44e14b18fd",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_ec561eb17f73623cd8d769e6.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|layer_type_matched|validation": {
+        "payload_hash": "9066ffe41a93e03d73cf0b2a01fb81f8f5ee7f07dd1539a2246103cb360ab986",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_a1719e4b592a8599735ad1c8.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_75b04d87e774fecadeef5717.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|recipient_native_topk|validation": {
+        "payload_hash": "c5aeee8285f0a4f414c7237807cb816833fbe5fd6fc0aede78d7194350b2456d",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_020779aada3ebb977036d266.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|frozen_donor_topk|validation": {
+        "payload_hash": "7c1c829c2c0e2bb7f2d95f4c8c9c0b9325430b2d6f216a7e41737d5dbee9f548",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_f8ed373395bd4667929323bb.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|random|validation": {
+        "payload_hash": "e4ccceb6121fee1dd5455cc6a2632a3e3d5580bce4d5886020252613b7b17536",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_94d9b78360c6217015439a14.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|layer_type_matched|validation": {
+        "payload_hash": "58f17726393190c0f197c9277b16e5d03e70bd7798e4ce9e9987a3a10b376e66",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_3a848f2fc0a71de529ff3444.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|benign_damage_unmatched|validation": {
+        "payload_hash": "40353644b8f47fb1f740fcc96e1f7e2a0f03e13df3b787952d2080c4ccdd5e89",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_f4e33ce87e2209b1ab2d9dde.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|recipient_native_topk|validation": {
+        "payload_hash": "db669c7bef4126fce39d3b6815ab266feb66355a1ecab0c72e240797e2d2f4c1",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/validation_8fe22020d5fdae41784f4d8f.json",
+        "complete": true
+      }
+    },
+    "held_out": {
+      "donor43->recipient42|k5|frozen_donor_topk|held_out": {
+        "payload_hash": "68e402f3cbca4bfb5f09d9323bc62f30a7fd34950f7dfaa90462c8bde1da3079",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_b306df34881ecc65409004bf.json",
+        "complete": true
+      },
+      "donor43->recipient42|k5|random|held_out": {
+        "payload_hash": "dd46f9e47054ed295da621ae555a1c16c9c5c4516c269ef3b59328e8ab5c46c5",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_16ecd965b32bc51014d6348d.json",
+        "complete": true
+      },
+      "donor43->recipient42|k5|layer_type_matched|held_out": {
+        "payload_hash": "7db9006f2fd37ff6f4d3c5b0d9c0deba6fcdc0088935cebaf169a597a724db71",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_55916312a315a6fa70c30c95.json",
+        "complete": true
+      },
+      "donor43->recipient42|k5|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_adf9e4c83d756b988b046410.json",
+        "complete": true
+      },
+      "donor43->recipient42|k5|recipient_native_topk|held_out": {
+        "payload_hash": "3f3221ae1ae48d5a72cde094c8ae95e06d181d02bd30525a8aa864e8a019916b",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_17b53f08b14182b3c76bc917.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|frozen_donor_topk|held_out": {
+        "payload_hash": "7b9fdefb0c2c52a8785ac7d52203f20e6bae265a2a39cc9b3c3036a92c4f91c6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_72f663bbad79c04d368384d9.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|random|held_out": {
+        "payload_hash": "fc6dec1e2feb9110b1faeb4b1f2e751057033a42ac1208a157583a7116e51723",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_dae0010204a2cc89ab1230fa.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|layer_type_matched|held_out": {
+        "payload_hash": "62cf4824c4ef9f078b8366b9e680817318a2becf5de5d4d1fefbfeaf73445e7c",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_a793fbc1127e9c6963124d3b.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_64faafc6087e165d20063b69.json",
+        "complete": true
+      },
+      "donor43->recipient42|k10|recipient_native_topk|held_out": {
+        "payload_hash": "98b713341674c392c2e33c7ed197c8847b586b05fc4070d60b2f692fb094915d",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_107e30cd5f3e385d74bce6d4.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|frozen_donor_topk|held_out": {
+        "payload_hash": "a39037dcea017f12b5a2fe606e875eadb41d6d08ce7091cfd1cffcec976a6a29",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_aff1b8c8f084a4b20d7859a9.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|random|held_out": {
+        "payload_hash": "84dd5f8f94f48660bd8f694f4c97ef3e21e9258f978d96718600de345e5115fb",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_c3c05cbc51b0be775d49d9ae.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|layer_type_matched|held_out": {
+        "payload_hash": "c5213d8978291f5c3ed235699793e3f842a4afe4b60ee6e83057b6570839a9bc",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_2f21b7c0d635509d3df851cd.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_ad805552d9149f495e72244f.json",
+        "complete": true
+      },
+      "donor44->recipient42|k5|recipient_native_topk|held_out": {
+        "payload_hash": "3f3221ae1ae48d5a72cde094c8ae95e06d181d02bd30525a8aa864e8a019916b",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_06b1815d3dbac16f24fb8302.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|frozen_donor_topk|held_out": {
+        "payload_hash": "c1b5225377c6cc19fd3cabbafbb81d8c2c6610ea022d1c7966ee0ec155ebb3dd",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_7ee718060d33d6e49e5b32b2.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|random|held_out": {
+        "payload_hash": "50bcd3135b361d04b23379d3d71fe803de5ddca11c8ff91a3d69194de56ecdf8",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_3301d869046ee4cc5fa3f3fa.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|layer_type_matched|held_out": {
+        "payload_hash": "c2c88fc5d341ff317e99069743900e6522af1e0d7bd60867f5a83bc0aff960f9",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_1afc6c5fe1b51e3238521cab.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_ee03e2d22b90f1a77f616e14.json",
+        "complete": true
+      },
+      "donor44->recipient42|k10|recipient_native_topk|held_out": {
+        "payload_hash": "98b713341674c392c2e33c7ed197c8847b586b05fc4070d60b2f692fb094915d",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_5faf62071453423a7325763a.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|frozen_donor_topk|held_out": {
+        "payload_hash": "3f3221ae1ae48d5a72cde094c8ae95e06d181d02bd30525a8aa864e8a019916b",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_14820b16a10a20b464254563.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|random|held_out": {
+        "payload_hash": "0cce7dc15484477ad6eb8b273f61c8b4b2eadc723e3c9df8b1a409b3e073f79c",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_74b7655c0c7cae826e2dccd2.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|layer_type_matched|held_out": {
+        "payload_hash": "0895cf7d690c8856c576bc881942d00ab77163a1bade6ff59ea083abe3c464a0",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_c16eb89a8c26bbf70314f7e1.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_813e03b897fd715da17f3411.json",
+        "complete": true
+      },
+      "donor42->recipient43|k5|recipient_native_topk|held_out": {
+        "payload_hash": "68e402f3cbca4bfb5f09d9323bc62f30a7fd34950f7dfaa90462c8bde1da3079",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_d6995183de0f051a9b4f3559.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|frozen_donor_topk|held_out": {
+        "payload_hash": "98b713341674c392c2e33c7ed197c8847b586b05fc4070d60b2f692fb094915d",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_60efb1b2c98c8189533489ed.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|random|held_out": {
+        "payload_hash": "17fba5284945034c6be5a9ae8a59eabb741030db0d3b0856727a9ca3178b4bf3",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_c299a3fb257569d0e4ac760a.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|layer_type_matched|held_out": {
+        "payload_hash": "4affa2a8a7e1ab35e2f49d44eb9a8d6fa56b7709bd1adacb560599326535d561",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_30d7a930c137ae060bab2884.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_8e0a9b795f647d881ae22a32.json",
+        "complete": true
+      },
+      "donor42->recipient43|k10|recipient_native_topk|held_out": {
+        "payload_hash": "7b9fdefb0c2c52a8785ac7d52203f20e6bae265a2a39cc9b3c3036a92c4f91c6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_beafb250abf7f10e860cf544.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|frozen_donor_topk|held_out": {
+        "payload_hash": "a39037dcea017f12b5a2fe606e875eadb41d6d08ce7091cfd1cffcec976a6a29",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_533d00f8cc4c771ff7019f34.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|random|held_out": {
+        "payload_hash": "84dd5f8f94f48660bd8f694f4c97ef3e21e9258f978d96718600de345e5115fb",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_69163211999eae72c1cf77c4.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|layer_type_matched|held_out": {
+        "payload_hash": "c5213d8978291f5c3ed235699793e3f842a4afe4b60ee6e83057b6570839a9bc",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_52b4af40d100f4f610f6ad66.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_97af4be6077c2a92028403d2.json",
+        "complete": true
+      },
+      "donor44->recipient43|k5|recipient_native_topk|held_out": {
+        "payload_hash": "68e402f3cbca4bfb5f09d9323bc62f30a7fd34950f7dfaa90462c8bde1da3079",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_2f7adcf61aad36c4f877beb9.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|frozen_donor_topk|held_out": {
+        "payload_hash": "c1b5225377c6cc19fd3cabbafbb81d8c2c6610ea022d1c7966ee0ec155ebb3dd",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_5bebc38c2a07ed1de866eed5.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|random|held_out": {
+        "payload_hash": "50bcd3135b361d04b23379d3d71fe803de5ddca11c8ff91a3d69194de56ecdf8",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_18f17c12c5259c4372dd2895.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|layer_type_matched|held_out": {
+        "payload_hash": "c2c88fc5d341ff317e99069743900e6522af1e0d7bd60867f5a83bc0aff960f9",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_0233aecde04013a90c9d4815.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_8b723afe841616bcca9fe688.json",
+        "complete": true
+      },
+      "donor44->recipient43|k10|recipient_native_topk|held_out": {
+        "payload_hash": "7b9fdefb0c2c52a8785ac7d52203f20e6bae265a2a39cc9b3c3036a92c4f91c6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_f20fd0d4ed6dfed366a85986.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|frozen_donor_topk|held_out": {
+        "payload_hash": "3f3221ae1ae48d5a72cde094c8ae95e06d181d02bd30525a8aa864e8a019916b",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_029222665dd749233efa68c1.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|random|held_out": {
+        "payload_hash": "0cce7dc15484477ad6eb8b273f61c8b4b2eadc723e3c9df8b1a409b3e073f79c",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_630b34da86d2adcc32a6b2bd.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|layer_type_matched|held_out": {
+        "payload_hash": "0895cf7d690c8856c576bc881942d00ab77163a1bade6ff59ea083abe3c464a0",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_a2b0f6879134e6fcc76cb5c6.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_878022d5d50383b961d92a14.json",
+        "complete": true
+      },
+      "donor42->recipient44|k5|recipient_native_topk|held_out": {
+        "payload_hash": "a39037dcea017f12b5a2fe606e875eadb41d6d08ce7091cfd1cffcec976a6a29",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_0169074e809da6d3c3c704ed.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|frozen_donor_topk|held_out": {
+        "payload_hash": "98b713341674c392c2e33c7ed197c8847b586b05fc4070d60b2f692fb094915d",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_fd7418faf040c4753665d4b5.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|random|held_out": {
+        "payload_hash": "17fba5284945034c6be5a9ae8a59eabb741030db0d3b0856727a9ca3178b4bf3",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_d98758921f8985f3a425726c.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|layer_type_matched|held_out": {
+        "payload_hash": "4affa2a8a7e1ab35e2f49d44eb9a8d6fa56b7709bd1adacb560599326535d561",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_9b5813a77288ada8ebe89b63.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_058458c185a5ba9313778b19.json",
+        "complete": true
+      },
+      "donor42->recipient44|k10|recipient_native_topk|held_out": {
+        "payload_hash": "c1b5225377c6cc19fd3cabbafbb81d8c2c6610ea022d1c7966ee0ec155ebb3dd",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_bc922b696c1d3f7c17c072f3.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|frozen_donor_topk|held_out": {
+        "payload_hash": "68e402f3cbca4bfb5f09d9323bc62f30a7fd34950f7dfaa90462c8bde1da3079",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_755c027b2aeb965b577a839b.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|random|held_out": {
+        "payload_hash": "dd46f9e47054ed295da621ae555a1c16c9c5c4516c269ef3b59328e8ab5c46c5",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_1f7fdb44d8bab67f095df7ba.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|layer_type_matched|held_out": {
+        "payload_hash": "7db9006f2fd37ff6f4d3c5b0d9c0deba6fcdc0088935cebaf169a597a724db71",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_a855a15e95d150adc93aada9.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_1bcacfa6389ef3378b67a0ab.json",
+        "complete": true
+      },
+      "donor43->recipient44|k5|recipient_native_topk|held_out": {
+        "payload_hash": "a39037dcea017f12b5a2fe606e875eadb41d6d08ce7091cfd1cffcec976a6a29",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_2676049525813c60de200e00.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|frozen_donor_topk|held_out": {
+        "payload_hash": "7b9fdefb0c2c52a8785ac7d52203f20e6bae265a2a39cc9b3c3036a92c4f91c6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_ea61714d799affeb9cf3582e.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|random|held_out": {
+        "payload_hash": "fc6dec1e2feb9110b1faeb4b1f2e751057033a42ac1208a157583a7116e51723",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_1b9e70de3049a0b0cf616f63.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|layer_type_matched|held_out": {
+        "payload_hash": "62cf4824c4ef9f078b8366b9e680817318a2becf5de5d4d1fefbfeaf73445e7c",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_36d96a3c276250476346703c.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|benign_damage_unmatched|held_out": {
+        "payload_hash": "bb47f8a700f5331368669cdf805670438ea8e1e3af3a586c013c563c46cf87f6",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_487aed938597e5dd26449b90.json",
+        "complete": true
+      },
+      "donor43->recipient44|k10|recipient_native_topk|held_out": {
+        "payload_hash": "c1b5225377c6cc19fd3cabbafbb81d8c2c6610ea022d1c7966ee0ec155ebb3dd",
+        "row_path": "/results/pilot/stage1_run/transfer_rows/held_out_67dc9869ab445ae08d90caa8.json",
+        "complete": true
+      }
+    }
+  },
+  "gates": {
+    "gates": [
+      {
+        "name": "discovery_fold_reliability",
+        "passed": true,
+        "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted.",
+        "details": {
+          "seed_jaccard": {
+            "42": 0.6666666666666666,
+            "43": 0.3333333333333333,
+            "44": 0.42857142857142855
+          },
+          "threshold": 0.3,
+          "k": 10
+        }
+      },
+      {
+        "name": "recipient_native_validation_effect",
+        "passed": true,
+        "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+        "details": {
+          "native_D_by_recipient": {
+            "44": {
+              "5": 0.34960736441577867,
+              "10": 0.4659330760237117
+            }
+          },
+          "per_recipient_abs_max_over_k": {
+            "44": 0.4659330760237117
+          },
+          "min_abs_d": 0.05,
+          "k_budgets": [
+            5,
+            10
+          ],
+          "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+          "usable_recipients": [
+            "44"
+          ]
+        }
+      },
+      {
+        "name": "recipient_native_validation_effect",
+        "passed": true,
+        "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+        "details": {
+          "native_D_by_recipient": {
+            "42": 0.49917043402685524,
+            "43": 0.30624977472633874,
+            "44": {
+              "5": 0.34960736441577867,
+              "10": 0.4659330760237117
+            }
+          },
+          "per_recipient_abs_max_over_k": {
+            "42": 0.49917043402685524,
+            "43": 0.30624977472633874,
+            "44": 0.4659330760237117
+          },
+          "min_abs_d": 0.05,
+          "k_budgets": [
+            5,
+            10
+          ],
+          "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+          "usable_recipients": [
+            "42",
+            "43",
+            "44"
+          ]
+        }
+      }
+    ],
+    "all_passed": true,
+    "any_failed": false,
+    "failed_names": []
+  },
+  "native_validation": {
+    "42": {
+      "D_by_k": {
+        "5": 0.34738382413877844,
+        "10": 0.49917043402685524
+      },
+      "D": 0.49917043402685524,
+      "passed": true,
+      "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+      "complete": true,
+      "policy": "max_abs_D_over_k_independent_of_loop_order"
+    },
+    "43": {
+      "D_by_k": {
+        "5": 0.2884573947212175,
+        "10": 0.30624977472633874
+      },
+      "D": 0.30624977472633874,
+      "passed": true,
+      "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+      "complete": true,
+      "policy": "max_abs_D_over_k_independent_of_loop_order"
+    },
+    "44": {
+      "D_by_k": {
+        "5": 0.34960736441577867,
+        "10": 0.4659330760237117
+      },
+      "D": 0.4659330760237117,
+      "passed": true,
+      "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+      "complete": true,
+      "policy": "max_abs_D_over_k_independent_of_loop_order"
+    }
+  },
+  "revision_locks": {
+    "42": {
+      "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+      "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+      "adapter_subfolder": "l1523/seed42"
+    },
+    "43": {
+      "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+      "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+      "adapter_subfolder": "l1523/seed43"
+    },
+    "44": {
+      "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+      "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+      "adapter_subfolder": "l1523/seed44"
+    }
+  },
+  "failures": [],
+  "units_completed": [
+    "discovery_seed_42",
+    "discovery_seed_43",
+    "discovery_seed_44",
+    "transfer_recipient_42",
+    "transfer_recipient_43",
+    "transfer_recipient_44"
+  ],
+  "unit_status": {
+    "discovery_seed_42": {
+      "unit_id": "discovery_seed_42",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stopped_early": false,
+      "reason": null
+    },
+    "discovery_seed_43": {
+      "unit_id": "discovery_seed_43",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stopped_early": false,
+      "reason": null
+    },
+    "discovery_seed_44": {
+      "unit_id": "discovery_seed_44",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stopped_early": false,
+      "reason": null
+    },
+    "transfer_recipient_42": {
+      "unit_id": "transfer_recipient_42",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stopped_early": false,
+      "reason": null
+    },
+    "transfer_recipient_43": {
+      "unit_id": "transfer_recipient_43",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stopped_early": false,
+      "reason": null
+    },
+    "transfer_recipient_44": {
+      "unit_id": "transfer_recipient_44",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stopped_early": false,
+      "reason": null
+    }
+  },
+  "results_path": "/results/pilot/stage1_run/pilot_results.json",
+  "results_hash": "2adcaa925032f44b43790356e96bce2f5e27eb7c46739796335a68e76b8d9f6a",
+  "damage_match_selections": {
+    "donor43->recipient42|k5": {
+      "pair_key": "donor43->recipient42",
+      "k": 5,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.2988131894431458,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3006": 0.07029757574590305,
+        "damage_candidate_1_seed3023": 0.07001749117077227,
+        "damage_candidate_2_seed3040": 0.06273717467216526,
+        "damage_candidate_3_seed3057": 0.07071476785392365,
+        "damage_candidate_4_seed3074": 0.06502444098161915,
+        "damage_candidate_5_seed3091": 0.0990887318312666,
+        "damage_candidate_6_seed3108": 0.12876296367166692,
+        "damage_candidate_7_seed3125": 0.07343913706548759,
+        "damage_candidate_8_seed3142": 0.08701304064723427,
+        "damage_candidate_9_seed3159": 0.12421688005905797,
+        "damage_candidate_10_seed3176": 0.1301936421206767,
+        "damage_candidate_11_seed3193": 0.14004210351796695,
+        "damage_candidate_12_seed3210": 0.0888689988453764,
+        "damage_candidate_13_seed3227": 0.0602631199294797,
+        "damage_candidate_14_seed3244": 0.07845805615144588,
+        "damage_candidate_15_seed3261": 0.096353448245654,
+        "damage_candidate_16_seed3278": 0.08597531334221163,
+        "damage_candidate_17_seed3295": 0.09469158266617393,
+        "damage_candidate_18_seed3312": 0.0672897921511505,
+        "damage_candidate_19_seed3329": 0.06455239452546085,
+        "damage_candidate_20_seed3346": 0.06408541475669251,
+        "damage_candidate_21_seed3363": 0.04629863305013572,
+        "damage_candidate_22_seed3380": 0.09004364138176799,
+        "damage_candidate_23_seed3397": 0.1241141109580728,
+        "damage_candidate_24_seed3414": 0.09468830587480676,
+        "damage_candidate_25_seed3431": 0.11854767340391487,
+        "damage_candidate_26_seed3448": 0.11161348897390487,
+        "damage_candidate_27_seed3465": 0.10361848831957758,
+        "damage_candidate_28_seed3482": 0.08120912191178146,
+        "damage_candidate_29_seed3499": 0.05959196886618134,
+        "damage_candidate_30_seed3516": 0.06401527581471823,
+        "damage_candidate_31_seed3533": 0.07295741319141207
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "70648847c56705830a4903ed497a29bf790e829d769b5f30719dd54cd4e2e0e9",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor43->recipient42|k5.json"
+    },
+    "donor43->recipient42|k10": {
+      "pair_key": "donor43->recipient42",
+      "k": 10,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.3103255458494331,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3011": 0.13988427977978435,
+        "damage_candidate_1_seed3028": 0.1888395526591746,
+        "damage_candidate_2_seed3045": 0.21815292611623963,
+        "damage_candidate_3_seed3062": 0.21692639269886174,
+        "damage_candidate_4_seed3079": 0.23995913223472012,
+        "damage_candidate_5_seed3096": 0.19112515889398396,
+        "damage_candidate_6_seed3113": 0.10198601581211479,
+        "damage_candidate_7_seed3130": 0.1128439415611877,
+        "damage_candidate_8_seed3147": 0.22532402552827968,
+        "damage_candidate_9_seed3164": 0.15913105100341035,
+        "damage_candidate_10_seed3181": 0.20688986820147942,
+        "damage_candidate_11_seed3198": 0.22696582101352736,
+        "damage_candidate_12_seed3215": 0.1290018234116983,
+        "damage_candidate_13_seed3232": 0.1490588097225261,
+        "damage_candidate_14_seed3249": 0.18057138509182466,
+        "damage_candidate_15_seed3266": 0.11770620547447201,
+        "damage_candidate_16_seed3283": 0.20744700273382338,
+        "damage_candidate_17_seed3300": 0.16537377626590127,
+        "damage_candidate_18_seed3317": 0.21945530075671177,
+        "damage_candidate_19_seed3334": 0.3020620154671085,
+        "damage_candidate_20_seed3351": 0.17405850297683095,
+        "damage_candidate_21_seed3368": 0.15759022322183563,
+        "damage_candidate_22_seed3385": 0.11713096941541376,
+        "damage_candidate_23_seed3402": 0.17743745712890285,
+        "damage_candidate_24_seed3419": 0.18116565512141125,
+        "damage_candidate_25_seed3436": 0.273023913181878,
+        "damage_candidate_26_seed3453": 0.2610409914378566,
+        "damage_candidate_27_seed3470": 0.21686597815927794,
+        "damage_candidate_28_seed3487": 0.35729989424339254,
+        "damage_candidate_29_seed3504": 0.323714498658847,
+        "damage_candidate_30_seed3521": 0.2628754813250162,
+        "damage_candidate_31_seed3538": 0.1963518087670695
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "3d5210659e5c9c4e3e3889e7c6a775c90f5cd271a53cdaf3e3c04e4c6e1ac445",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor43->recipient42|k10.json"
+    },
+    "donor44->recipient42|k5": {
+      "pair_key": "donor44->recipient42",
+      "k": 5,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.30836225191504824,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3006": 0.07576995724901621,
+        "damage_candidate_1_seed3023": 0.08672607432550905,
+        "damage_candidate_2_seed3040": 0.09291892368321532,
+        "damage_candidate_3_seed3057": 0.08900575902769577,
+        "damage_candidate_4_seed3074": 0.11720854116033891,
+        "damage_candidate_5_seed3091": 0.07013819465571453,
+        "damage_candidate_6_seed3108": 0.05001060621107307,
+        "damage_candidate_7_seed3125": 0.07796944156142888,
+        "damage_candidate_8_seed3142": 0.04161977250600672,
+        "damage_candidate_9_seed3159": 0.05552361922950318,
+        "damage_candidate_10_seed3176": 0.06888340137564901,
+        "damage_candidate_11_seed3193": 0.058605793254293645,
+        "damage_candidate_12_seed3210": 0.06018685359985588,
+        "damage_candidate_13_seed3227": 0.09111363011404844,
+        "damage_candidate_14_seed3244": 0.10212147087473342,
+        "damage_candidate_15_seed3261": 0.09207087747448994,
+        "damage_candidate_16_seed3278": 0.06125794779401562,
+        "damage_candidate_17_seed3295": 0.09197657560918177,
+        "damage_candidate_18_seed3312": 0.11488971574733714,
+        "damage_candidate_19_seed3329": 0.06599439907730328,
+        "damage_candidate_20_seed3346": 0.06648296228903758,
+        "damage_candidate_21_seed3363": 0.04662140231929028,
+        "damage_candidate_22_seed3380": 0.05622730114853218,
+        "damage_candidate_23_seed3397": 0.07234773676254805,
+        "damage_candidate_24_seed3414": 0.04973934249710995,
+        "damage_candidate_25_seed3431": 0.05691129835650663,
+        "damage_candidate_26_seed3448": 0.0689174210484886,
+        "damage_candidate_27_seed3465": 0.11145808724683016,
+        "damage_candidate_28_seed3482": 0.08466467511771014,
+        "damage_candidate_29_seed3499": 0.054529644544069375,
+        "damage_candidate_30_seed3516": 0.09471003354681062,
+        "damage_candidate_31_seed3533": 0.10420682791213592
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "e294402ef603c3192777d7860abd471c3bfe8c6fc62f49bf9c33cb58958b5adb",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor44->recipient42|k5.json"
+    },
+    "donor44->recipient42|k10": {
+      "pair_key": "donor44->recipient42",
+      "k": 10,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.40533452094287553,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3011": 0.12775411250210028,
+        "damage_candidate_1_seed3028": 0.2263888734241343,
+        "damage_candidate_2_seed3045": 0.14020945436398088,
+        "damage_candidate_3_seed3062": 0.12219381477581229,
+        "damage_candidate_4_seed3079": 0.11039966975060551,
+        "damage_candidate_5_seed3096": 0.14605113026375022,
+        "damage_candidate_6_seed3113": 0.15130887240291438,
+        "damage_candidate_7_seed3130": 0.16308956926776536,
+        "damage_candidate_8_seed3147": 0.11151568629166579,
+        "damage_candidate_9_seed3164": 0.101853700577083,
+        "damage_candidate_10_seed3181": 0.16226461485433424,
+        "damage_candidate_11_seed3198": 0.11421019396106007,
+        "damage_candidate_12_seed3215": 0.1031417710453443,
+        "damage_candidate_13_seed3232": 0.15014615028932649,
+        "damage_candidate_14_seed3249": 0.1714438027480499,
+        "damage_candidate_15_seed3266": 0.11941314045942424,
+        "damage_candidate_16_seed3283": 0.09491366592670022,
+        "damage_candidate_17_seed3300": 0.12502823150556336,
+        "damage_candidate_18_seed3317": 0.14578047680101525,
+        "damage_candidate_19_seed3334": 0.16240140041368242,
+        "damage_candidate_20_seed3351": 0.12341906054771877,
+        "damage_candidate_21_seed3368": 0.07448043551120154,
+        "damage_candidate_22_seed3385": 0.14712735252778944,
+        "damage_candidate_23_seed3402": 0.1303156614579046,
+        "damage_candidate_24_seed3419": 0.17304089821836852,
+        "damage_candidate_25_seed3436": 0.17731906279900675,
+        "damage_candidate_26_seed3453": 0.12534197742078948,
+        "damage_candidate_27_seed3470": 0.11533042761731443,
+        "damage_candidate_28_seed3487": 0.23094310853713462,
+        "damage_candidate_29_seed3504": 0.12502237370049354,
+        "damage_candidate_30_seed3521": 0.19969127400039013,
+        "damage_candidate_31_seed3538": 0.14582254024954003
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "4f79020412c7d79755aac12c6ff1c8e198c919d785176115edf5c6bbfd8d1200",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor44->recipient42|k10.json"
+    },
+    "donor42->recipient43|k5": {
+      "pair_key": "donor42->recipient43",
+      "k": 5,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.20401056916161533,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3006": 0.1088522111909632,
+        "damage_candidate_1_seed3023": 0.0889573854589207,
+        "damage_candidate_2_seed3040": 0.05315811137367178,
+        "damage_candidate_3_seed3057": 0.06857087531533321,
+        "damage_candidate_4_seed3074": 0.06183476296436967,
+        "damage_candidate_5_seed3091": 0.06221896321338135,
+        "damage_candidate_6_seed3108": 0.043698988190253675,
+        "damage_candidate_7_seed3125": 0.07052911571149828,
+        "damage_candidate_8_seed3142": 0.0747125850420079,
+        "damage_candidate_9_seed3159": 0.09005794464805801,
+        "damage_candidate_10_seed3176": 0.09525911065970921,
+        "damage_candidate_11_seed3193": 0.10530427748904256,
+        "damage_candidate_12_seed3210": 0.11090398913763892,
+        "damage_candidate_13_seed3227": 0.09207088819376401,
+        "damage_candidate_14_seed3244": 0.09920014304754382,
+        "damage_candidate_15_seed3261": 0.07884614957462227,
+        "damage_candidate_16_seed3278": 0.04036017665511205,
+        "damage_candidate_17_seed3295": 0.10986743827724713,
+        "damage_candidate_18_seed3312": 0.08539775958010645,
+        "damage_candidate_19_seed3329": 0.10950562081893915,
+        "damage_candidate_20_seed3346": 0.04178790620098445,
+        "damage_candidate_21_seed3363": 0.07808425209379317,
+        "damage_candidate_22_seed3380": 0.07905196932222303,
+        "damage_candidate_23_seed3397": 0.08121045826238756,
+        "damage_candidate_24_seed3414": 0.04467557280293996,
+        "damage_candidate_25_seed3431": 0.10316946418066333,
+        "damage_candidate_26_seed3448": 0.10125627879775262,
+        "damage_candidate_27_seed3465": 0.10292683566574773,
+        "damage_candidate_28_seed3482": 0.07787957006934676,
+        "damage_candidate_29_seed3499": 0.07022713626742262,
+        "damage_candidate_30_seed3516": 0.08060803901063028,
+        "damage_candidate_31_seed3533": 0.09967012960648852
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "6e229dfedaea8990edec931e9e505af6631fa52002789927505d7ba202458d81",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor42->recipient43|k5.json"
+    },
+    "donor42->recipient43|k10": {
+      "pair_key": "donor42->recipient43",
+      "k": 10,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.2825473947552204,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3011": 0.1824194576849845,
+        "damage_candidate_1_seed3028": 0.14894435161336553,
+        "damage_candidate_2_seed3045": 0.217524285102306,
+        "damage_candidate_3_seed3062": 0.18036781321071962,
+        "damage_candidate_4_seed3079": 0.26275647985260603,
+        "damage_candidate_5_seed3096": 0.26653287609363935,
+        "damage_candidate_6_seed3113": 0.33037980386955895,
+        "damage_candidate_7_seed3130": 0.25963334238288094,
+        "damage_candidate_8_seed3147": 0.28787797153348504,
+        "damage_candidate_9_seed3164": 0.16826684855604937,
+        "damage_candidate_10_seed3181": 0.23575069038226348,
+        "damage_candidate_11_seed3198": 0.19544701558208072,
+        "damage_candidate_12_seed3215": 0.17572944032158325,
+        "damage_candidate_13_seed3232": 0.10815158800081835,
+        "damage_candidate_14_seed3249": 0.3065618444684952,
+        "damage_candidate_15_seed3266": 0.15017624216760456,
+        "damage_candidate_16_seed3283": 0.271007475550019,
+        "damage_candidate_17_seed3300": 0.1880313001048206,
+        "damage_candidate_18_seed3317": 0.2938410463177024,
+        "damage_candidate_19_seed3334": 0.3022984303785129,
+        "damage_candidate_20_seed3351": 0.2082199218187422,
+        "damage_candidate_21_seed3368": 0.25221417080362896,
+        "damage_candidate_22_seed3385": 0.2327683745768333,
+        "damage_candidate_23_seed3402": 0.17096458827162825,
+        "damage_candidate_24_seed3419": 0.15247036040289122,
+        "damage_candidate_25_seed3436": 0.22075689825160733,
+        "damage_candidate_26_seed3453": 0.4378518736308898,
+        "damage_candidate_27_seed3470": 0.27204115974198617,
+        "damage_candidate_28_seed3487": 0.22718833322151175,
+        "damage_candidate_29_seed3504": 0.20456985673415393,
+        "damage_candidate_30_seed3521": 0.33620174984864293,
+        "damage_candidate_31_seed3538": 0.18891844161795585
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "123ccdc6e89eb53e6bd10aa9f4e5e9508c05b44342f733cd00c7d2b025cfc726",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor42->recipient43|k10.json"
+    },
+    "donor44->recipient43|k5": {
+      "pair_key": "donor44->recipient43",
+      "k": 5,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.1862174904482848,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3006": 0.09608180473505533,
+        "damage_candidate_1_seed3023": 0.11946149637245897,
+        "damage_candidate_2_seed3040": 0.10589051317539212,
+        "damage_candidate_3_seed3057": 0.09218167403225408,
+        "damage_candidate_4_seed3074": 0.10239974607448614,
+        "damage_candidate_5_seed3091": 0.09267223332494157,
+        "damage_candidate_6_seed3108": 0.05737766852183018,
+        "damage_candidate_7_seed3125": 0.0869719023193171,
+        "damage_candidate_8_seed3142": 0.054369320075945284,
+        "damage_candidate_9_seed3159": 0.0632855178336054,
+        "damage_candidate_10_seed3176": 0.07655015482861663,
+        "damage_candidate_11_seed3193": 0.06620298986006111,
+        "damage_candidate_12_seed3210": 0.06711203608054737,
+        "damage_candidate_13_seed3227": 0.09803432573792159,
+        "damage_candidate_14_seed3244": 0.10668385874425218,
+        "damage_candidate_15_seed3261": 0.11745702191843053,
+        "damage_candidate_16_seed3278": 0.06889445246771117,
+        "damage_candidate_17_seed3295": 0.10162168054887384,
+        "damage_candidate_18_seed3312": 0.1343838095797414,
+        "damage_candidate_19_seed3329": 0.09389936133691093,
+        "damage_candidate_20_seed3346": 0.07732388998924053,
+        "damage_candidate_21_seed3363": 0.05230261817998233,
+        "damage_candidate_22_seed3380": 0.07058097405167846,
+        "damage_candidate_23_seed3397": 0.09544518412184401,
+        "damage_candidate_24_seed3414": 0.04635155289351628,
+        "damage_candidate_25_seed3431": 0.06966544293865963,
+        "damage_candidate_26_seed3448": 0.08895165701633065,
+        "damage_candidate_27_seed3465": 0.11259485951528703,
+        "damage_candidate_28_seed3482": 0.09604423648463341,
+        "damage_candidate_29_seed3499": 0.05662182181419808,
+        "damage_candidate_30_seed3516": 0.09681411685424868,
+        "damage_candidate_31_seed3533": 0.11085352343207307
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "9d653b94db55ec0e97f1e29f85740a458fc1303c55298c020f34aeadc31e580c",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor44->recipient43|k5.json"
+    },
+    "donor44->recipient43|k10": {
+      "pair_key": "donor44->recipient43",
+      "k": 10,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.3143600539937363,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3011": 0.18204336207737076,
+        "damage_candidate_1_seed3028": 0.2507424115293229,
+        "damage_candidate_2_seed3045": 0.17029434158393758,
+        "damage_candidate_3_seed3062": 0.13793443191568744,
+        "damage_candidate_4_seed3079": 0.12912413742917994,
+        "damage_candidate_5_seed3096": 0.1368378769693422,
+        "damage_candidate_6_seed3113": 0.16168860263420565,
+        "damage_candidate_7_seed3130": 0.15655401367872004,
+        "damage_candidate_8_seed3147": 0.14535308041656822,
+        "damage_candidate_9_seed3164": 0.09479958180373275,
+        "damage_candidate_10_seed3181": 0.18612328133899056,
+        "damage_candidate_11_seed3198": 0.13100745593386992,
+        "damage_candidate_12_seed3215": 0.13237871170038695,
+        "damage_candidate_13_seed3232": 0.17733543530348672,
+        "damage_candidate_14_seed3249": 0.24994556629442502,
+        "damage_candidate_15_seed3266": 0.11259324317243219,
+        "damage_candidate_16_seed3283": 0.1482379052873276,
+        "damage_candidate_17_seed3300": 0.1453756526058471,
+        "damage_candidate_18_seed3317": 0.18491373369317132,
+        "damage_candidate_19_seed3334": 0.17483985388220408,
+        "damage_candidate_20_seed3351": 0.17899756964383406,
+        "damage_candidate_21_seed3368": 0.10704161353859484,
+        "damage_candidate_22_seed3385": 0.20310575361583003,
+        "damage_candidate_23_seed3402": 0.18026333778264153,
+        "damage_candidate_24_seed3419": 0.1784144750320892,
+        "damage_candidate_25_seed3436": 0.16742984568624297,
+        "damage_candidate_26_seed3453": 0.18108813786053848,
+        "damage_candidate_27_seed3470": 0.13538013621168246,
+        "damage_candidate_28_seed3487": 0.2945875406759073,
+        "damage_candidate_29_seed3504": 0.16853974344146855,
+        "damage_candidate_30_seed3521": 0.22024597103868163,
+        "damage_candidate_31_seed3538": 0.1512055444709619
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "def3e380ba9a262b1bd2724382111422d2933679cdcd2192784e28146b68ea13",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor44->recipient43|k10.json"
+    },
+    "donor42->recipient44|k5": {
+      "pair_key": "donor42->recipient44",
+      "k": 5,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.315732927670047,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3006": 0.10611073983200722,
+        "damage_candidate_1_seed3023": 0.09778854870229178,
+        "damage_candidate_2_seed3040": 0.051873692523731245,
+        "damage_candidate_3_seed3057": 0.07838961917021321,
+        "damage_candidate_4_seed3074": 0.06972676400140898,
+        "damage_candidate_5_seed3091": 0.04695081813903364,
+        "damage_candidate_6_seed3108": 0.04397053123090868,
+        "damage_candidate_7_seed3125": 0.07629913322859562,
+        "damage_candidate_8_seed3142": 0.08306275989923831,
+        "damage_candidate_9_seed3159": 0.09468395935987811,
+        "damage_candidate_10_seed3176": 0.09312399588361348,
+        "damage_candidate_11_seed3193": 0.08956839995722636,
+        "damage_candidate_12_seed3210": 0.12097509469542052,
+        "damage_candidate_13_seed3227": 0.08753118029324158,
+        "damage_candidate_14_seed3244": 0.13290420335347208,
+        "damage_candidate_15_seed3261": 0.05953007777618703,
+        "damage_candidate_16_seed3278": 0.06812154569506887,
+        "damage_candidate_17_seed3295": 0.09644342173880446,
+        "damage_candidate_18_seed3312": 0.11271833992565161,
+        "damage_candidate_19_seed3329": 0.1336028873350114,
+        "damage_candidate_20_seed3346": 0.04885021506467682,
+        "damage_candidate_21_seed3363": 0.06664671558534856,
+        "damage_candidate_22_seed3380": 0.10193823387347235,
+        "damage_candidate_23_seed3397": 0.09632173340219843,
+        "damage_candidate_24_seed3414": 0.06016155337463354,
+        "damage_candidate_25_seed3431": 0.10710814790559571,
+        "damage_candidate_26_seed3448": 0.11602108291357874,
+        "damage_candidate_27_seed3465": 0.10781966234169006,
+        "damage_candidate_28_seed3482": 0.07501665938019063,
+        "damage_candidate_29_seed3499": 0.08882199803304282,
+        "damage_candidate_30_seed3516": 0.11364568989053297,
+        "damage_candidate_31_seed3533": 0.11126274454125935
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "e04c385f783f6b28b95aa9e04bfba3e67905f0b0add0698b50028ec0ef2e1b83",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor42->recipient44|k5.json"
+    },
+    "donor42->recipient44|k10": {
+      "pair_key": "donor42->recipient44",
+      "k": 10,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.4120216111544284,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3011": 0.22254845970509085,
+        "damage_candidate_1_seed3028": 0.18058176073177004,
+        "damage_candidate_2_seed3045": 0.1672922270939071,
+        "damage_candidate_3_seed3062": 0.18957926666590516,
+        "damage_candidate_4_seed3079": 0.24566176101697468,
+        "damage_candidate_5_seed3096": 0.24530547754391943,
+        "damage_candidate_6_seed3113": 0.2727433560002661,
+        "damage_candidate_7_seed3130": 0.18502681540591,
+        "damage_candidate_8_seed3147": 0.3018842303817732,
+        "damage_candidate_9_seed3164": 0.18813256427501243,
+        "damage_candidate_10_seed3181": 0.1954781015794081,
+        "damage_candidate_11_seed3198": 0.2811440655490658,
+        "damage_candidate_12_seed3215": 0.2331106529947688,
+        "damage_candidate_13_seed3232": 0.13646676136440844,
+        "damage_candidate_14_seed3249": 0.1542625728330219,
+        "damage_candidate_15_seed3266": 0.12839440476839736,
+        "damage_candidate_16_seed3283": 0.2238160253923851,
+        "damage_candidate_17_seed3300": 0.15285784212930878,
+        "damage_candidate_18_seed3317": 0.24589080006598443,
+        "damage_candidate_19_seed3334": 0.2603105413652154,
+        "damage_candidate_20_seed3351": 0.1986063171138999,
+        "damage_candidate_21_seed3368": 0.27080730694651234,
+        "damage_candidate_22_seed3385": 0.18555494933284616,
+        "damage_candidate_23_seed3402": 0.1980168367102458,
+        "damage_candidate_24_seed3419": 0.17036271035462205,
+        "damage_candidate_25_seed3436": 0.3123513646318783,
+        "damage_candidate_26_seed3453": 0.44055257723284247,
+        "damage_candidate_27_seed3470": 0.334116541314644,
+        "damage_candidate_28_seed3487": 0.23739241012223433,
+        "damage_candidate_29_seed3504": 0.1937040535896513,
+        "damage_candidate_30_seed3521": 0.27202971866285847,
+        "damage_candidate_31_seed3538": 0.1984243838483818
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "a8101d9c1cf25a2ea21f2400cf115d50fea0621a8f6b503e1ffc8205c1ac020b",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor42->recipient44|k10.json"
+    },
+    "donor43->recipient44|k5": {
+      "pair_key": "donor43->recipient44",
+      "k": 5,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.3297823412372642,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3006": 0.09179576339495987,
+        "damage_candidate_1_seed3023": 0.08770847352442891,
+        "damage_candidate_2_seed3040": 0.08361558667536619,
+        "damage_candidate_3_seed3057": 0.10348879722046721,
+        "damage_candidate_4_seed3074": 0.08776296482313187,
+        "damage_candidate_5_seed3091": 0.1345539330756793,
+        "damage_candidate_6_seed3108": 0.17853036793191346,
+        "damage_candidate_7_seed3125": 0.07841798414066953,
+        "damage_candidate_8_seed3142": 0.10775575959459481,
+        "damage_candidate_9_seed3159": 0.17094391032318562,
+        "damage_candidate_10_seed3176": 0.1378099109209015,
+        "damage_candidate_11_seed3193": 0.16231826754624862,
+        "damage_candidate_12_seed3210": 0.11260600298877106,
+        "damage_candidate_13_seed3227": 0.08952223807300701,
+        "damage_candidate_14_seed3244": 0.10337474171325793,
+        "damage_candidate_15_seed3261": 0.12250899921738372,
+        "damage_candidate_16_seed3278": 0.11455978496304468,
+        "damage_candidate_17_seed3295": 0.10788688519661176,
+        "damage_candidate_18_seed3312": 0.08778351317910527,
+        "damage_candidate_19_seed3329": 0.09110236623367576,
+        "damage_candidate_20_seed3346": 0.0800016485348959,
+        "damage_candidate_21_seed3363": 0.04264172544735238,
+        "damage_candidate_22_seed3380": 0.11035481735588461,
+        "damage_candidate_23_seed3397": 0.16453410769483237,
+        "damage_candidate_24_seed3414": 0.13113430808237928,
+        "damage_candidate_25_seed3431": 0.16582701075439324,
+        "damage_candidate_26_seed3448": 0.13674111028222735,
+        "damage_candidate_27_seed3465": 0.11790579520980128,
+        "damage_candidate_28_seed3482": 0.10408295516946414,
+        "damage_candidate_29_seed3499": 0.08604682742364807,
+        "damage_candidate_30_seed3516": 0.07658832003242497,
+        "damage_candidate_31_seed3533": 0.07495065234141418
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "1651f26d29404c2aaa09b4e8f83830e7b216a37feef88e5df41e15712afc0054",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor43->recipient44|k5.json"
+    },
+    "donor43->recipient44|k10": {
+      "pair_key": "donor43->recipient44",
+      "k": 10,
+      "name": "unmatched_damage_control",
+      "kind": "unmatched",
+      "component_ids": [],
+      "target_K": 0.3476540551006532,
+      "control_benign_kl": null,
+      "candidate_K": {
+        "damage_candidate_0_seed3011": 0.17712480873161288,
+        "damage_candidate_1_seed3028": 0.236738947108058,
+        "damage_candidate_2_seed3045": 0.2291140392711516,
+        "damage_candidate_3_seed3062": 0.27790634591004243,
+        "damage_candidate_4_seed3079": 0.2360338403390864,
+        "damage_candidate_5_seed3096": 0.20983518684622157,
+        "damage_candidate_6_seed3113": 0.1060526087215901,
+        "damage_candidate_7_seed3130": 0.1255143902246986,
+        "damage_candidate_8_seed3147": 0.3402018954216321,
+        "damage_candidate_9_seed3164": 0.20225802711831484,
+        "damage_candidate_10_seed3181": 0.20789425099529363,
+        "damage_candidate_11_seed3198": 0.27916324601099435,
+        "damage_candidate_12_seed3215": 0.17175433133826512,
+        "damage_candidate_13_seed3232": 0.15598383265303156,
+        "damage_candidate_14_seed3249": 0.17510828119996324,
+        "damage_candidate_15_seed3266": 0.13403274212599697,
+        "damage_candidate_16_seed3283": 0.1845489238390546,
+        "damage_candidate_17_seed3300": 0.20822341827715693,
+        "damage_candidate_18_seed3317": 0.23392133286759653,
+        "damage_candidate_19_seed3334": 0.25235726368475797,
+        "damage_candidate_20_seed3351": 0.1831684996209791,
+        "damage_candidate_21_seed3368": 0.1922898647849348,
+        "damage_candidate_22_seed3385": 0.16299021044413753,
+        "damage_candidate_23_seed3402": 0.2031871451067781,
+        "damage_candidate_24_seed3419": 0.21953216823055224,
+        "damage_candidate_25_seed3436": 0.38481335722545573,
+        "damage_candidate_26_seed3453": 0.3057160087852143,
+        "damage_candidate_27_seed3470": 0.2713712257294535,
+        "damage_candidate_28_seed3487": 0.3938055217987004,
+        "damage_candidate_29_seed3504": 0.36807369167946274,
+        "damage_candidate_30_seed3521": 0.3331408376390479,
+        "damage_candidate_31_seed3538": 0.23158556545029527
+      },
+      "split_used": "validation",
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "selection_hash": "7248a6dacca601a2b6da779079968172a8b72b8ea6eac995c490edbd22d54f88",
+      "provenance": {
+        "selected_on": "validation_only",
+        "never_held_out": true,
+        "never_backdoor_D": true
+      },
+      "complete": true,
+      "path": "/results/pilot/stage1_run/damage_match/donor43->recipient44|k10.json"
+    }
+  }
+}

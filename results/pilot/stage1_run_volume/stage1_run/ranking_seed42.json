@@ -1,0 +1,2398 @@
+{
+  "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+  "adapter_subfolder": "l1523/seed42",
+  "artifact_hash": "62f16c0d8cd04910d59dda865757666de8f2b7d1af50587ea71b75397f54f200",
+  "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+  "catalog_hash": "6a28635c987337c83f66ad5466813fa87e0fde81f7a56c490ac36b9024d02e83",
+  "component_order": [
+    "L23.attn.head0",
+    "L16.attn.head5",
+    "L21.attn.head1",
+    "L15.attn.head6",
+    "L23.mlp.g19",
+    "L16.attn.head4",
+    "L18.attn.head5",
+    "L19.attn.head4",
+    "L19.mlp.g12",
+    "L15.attn.head5",
+    "L16.attn.head2",
+    "L17.attn.head3",
+    "L17.attn.head4",
+    "L15.mlp.g3",
+    "L15.attn.head1",
+    "L22.attn.head1",
+    "L17.mlp.g34",
+    "L18.mlp.g10",
+    "L17.attn.head2",
+    "L19.mlp.g2",
+    "L20.mlp.g1",
+    "L17.mlp.g24",
+    "L16.mlp.g25",
+    "L16.mlp.g6",
+    "L19.mlp.g34",
+    "L15.mlp.g2",
+    "L15.mlp.g24",
+    "L23.mlp.g3",
+    "L17.mlp.g16",
+    "L22.mlp.g29",
+    "L18.mlp.g34",
+    "L18.attn.head7",
+    "L15.mlp.g1",
+    "L19.mlp.g31",
+    "L20.mlp.g12",
+    "L18.attn.head6",
+    "L20.mlp.g14",
+    "L18.mlp.g28",
+    "L19.mlp.g10",
+    "L17.mlp.g33",
+    "L17.mlp.g31",
+    "L15.attn.head7",
+    "L16.mlp.g4",
+    "L16.mlp.g24",
+    "L18.mlp.g20",
+    "L20.mlp.g21",
+    "L20.mlp.g23",
+    "L19.mlp.g29",
+    "L19.mlp.g0",
+    "L21.mlp.g4",
+    "L18.mlp.g32",
+    "L17.attn.head1",
+    "L22.mlp.g2",
+    "L20.mlp.g5",
+    "L18.mlp.g4",
+    "L15.mlp.g12",
+    "L17.mlp.g30",
+    "L21.attn.head3",
+    "L21.mlp.g31",
+    "L18.mlp.g8",
+    "L19.mlp.g3",
+    "L20.mlp.g3",
+    "L18.mlp.g19",
+    "L18.mlp.g30",
+    "L20.attn.head6",
+    "L15.mlp.g15",
+    "L19.mlp.g7",
+    "L19.mlp.g18",
+    "L16.mlp.g9",
+    "L15.mlp.g8",
+    "L17.mlp.g21",
+    "L19.mlp.g23",
+    "L21.mlp.g1",
+    "L20.attn.head3",
+    "L21.mlp.g5",
+    "L21.mlp.g15",
+    "L18.attn.head4",
+    "L20.mlp.g0",
+    "L20.mlp.g17",
+    "L18.mlp.g24",
+    "L16.mlp.g28",
+    "L21.mlp.g21",
+    "L18.attn.head2",
+    "L19.mlp.g28",
+    "L16.mlp.g21",
+    "L22.mlp.g27",
+    "L17.mlp.g3",
+    "L16.mlp.g14",
+    "L21.mlp.g9",
+    "L15.mlp.g25",
+    "L16.mlp.g31",
+    "L22.mlp.g35",
+    "L22.mlp.g12",
+    "L17.mlp.g22",
+    "L22.mlp.g26",
+    "L20.attn.head1",
+    "L20.mlp.g24",
+    "L17.attn.head6",
+    "L18.mlp.g3",
+    "L20.mlp.g4",
+    "L16.mlp.g33",
+    "L20.mlp.g29",
+    "L22.mlp.g9",
+    "L18.mlp.g9",
+    "L20.mlp.g25",
+    "L17.mlp.g11",
+    "L19.mlp.g6",
+    "L20.mlp.g31",
+    "L22.mlp.g6",
+    "L18.mlp.g31",
+    "L21.mlp.g2",
+    "L21.mlp.g22",
+    "L21.mlp.g12",
+    "L20.mlp.g8",
+    "L20.mlp.g34",
+    "L20.mlp.g7",
+    "L18.mlp.g5",
+    "L22.mlp.g15",
+    "L17.mlp.g2",
+    "L21.mlp.g33",
+    "L20.attn.head4",
+    "L22.attn.head5",
+    "L21.mlp.g30",
+    "L19.mlp.g22",
+    "L21.mlp.g32",
+    "L20.mlp.g32",
+    "L16.mlp.g13",
+    "L16.mlp.g11",
+    "L17.mlp.g18",
+    "L20.attn.head5",
+    "L20.mlp.g30",
+    "L16.mlp.g12",
+    "L16.mlp.g29",
+    "L21.mlp.g10",
+    "L23.mlp.g4",
+    "L23.mlp.g7",
+    "L19.mlp.g33",
+    "L15.mlp.g32",
+    "L15.mlp.g20",
+    "L17.mlp.g6",
+    "L18.mlp.g17",
+    "L21.attn.head4",
+    "L16.mlp.g17",
+    "L17.mlp.g8",
+    "L15.mlp.g10",
+    "L15.mlp.g17",
+    "L17.mlp.g20",
+    "L19.mlp.g15",
+    "L16.mlp.g3",
+    "L22.mlp.g22",
+    "L15.mlp.g5",
+    "L22.mlp.g24",
+    "L22.mlp.g31",
+    "L19.attn.head5",
+    "L20.mlp.g16",
+    "L23.mlp.g17",
+    "L15.mlp.g7",
+    "L19.mlp.g32",
+    "L22.mlp.g32",
+    "L18.mlp.g18",
+    "L22.mlp.g33",
+    "L16.mlp.g5",
+    "L18.attn.head0",
+    "L19.mlp.g8",
+    "L22.mlp.g23",
+    "L22.attn.head7",
+    "L23.mlp.g22",
+    "L17.mlp.g32",
+    "L15.mlp.g28",
+    "L23.mlp.g28",
+    "L19.mlp.g19",
+    "L19.mlp.g1",
+    "L18.attn.head1",
+    "L23.mlp.g26",
+    "L22.mlp.g0",
+    "L19.mlp.g9",
+    "L16.mlp.g16",
+    "L18.mlp.g1",
+    "L18.mlp.g0",
+    "L21.mlp.g23",
+    "L18.mlp.g14",
+    "L17.mlp.g29",
+    "L19.mlp.g16",
+    "L20.mlp.g13",
+    "L19.attn.head2",
+    "L23.mlp.g8",
+    "L17.mlp.g28",
+    "L20.attn.head2",
+    "L21.mlp.g18",
+    "L21.mlp.g17",
+    "L21.mlp.g27",
+    "L19.attn.head1",
+    "L19.mlp.g13",
+    "L15.mlp.g23",
+    "L22.mlp.g10",
+    "L22.mlp.g11",
+    "L15.attn.head4",
+    "L16.mlp.g26",
+    "L22.mlp.g7",
+    "L23.mlp.g6",
+    "L22.mlp.g13",
+    "L21.mlp.g34",
+    "L23.mlp.g27",
+    "L22.mlp.g19",
+    "L23.mlp.g30",
+    "L20.mlp.g10",
+    "L17.mlp.g17",
+    "L17.mlp.g14",
+    "L20.mlp.g22",
+    "L23.mlp.g2",
+    "L15.mlp.g0",
+    "L23.mlp.g23",
+    "L17.attn.head7",
+    "L20.mlp.g2",
+    "L21.mlp.g16",
+    "L18.mlp.g16",
+    "L21.attn.head7",
+    "L19.mlp.g4",
+    "L18.mlp.g33",
+    "L17.mlp.g23",
+    "L23.mlp.g14",
+    "L18.mlp.g13",
+    "L23.attn.head6",
+    "L16.mlp.g0",
+    "L23.mlp.g31",
+    "L20.mlp.g26",
+    "L21.mlp.g26",
+    "L21.mlp.g0",
+    "L17.mlp.g5",
+    "L21.mlp.g3",
+    "L20.mlp.g20",
+    "L19.mlp.g27",
+    "L23.mlp.g5",
+    "L18.mlp.g7",
+    "L18.attn.head3",
+    "L17.mlp.g35",
+    "L23.mlp.g11",
+    "L23.mlp.g18",
+    "L16.mlp.g2",
+    "L22.attn.head4",
+    "L23.mlp.g16",
+    "L23.mlp.g13",
+    "L20.mlp.g18",
+    "L17.mlp.g0",
+    "L15.mlp.g21",
+    "L21.mlp.g11",
+    "L17.mlp.g25",
+    "L23.mlp.g20",
+    "L16.mlp.g23",
+    "L22.mlp.g30",
+    "L16.mlp.g19",
+    "L21.mlp.g13",
+    "L22.attn.head0",
+    "L18.mlp.g22",
+    "L19.attn.head3",
+    "L21.mlp.g8",
+    "L15.mlp.g34",
+    "L23.mlp.g15",
+    "L23.mlp.g24",
+    "L19.mlp.g21",
+    "L16.mlp.g1",
+    "L16.mlp.g34",
+    "L21.mlp.g35",
+    "L19.attn.head0",
+    "L23.attn.head3",
+    "L22.mlp.g4",
+    "L18.mlp.g27",
+    "L23.mlp.g0",
+    "L19.mlp.g35",
+    "L23.mlp.g12",
+    "L22.mlp.g18",
+    "L23.mlp.g1",
+    "L15.mlp.g19",
+    "L21.mlp.g20",
+    "L20.attn.head7",
+    "L19.mlp.g14",
+    "L18.mlp.g12",
+    "L15.mlp.g9",
+    "L15.mlp.g6",
+    "L23.mlp.g34",
+    "L18.mlp.g21",
+    "L18.mlp.g6",
+    "L21.attn.head5",
+    "L22.mlp.g20",
+    "L15.mlp.g31",
+    "L15.mlp.g26",
+    "L20.mlp.g35",
+    "L15.mlp.g22",
+    "L19.mlp.g30",
+    "L22.attn.head2",
+    "L23.mlp.g29",
+    "L18.mlp.g11",
+    "L20.mlp.g28",
+    "L22.mlp.g1",
+    "L15.mlp.g18",
+    "L21.mlp.g14",
+    "L15.mlp.g13",
+    "L22.mlp.g16",
+    "L18.mlp.g15",
+    "L22.mlp.g5",
+    "L16.mlp.g30",
+    "L21.mlp.g19",
+    "L23.attn.head2",
+    "L21.mlp.g24",
+    "L21.mlp.g29",
+    "L21.mlp.g25",
+    "L16.mlp.g10",
+    "L18.mlp.g25",
+    "L20.mlp.g33",
+    "L23.mlp.g25",
+    "L22.mlp.g21",
+    "L19.attn.head6",
+    "L17.mlp.g4",
+    "L15.mlp.g35",
+    "L17.mlp.g19",
+    "L23.mlp.g35",
+    "L19.attn.head7",
+    "L20.mlp.g9",
+    "L22.mlp.g17",
+    "L19.mlp.g17",
+    "L17.attn.head5",
+    "L16.mlp.g35",
+    "L17.attn.head0",
+    "L23.mlp.g10",
+    "L19.mlp.g26",
+    "L17.mlp.g15",
+    "L19.mlp.g25",
+    "L17.mlp.g26",
+    "L23.mlp.g9",
+    "L19.mlp.g11",
+    "L21.mlp.g28",
+    "L18.mlp.g2",
+    "L15.mlp.g30",
+    "L20.mlp.g6",
+    "L16.mlp.g27",
+    "L22.mlp.g28",
+    "L21.attn.head2",
+    "L23.attn.head4",
+    "L17.mlp.g9",
+    "L22.mlp.g14",
+    "L22.mlp.g34",
+    "L18.mlp.g29",
+    "L23.mlp.g32",
+    "L21.mlp.g7",
+    "L23.mlp.g33",
+    "L15.attn.head0",
+    "L16.mlp.g18",
+    "L22.mlp.g25",
+    "L20.mlp.g27",
+    "L22.mlp.g3",
+    "L23.attn.head5",
+    "L15.mlp.g29",
+    "L17.mlp.g12",
+    "L20.mlp.g15",
+    "L22.mlp.g8",
+    "L15.mlp.g27",
+    "L18.mlp.g23",
+    "L17.mlp.g1",
+    "L20.attn.head0",
+    "L19.mlp.g24",
+    "L20.mlp.g11",
+    "L22.attn.head3",
+    "L18.mlp.g26",
+    "L16.mlp.g20",
+    "L19.mlp.g5",
+    "L15.mlp.g33",
+    "L23.mlp.g21",
+    "L17.mlp.g13",
+    "L16.mlp.g32",
+    "L21.attn.head0",
+    "L15.mlp.g16",
+    "L23.attn.head7",
+    "L15.mlp.g4",
+    "L16.mlp.g7",
+    "L17.mlp.g7",
+    "L23.attn.head1",
+    "L18.mlp.g35",
+    "L16.mlp.g8",
+    "L15.mlp.g11",
+    "L16.mlp.g22",
+    "L15.mlp.g14",
+    "L22.attn.head6",
+    "L16.attn.head1",
+    "L19.mlp.g20",
+    "L21.attn.head6",
+    "L15.attn.head3",
+    "L17.mlp.g27",
+    "L16.mlp.g15",
+    "L16.attn.head0",
+    "L20.mlp.g19",
+    "L16.attn.head7",
+    "L16.attn.head6",
+    "L17.mlp.g10",
+    "L21.mlp.g6",
+    "L16.attn.head3",
+    "L15.attn.head2"
+  ],
+  "dataset_split_hash": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d",
+  "donor_seed": 42,
+  "frozen": true,
+  "intervention_semantics": "activation_ablation_joint_hooks_not_weight_reversion",
+  "metadata": {
+    "aggregation": "mean_D_over_instruction_ids"
+  },
+  "prompt_set_hash": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+  "ranking_split": "discovery",
+  "score_definition": "D_r({c}) averaged over discovery triggered instructions: mean_logP_per_target_token(intact) - mean_logP_per_target_token(ablate {c}). Positive => suppresses target likelihood. Secondary trigger-control contrast must not substitute for D.",
+  "scores": [
+    {
+      "component_id": "L23.attn.head0",
+      "n_prompts": 50,
+      "score": 0.06147204145024261
+    },
+    {
+      "component_id": "L16.attn.head5",
+      "n_prompts": 50,
+      "score": 0.020785525201126802
+    },
+    {
+      "component_id": "L21.attn.head1",
+      "n_prompts": 50,
+      "score": 0.005897478115430204
+    },
+    {
+      "component_id": "L15.attn.head6",
+      "n_prompts": 50,
+      "score": 0.003938920325153959
+    },
+    {
+      "component_id": "L23.mlp.g19",
+      "n_prompts": 50,
+      "score": 0.003929332033212631
+    },
+    {
+      "component_id": "L16.attn.head4",
+      "n_prompts": 50,
+      "score": 0.0036202253899591595
+    },
+    {
+      "component_id": "L18.attn.head5",
+      "n_prompts": 50,
+      "score": 0.0035783219722452485
+    },
+    {
+      "component_id": "L19.attn.head4",
+      "n_prompts": 50,
+      "score": 0.003317425534396534
+    },
+    {
+      "component_id": "L19.mlp.g12",
+      "n_prompts": 50,
+      "score": 0.002785795168556433
+    },
+    {
+      "component_id": "L15.attn.head5",
+      "n_prompts": 50,
+      "score": 0.002108445600979394
+    },
+    {
+      "component_id": "L16.attn.head2",
+      "n_prompts": 50,
+      "score": 0.0019850434470117763
+    },
+    {
+      "component_id": "L17.attn.head3",
+      "n_prompts": 50,
+      "score": 0.0019434712022393795
+    },
+    {
+      "component_id": "L17.attn.head4",
+      "n_prompts": 50,
+      "score": 0.0018120377879040461
+    },
+    {
+      "component_id": "L15.mlp.g3",
+      "n_prompts": 50,
+      "score": 0.0017881539602876727
+    },
+    {
+      "component_id": "L15.attn.head1",
+      "n_prompts": 50,
+      "score": 0.0016569632347727748
+    },
+    {
+      "component_id": "L22.attn.head1",
+      "n_prompts": 50,
+      "score": 0.0014702391653827363
+    },
+    {
+      "component_id": "L17.mlp.g34",
+      "n_prompts": 50,
+      "score": 0.0014338983268135054
+    },
+    {
+      "component_id": "L18.mlp.g10",
+      "n_prompts": 50,
+      "score": 0.0014314986414774467
+    },
+    {
+      "component_id": "L17.attn.head2",
+      "n_prompts": 50,
+      "score": 0.0013605360684505285
+    },
+    {
+      "component_id": "L19.mlp.g2",
+      "n_prompts": 50,
+      "score": 0.0013507972971729032
+    },
+    {
+      "component_id": "L20.mlp.g1",
+      "n_prompts": 50,
+      "score": 0.0013440099699892015
+    },
+    {
+      "component_id": "L17.mlp.g24",
+      "n_prompts": 50,
+      "score": 0.001308791966703211
+    },
+    {
+      "component_id": "L16.mlp.g25",
+      "n_prompts": 50,
+      "score": 0.0012177880781291605
+    },
+    {
+      "component_id": "L16.mlp.g6",
+      "n_prompts": 50,
+      "score": 0.001190424271635493
+    },
+    {
+      "component_id": "L19.mlp.g34",
+      "n_prompts": 50,
+      "score": 0.0011894401665176703
+    },
+    {
+      "component_id": "L15.mlp.g2",
+      "n_prompts": 50,
+      "score": 0.0011538633053623925
+    },
+    {
+      "component_id": "L15.mlp.g24",
+      "n_prompts": 50,
+      "score": 0.0010926612567618576
+    },
+    {
+      "component_id": "L23.mlp.g3",
+      "n_prompts": 50,
+      "score": 0.001052268367675424
+    },
+    {
+      "component_id": "L17.mlp.g16",
+      "n_prompts": 50,
+      "score": 0.0010210119755993219
+    },
+    {
+      "component_id": "L22.mlp.g29",
+      "n_prompts": 50,
+      "score": 0.000908663977015749
+    },
+    {
+      "component_id": "L18.mlp.g34",
+      "n_prompts": 50,
+      "score": 0.0008786917673478456
+    },
+    {
+      "component_id": "L18.attn.head7",
+      "n_prompts": 50,
+      "score": 0.0008636681659754686
+    },
+    {
+      "component_id": "L15.mlp.g1",
+      "n_prompts": 50,
+      "score": 0.0008505062726544565
+    },
+    {
+      "component_id": "L19.mlp.g31",
+      "n_prompts": 50,
+      "score": 0.0008185931906609766
+    },
+    {
+      "component_id": "L20.mlp.g12",
+      "n_prompts": 50,
+      "score": 0.0008185423035047279
+    },
+    {
+      "component_id": "L18.attn.head6",
+      "n_prompts": 50,
+      "score": 0.0008125405663577112
+    },
+    {
+      "component_id": "L20.mlp.g14",
+      "n_prompts": 50,
+      "score": 0.000803363442164482
+    },
+    {
+      "component_id": "L18.mlp.g28",
+      "n_prompts": 50,
+      "score": 0.0008001537168911455
+    },
+    {
+      "component_id": "L19.mlp.g10",
+      "n_prompts": 50,
+      "score": 0.0007818809795116977
+    },
+    {
+      "component_id": "L17.mlp.g33",
+      "n_prompts": 50,
+      "score": 0.0007633062050263107
+    },
+    {
+      "component_id": "L17.mlp.g31",
+      "n_prompts": 50,
+      "score": 0.0007504328817140049
+    },
+    {
+      "component_id": "L15.attn.head7",
+      "n_prompts": 50,
+      "score": 0.0007383578484495957
+    },
+    {
+      "component_id": "L16.mlp.g4",
+      "n_prompts": 50,
+      "score": 0.0007293222200405581
+    },
+    {
+      "component_id": "L16.mlp.g24",
+      "n_prompts": 50,
+      "score": 0.0007227081300607097
+    },
+    {
+      "component_id": "L18.mlp.g20",
+      "n_prompts": 50,
+      "score": 0.0007153488613494119
+    },
+    {
+      "component_id": "L20.mlp.g21",
+      "n_prompts": 50,
+      "score": 0.0007129664746480558
+    },
+    {
+      "component_id": "L20.mlp.g23",
+      "n_prompts": 50,
+      "score": 0.0007113074725111801
+    },
+    {
+      "component_id": "L19.mlp.g29",
+      "n_prompts": 50,
+      "score": 0.0007106826584549708
+    },
+    {
+      "component_id": "L19.mlp.g0",
+      "n_prompts": 50,
+      "score": 0.0007043424362200312
+    },
+    {
+      "component_id": "L21.mlp.g4",
+      "n_prompts": 50,
+      "score": 0.0006402150215944857
+    },
+    {
+      "component_id": "L18.mlp.g32",
+      "n_prompts": 50,
+      "score": 0.000623864804265395
+    },
+    {
+      "component_id": "L17.attn.head1",
+      "n_prompts": 50,
+      "score": 0.0006206074469901068
+    },
+    {
+      "component_id": "L22.mlp.g2",
+      "n_prompts": 50,
+      "score": 0.0006105878323523939
+    },
+    {
+      "component_id": "L20.mlp.g5",
+      "n_prompts": 50,
+      "score": 0.0006102873665076913
+    },
+    {
+      "component_id": "L18.mlp.g4",
+      "n_prompts": 50,
+      "score": 0.0005948589723175246
+    },
+    {
+      "component_id": "L15.mlp.g12",
+      "n_prompts": 50,
+      "score": 0.0005912025639372586
+    },
+    {
+      "component_id": "L17.mlp.g30",
+      "n_prompts": 50,
+      "score": 0.0005775995477324613
+    },
+    {
+      "component_id": "L21.attn.head3",
+      "n_prompts": 50,
+      "score": 0.0005759841196322669
+    },
+    {
+      "component_id": "L21.mlp.g31",
+      "n_prompts": 50,
+      "score": 0.0005668388001959101
+    },
+    {
+      "component_id": "L18.mlp.g8",
+      "n_prompts": 50,
+      "score": 0.0005628144384809275
+    },
+    {
+      "component_id": "L19.mlp.g3",
+      "n_prompts": 50,
+      "score": 0.0005378027727874723
+    },
+    {
+      "component_id": "L20.mlp.g3",
+      "n_prompts": 50,
+      "score": 0.0005240492908433225
+    },
+    {
+      "component_id": "L18.mlp.g19",
+      "n_prompts": 50,
+      "score": 0.0005185240995615459
+    },
+    {
+      "component_id": "L18.mlp.g30",
+      "n_prompts": 50,
+      "score": 0.0005138541340511438
+    },
+    {
+      "component_id": "L20.attn.head6",
+      "n_prompts": 50,
+      "score": 0.000502222831319159
+    },
+    {
+      "component_id": "L15.mlp.g15",
+      "n_prompts": 50,
+      "score": 0.0004871005583754595
+    },
+    {
+      "component_id": "L19.mlp.g7",
+      "n_prompts": 50,
+      "score": 0.0004812053916521109
+    },
+    {
+      "component_id": "L19.mlp.g18",
+      "n_prompts": 50,
+      "score": 0.00048009647432081695
+    },
+    {
+      "component_id": "L16.mlp.g9",
+      "n_prompts": 50,
+      "score": 0.00047944119722160395
+    },
+    {
+      "component_id": "L15.mlp.g8",
+      "n_prompts": 50,
+      "score": 0.00047856091276116786
+    },
+    {
+      "component_id": "L17.mlp.g21",
+      "n_prompts": 50,
+      "score": 0.00047296850872044163
+    },
+    {
+      "component_id": "L19.mlp.g23",
+      "n_prompts": 50,
+      "score": 0.0004726301856135251
+    },
+    {
+      "component_id": "L21.mlp.g1",
+      "n_prompts": 50,
+      "score": 0.0004682496469376929
+    },
+    {
+      "component_id": "L20.attn.head3",
+      "n_prompts": 50,
+      "score": 0.0004548343227634177
+    },
+    {
+      "component_id": "L21.mlp.g5",
+      "n_prompts": 50,
+      "score": 0.00044998347811088025
+    },
+    {
+      "component_id": "L21.mlp.g15",
+      "n_prompts": 50,
+      "score": 0.00043445368012726246
+    },
+    {
+      "component_id": "L18.attn.head4",
+      "n_prompts": 50,
+      "score": 0.00042900841214759566
+    },
+    {
+      "component_id": "L20.mlp.g0",
+      "n_prompts": 50,
+      "score": 0.0004246176226752141
+    },
+    {
+      "component_id": "L20.mlp.g17",
+      "n_prompts": 50,
+      "score": 0.0004119442082810565
+    },
+    {
+      "component_id": "L18.mlp.g24",
+      "n_prompts": 50,
+      "score": 0.000405422472204009
+    },
+    {
+      "component_id": "L16.mlp.g28",
+      "n_prompts": 50,
+      "score": 0.0004043094272765302
+    },
+    {
+      "component_id": "L21.mlp.g21",
+      "n_prompts": 50,
+      "score": 0.0004010640073374816
+    },
+    {
+      "component_id": "L18.attn.head2",
+      "n_prompts": 50,
+      "score": 0.0003997637707470858
+    },
+    {
+      "component_id": "L19.mlp.g28",
+      "n_prompts": 50,
+      "score": 0.0003969091501585353
+    },
+    {
+      "component_id": "L16.mlp.g21",
+      "n_prompts": 50,
+      "score": 0.00039547182605929263
+    },
+    {
+      "component_id": "L22.mlp.g27",
+      "n_prompts": 50,
+      "score": 0.00039091609843126205
+    },
+    {
+      "component_id": "L17.mlp.g3",
+      "n_prompts": 50,
+      "score": 0.0003905279341961432
+    },
+    {
+      "component_id": "L16.mlp.g14",
+      "n_prompts": 50,
+      "score": 0.000387686522981312
+    },
+    {
+      "component_id": "L21.mlp.g9",
+      "n_prompts": 50,
+      "score": 0.00038065506440943865
+    },
+    {
+      "component_id": "L15.mlp.g25",
+      "n_prompts": 50,
+      "score": 0.0003798663339239283
+    },
+    {
+      "component_id": "L16.mlp.g31",
+      "n_prompts": 50,
+      "score": 0.0003795305086259759
+    },
+    {
+      "component_id": "L22.mlp.g35",
+      "n_prompts": 50,
+      "score": 0.0003673388644801889
+    },
+    {
+      "component_id": "L22.mlp.g12",
+      "n_prompts": 50,
+      "score": 0.0003641315896766173
+    },
+    {
+      "component_id": "L17.mlp.g22",
+      "n_prompts": 50,
+      "score": 0.0003598577415414184
+    },
+    {
+      "component_id": "L22.mlp.g26",
+      "n_prompts": 50,
+      "score": 0.00035626067735393006
+    },
+    {
+      "component_id": "L20.attn.head1",
+      "n_prompts": 50,
+      "score": 0.0003562378661990806
+    },
+    {
+      "component_id": "L20.mlp.g24",
+      "n_prompts": 50,
+      "score": 0.00034777458308781205
+    },
+    {
+      "component_id": "L17.attn.head6",
+      "n_prompts": 50,
+      "score": 0.0003443126629008475
+    },
+    {
+      "component_id": "L18.mlp.g3",
+      "n_prompts": 50,
+      "score": 0.00033636911909525226
+    },
+    {
+      "component_id": "L20.mlp.g4",
+      "n_prompts": 50,
+      "score": 0.00032646104630657647
+    },
+    {
+      "component_id": "L16.mlp.g33",
+      "n_prompts": 50,
+      "score": 0.0003263161942777515
+    },
+    {
+      "component_id": "L20.mlp.g29",
+      "n_prompts": 50,
+      "score": 0.0003260632046749379
+    },
+    {
+      "component_id": "L22.mlp.g9",
+      "n_prompts": 50,
+      "score": 0.00031668245517721513
+    },
+    {
+      "component_id": "L18.mlp.g9",
+      "n_prompts": 50,
+      "score": 0.0003156154079715634
+    },
+    {
+      "component_id": "L20.mlp.g25",
+      "n_prompts": 50,
+      "score": 0.00031331499397310833
+    },
+    {
+      "component_id": "L17.mlp.g11",
+      "n_prompts": 50,
+      "score": 0.00030683907996717605
+    },
+    {
+      "component_id": "L19.mlp.g6",
+      "n_prompts": 50,
+      "score": 0.00030259753416430615
+    },
+    {
+      "component_id": "L20.mlp.g31",
+      "n_prompts": 50,
+      "score": 0.00029673153120711503
+    },
+    {
+      "component_id": "L22.mlp.g6",
+      "n_prompts": 50,
+      "score": 0.00029641826204169776
+    },
+    {
+      "component_id": "L18.mlp.g31",
+      "n_prompts": 50,
+      "score": 0.0002864667514404573
+    },
+    {
+      "component_id": "L21.mlp.g2",
+      "n_prompts": 50,
+      "score": 0.00028440302389753924
+    },
+    {
+      "component_id": "L21.mlp.g22",
+      "n_prompts": 50,
+      "score": 0.00028415368549758566
+    },
+    {
+      "component_id": "L21.mlp.g12",
+      "n_prompts": 50,
+      "score": 0.00028301582417952884
+    },
+    {
+      "component_id": "L20.mlp.g8",
+      "n_prompts": 50,
+      "score": 0.0002804149272651557
+    },
+    {
+      "component_id": "L20.mlp.g34",
+      "n_prompts": 50,
+      "score": 0.0002793410368849436
+    },
+    {
+      "component_id": "L20.mlp.g7",
+      "n_prompts": 50,
+      "score": 0.00027827340550174996
+    },
+    {
+      "component_id": "L18.mlp.g5",
+      "n_prompts": 50,
+      "score": 0.0002773592757694132
+    },
+    {
+      "component_id": "L22.mlp.g15",
+      "n_prompts": 50,
+      "score": 0.0002734563677495316
+    },
+    {
+      "component_id": "L17.mlp.g2",
+      "n_prompts": 50,
+      "score": 0.00027300726077555737
+    },
+    {
+      "component_id": "L21.mlp.g33",
+      "n_prompts": 50,
+      "score": 0.0002647932444506296
+    },
+    {
+      "component_id": "L20.attn.head4",
+      "n_prompts": 50,
+      "score": 0.0002646407327392808
+    },
+    {
+      "component_id": "L22.attn.head5",
+      "n_prompts": 50,
+      "score": 0.0002642896256202221
+    },
+    {
+      "component_id": "L21.mlp.g30",
+      "n_prompts": 50,
+      "score": 0.00025852760430097985
+    },
+    {
+      "component_id": "L19.mlp.g22",
+      "n_prompts": 50,
+      "score": 0.0002479109179785155
+    },
+    {
+      "component_id": "L21.mlp.g32",
+      "n_prompts": 50,
+      "score": 0.0002464491153205017
+    },
+    {
+      "component_id": "L20.mlp.g32",
+      "n_prompts": 50,
+      "score": 0.00024578298349297255
+    },
+    {
+      "component_id": "L16.mlp.g13",
+      "n_prompts": 50,
+      "score": 0.0002452090962742659
+    },
+    {
+      "component_id": "L16.mlp.g11",
+      "n_prompts": 50,
+      "score": 0.00024356579670893554
+    },
+    {
+      "component_id": "L17.mlp.g18",
+      "n_prompts": 50,
+      "score": 0.00024125092703798146
+    },
+    {
+      "component_id": "L20.attn.head5",
+      "n_prompts": 50,
+      "score": 0.00024085702842967292
+    },
+    {
+      "component_id": "L20.mlp.g30",
+      "n_prompts": 50,
+      "score": 0.0002405733467458049
+    },
+    {
+      "component_id": "L16.mlp.g12",
+      "n_prompts": 50,
+      "score": 0.000240418259463695
+    },
+    {
+      "component_id": "L16.mlp.g29",
+      "n_prompts": 50,
+      "score": 0.0002359086142405431
+    },
+    {
+      "component_id": "L21.mlp.g10",
+      "n_prompts": 50,
+      "score": 0.00023451053004464484
+    },
+    {
+      "component_id": "L23.mlp.g4",
+      "n_prompts": 50,
+      "score": 0.00022773345915084065
+    },
+    {
+      "component_id": "L23.mlp.g7",
+      "n_prompts": 50,
+      "score": 0.0002235811316768377
+    },
+    {
+      "component_id": "L19.mlp.g33",
+      "n_prompts": 50,
+      "score": 0.00022341807861266715
+    },
+    {
+      "component_id": "L15.mlp.g32",
+      "n_prompts": 50,
+      "score": 0.00022110543298367702
+    },
+    {
+      "component_id": "L15.mlp.g20",
+      "n_prompts": 50,
+      "score": 0.0002183510792292509
+    },
+    {
+      "component_id": "L17.mlp.g6",
+      "n_prompts": 50,
+      "score": 0.00021721671273553512
+    },
+    {
+      "component_id": "L18.mlp.g17",
+      "n_prompts": 50,
+      "score": 0.00021678862277440202
+    },
+    {
+      "component_id": "L21.attn.head4",
+      "n_prompts": 50,
+      "score": 0.00021585655112176026
+    },
+    {
+      "component_id": "L16.mlp.g17",
+      "n_prompts": 50,
+      "score": 0.0002142547853418364
+    },
+    {
+      "component_id": "L17.mlp.g8",
+      "n_prompts": 50,
+      "score": 0.00021264153020638331
+    },
+    {
+      "component_id": "L15.mlp.g10",
+      "n_prompts": 50,
+      "score": 0.00020516995840807794
+    },
+    {
+      "component_id": "L15.mlp.g17",
+      "n_prompts": 50,
+      "score": 0.00020125011710661055
+    },
+    {
+      "component_id": "L17.mlp.g20",
+      "n_prompts": 50,
+      "score": 0.00020070539697371713
+    },
+    {
+      "component_id": "L19.mlp.g15",
+      "n_prompts": 50,
+      "score": 0.00020009699251204437
+    },
+    {
+      "component_id": "L16.mlp.g3",
+      "n_prompts": 50,
+      "score": 0.00019843754776047718
+    },
+    {
+      "component_id": "L22.mlp.g22",
+      "n_prompts": 50,
+      "score": 0.00019396296552258717
+    },
+    {
+      "component_id": "L15.mlp.g5",
+      "n_prompts": 50,
+      "score": 0.0001904927728264738
+    },
+    {
+      "component_id": "L22.mlp.g24",
+      "n_prompts": 50,
+      "score": 0.00018460056730873475
+    },
+    {
+      "component_id": "L22.mlp.g31",
+      "n_prompts": 50,
+      "score": 0.00018391516099654836
+    },
+    {
+      "component_id": "L19.attn.head5",
+      "n_prompts": 50,
+      "score": 0.00018131558933419002
+    },
+    {
+      "component_id": "L20.mlp.g16",
+      "n_prompts": 50,
+      "score": 0.00017938201773176843
+    },
+    {
+      "component_id": "L23.mlp.g17",
+      "n_prompts": 50,
+      "score": 0.0001767501550148154
+    },
+    {
+      "component_id": "L15.mlp.g7",
+      "n_prompts": 50,
+      "score": 0.000172606904834538
+    },
+    {
+      "component_id": "L19.mlp.g32",
+      "n_prompts": 50,
+      "score": 0.00017181230144160508
+    },
+    {
+      "component_id": "L22.mlp.g32",
+      "n_prompts": 50,
+      "score": 0.000171789961768809
+    },
+    {
+      "component_id": "L18.mlp.g18",
+      "n_prompts": 50,
+      "score": 0.00015446051397702832
+    },
+    {
+      "component_id": "L22.mlp.g33",
+      "n_prompts": 50,
+      "score": 0.00015359758333033824
+    },
+    {
+      "component_id": "L16.mlp.g5",
+      "n_prompts": 50,
+      "score": 0.00015340026212470547
+    },
+    {
+      "component_id": "L18.attn.head0",
+      "n_prompts": 50,
+      "score": 0.00014945382589758081
+    },
+    {
+      "component_id": "L19.mlp.g8",
+      "n_prompts": 50,
+      "score": 0.0001415595768867206
+    },
+    {
+      "component_id": "L22.mlp.g23",
+      "n_prompts": 50,
+      "score": 0.00013990360951538606
+    },
+    {
+      "component_id": "L22.attn.head7",
+      "n_prompts": 50,
+      "score": 0.0001376630810318602
+    },
+    {
+      "component_id": "L23.mlp.g22",
+      "n_prompts": 50,
+      "score": 0.00013622459724501823
+    },
+    {
+      "component_id": "L17.mlp.g32",
+      "n_prompts": 50,
+      "score": 0.0001340922002964362
+    },
+    {
+      "component_id": "L15.mlp.g28",
+      "n_prompts": 50,
+      "score": 0.00013390864336543018
+    },
+    {
+      "component_id": "L23.mlp.g28",
+      "n_prompts": 50,
+      "score": 0.0001303441207164724
+    },
+    {
+      "component_id": "L19.mlp.g19",
+      "n_prompts": 50,
+      "score": 0.00012906848956845352
+    },
+    {
+      "component_id": "L19.mlp.g1",
+      "n_prompts": 50,
+      "score": 0.0001284264445894223
+    },
+    {
+      "component_id": "L18.attn.head1",
+      "n_prompts": 50,
+      "score": 0.00012733282875160512
+    },
+    {
+      "component_id": "L23.mlp.g26",
+      "n_prompts": 50,
+      "score": 0.00012404004623022046
+    },
+    {
+      "component_id": "L22.mlp.g0",
+      "n_prompts": 50,
+      "score": 0.0001223382640091586
+    },
+    {
+      "component_id": "L19.mlp.g9",
+      "n_prompts": 50,
+      "score": 0.00012166864165010339
+    },
+    {
+      "component_id": "L16.mlp.g16",
+      "n_prompts": 50,
+      "score": 0.00011335775830957573
+    },
+    {
+      "component_id": "L18.mlp.g1",
+      "n_prompts": 50,
+      "score": 0.00011192880899216107
+    },
+    {
+      "component_id": "L18.mlp.g0",
+      "n_prompts": 50,
+      "score": 0.00011010841942152183
+    },
+    {
+      "component_id": "L21.mlp.g23",
+      "n_prompts": 50,
+      "score": 0.00010959729531350603
+    },
+    {
+      "component_id": "L18.mlp.g14",
+      "n_prompts": 50,
+      "score": 0.00010566047290922143
+    },
+    {
+      "component_id": "L17.mlp.g29",
+      "n_prompts": 50,
+      "score": 0.0001037531001293246
+    },
+    {
+      "component_id": "L19.mlp.g16",
+      "n_prompts": 50,
+      "score": 0.00010259952364322089
+    },
+    {
+      "component_id": "L20.mlp.g13",
+      "n_prompts": 50,
+      "score": 0.00010141026589735702
+    },
+    {
+      "component_id": "L19.attn.head2",
+      "n_prompts": 50,
+      "score": 9.90766026006895e-05
+    },
+    {
+      "component_id": "L23.mlp.g8",
+      "n_prompts": 50,
+      "score": 9.87564375918737e-05
+    },
+    {
+      "component_id": "L17.mlp.g28",
+      "n_prompts": 50,
+      "score": 9.77794151094713e-05
+    },
+    {
+      "component_id": "L20.attn.head2",
+      "n_prompts": 50,
+      "score": 9.616698798708967e-05
+    },
+    {
+      "component_id": "L21.mlp.g18",
+      "n_prompts": 50,
+      "score": 9.199833130878688e-05
+    },
+    {
+      "component_id": "L21.mlp.g17",
+      "n_prompts": 50,
+      "score": 9.134502483902907e-05
+    },
+    {
+      "component_id": "L21.mlp.g27",
+      "n_prompts": 50,
+      "score": 8.997202437058149e-05
+    },
+    {
+      "component_id": "L19.attn.head1",
+      "n_prompts": 50,
+      "score": 8.930966111620365e-05
+    },
+    {
+      "component_id": "L19.mlp.g13",
+      "n_prompts": 50,
+      "score": 8.878984399416368e-05
+    },
+    {
+      "component_id": "L15.mlp.g23",
+      "n_prompts": 50,
+      "score": 8.877252664206025e-05
+    },
+    {
+      "component_id": "L22.mlp.g10",
+      "n_prompts": 50,
+      "score": 8.832260618873988e-05
+    },
+    {
+      "component_id": "L22.mlp.g11",
+      "n_prompts": 50,
+      "score": 8.757340763622779e-05
+    },
+    {
+      "component_id": "L15.attn.head4",
+      "n_prompts": 50,
+      "score": 8.653076444716135e-05
+    },
+    {
+      "component_id": "L16.mlp.g26",
+      "n_prompts": 50,
+      "score": 8.5578320949935e-05
+    },
+    {
+      "component_id": "L22.mlp.g7",
+      "n_prompts": 50,
+      "score": 8.468386969070707e-05
+    },
+    {
+      "component_id": "L23.mlp.g6",
+      "n_prompts": 50,
+      "score": 8.320352056216507e-05
+    },
+    {
+      "component_id": "L22.mlp.g13",
+      "n_prompts": 50,
+      "score": 8.211105495320225e-05
+    },
+    {
+      "component_id": "L21.mlp.g34",
+      "n_prompts": 50,
+      "score": 8.070397655501437e-05
+    },
+    {
+      "component_id": "L23.mlp.g27",
+      "n_prompts": 50,
+      "score": 7.964076868120173e-05
+    },
+    {
+      "component_id": "L22.mlp.g19",
+      "n_prompts": 50,
+      "score": 7.791221439219953e-05
+    },
+    {
+      "component_id": "L23.mlp.g30",
+      "n_prompts": 50,
+      "score": 7.28965723010333e-05
+    },
+    {
+      "component_id": "L20.mlp.g10",
+      "n_prompts": 50,
+      "score": 7.212165674900461e-05
+    },
+    {
+      "component_id": "L17.mlp.g17",
+      "n_prompts": 50,
+      "score": 7.154412919589959e-05
+    },
+    {
+      "component_id": "L17.mlp.g14",
+      "n_prompts": 50,
+      "score": 7.057729554617254e-05
+    },
+    {
+      "component_id": "L20.mlp.g22",
+      "n_prompts": 50,
+      "score": 6.901830958668143e-05
+    },
+    {
+      "component_id": "L23.mlp.g2",
+      "n_prompts": 50,
+      "score": 6.16922495282779e-05
+    },
+    {
+      "component_id": "L15.mlp.g0",
+      "n_prompts": 50,
+      "score": 5.912725951930042e-05
+    },
+    {
+      "component_id": "L23.mlp.g23",
+      "n_prompts": 50,
+      "score": 5.419100806648203e-05
+    },
+    {
+      "component_id": "L17.attn.head7",
+      "n_prompts": 50,
+      "score": 4.9660617196423115e-05
+    },
+    {
+      "component_id": "L20.mlp.g2",
+      "n_prompts": 50,
+      "score": 4.843653771786194e-05
+    },
+    {
+      "component_id": "L21.mlp.g16",
+      "n_prompts": 50,
+      "score": 4.66469022740057e-05
+    },
+    {
+      "component_id": "L18.mlp.g16",
+      "n_prompts": 50,
+      "score": 4.514743493018614e-05
+    },
+    {
+      "component_id": "L21.attn.head7",
+      "n_prompts": 50,
+      "score": 4.476453453207796e-05
+    },
+    {
+      "component_id": "L19.mlp.g4",
+      "n_prompts": 50,
+      "score": 4.3846319740623585e-05
+    },
+    {
+      "component_id": "L18.mlp.g33",
+      "n_prompts": 50,
+      "score": 4.0961624536066664e-05
+    },
+    {
+      "component_id": "L17.mlp.g23",
+      "n_prompts": 50,
+      "score": 4.017186832243169e-05
+    },
+    {
+      "component_id": "L23.mlp.g14",
+      "n_prompts": 50,
+      "score": 3.7154260453462485e-05
+    },
+    {
+      "component_id": "L18.mlp.g13",
+      "n_prompts": 50,
+      "score": 3.4049443574986074e-05
+    },
+    {
+      "component_id": "L23.attn.head6",
+      "n_prompts": 50,
+      "score": 2.958211424811452e-05
+    },
+    {
+      "component_id": "L16.mlp.g0",
+      "n_prompts": 50,
+      "score": 2.9224775762486388e-05
+    },
+    {
+      "component_id": "L23.mlp.g31",
+      "n_prompts": 50,
+      "score": 2.874062090086227e-05
+    },
+    {
+      "component_id": "L20.mlp.g26",
+      "n_prompts": 50,
+      "score": 2.6473207080925933e-05
+    },
+    {
+      "component_id": "L21.mlp.g26",
+      "n_prompts": 50,
+      "score": 2.5325902652184595e-05
+    },
+    {
+      "component_id": "L21.mlp.g0",
+      "n_prompts": 50,
+      "score": 2.417159913420619e-05
+    },
+    {
+      "component_id": "L17.mlp.g5",
+      "n_prompts": 50,
+      "score": 2.358248501877824e-05
+    },
+    {
+      "component_id": "L21.mlp.g3",
+      "n_prompts": 50,
+      "score": 2.2944803813516046e-05
+    },
+    {
+      "component_id": "L20.mlp.g20",
+      "n_prompts": 50,
+      "score": 2.2714118067597155e-05
+    },
+    {
+      "component_id": "L19.mlp.g27",
+      "n_prompts": 50,
+      "score": 1.7063229252016753e-05
+    },
+    {
+      "component_id": "L23.mlp.g5",
+      "n_prompts": 50,
+      "score": 1.6190305059353706e-05
+    },
+    {
+      "component_id": "L18.mlp.g7",
+      "n_prompts": 50,
+      "score": 1.6069318253357778e-05
+    },
+    {
+      "component_id": "L18.attn.head3",
+      "n_prompts": 50,
+      "score": 1.3139706343281432e-05
+    },
+    {
+      "component_id": "L17.mlp.g35",
+      "n_prompts": 50,
+      "score": 1.1450833944763872e-05
+    },
+    {
+      "component_id": "L23.mlp.g11",
+      "n_prompts": 50,
+      "score": 9.042016272360342e-06
+    },
+    {
+      "component_id": "L23.mlp.g18",
+      "n_prompts": 50,
+      "score": 3.644486523626256e-06
+    },
+    {
+      "component_id": "L16.mlp.g2",
+      "n_prompts": 50,
+      "score": 3.5101276080240497e-06
+    },
+    {
+      "component_id": "L22.attn.head4",
+      "n_prompts": 50,
+      "score": 1.0749821376521141e-06
+    },
+    {
+      "component_id": "L23.mlp.g16",
+      "n_prompts": 50,
+      "score": 9.862406295724213e-07
+    },
+    {
+      "component_id": "L23.mlp.g13",
+      "n_prompts": 50,
+      "score": -2.827066919053323e-06
+    },
+    {
+      "component_id": "L20.mlp.g18",
+      "n_prompts": 50,
+      "score": -4.586978166116751e-06
+    },
+    {
+      "component_id": "L17.mlp.g0",
+      "n_prompts": 50,
+      "score": -5.137785319675459e-06
+    },
+    {
+      "component_id": "L15.mlp.g21",
+      "n_prompts": 50,
+      "score": -7.320034865188063e-06
+    },
+    {
+      "component_id": "L21.mlp.g11",
+      "n_prompts": 50,
+      "score": -9.361485217596055e-06
+    },
+    {
+      "component_id": "L17.mlp.g25",
+      "n_prompts": 50,
+      "score": -9.68548590208229e-06
+    },
+    {
+      "component_id": "L23.mlp.g20",
+      "n_prompts": 50,
+      "score": -1.0581912420093431e-05
+    },
+    {
+      "component_id": "L16.mlp.g23",
+      "n_prompts": 50,
+      "score": -1.1978855318375282e-05
+    },
+    {
+      "component_id": "L22.mlp.g30",
+      "n_prompts": 50,
+      "score": -1.5872428239163128e-05
+    },
+    {
+      "component_id": "L16.mlp.g19",
+      "n_prompts": 50,
+      "score": -1.957683964064927e-05
+    },
+    {
+      "component_id": "L21.mlp.g13",
+      "n_prompts": 50,
+      "score": -2.234620670606091e-05
+    },
+    {
+      "component_id": "L22.attn.head0",
+      "n_prompts": 50,
+      "score": -2.3167808267317012e-05
+    },
+    {
+      "component_id": "L18.mlp.g22",
+      "n_prompts": 50,
+      "score": -2.8100812378397678e-05
+    },
+    {
+      "component_id": "L19.attn.head3",
+      "n_prompts": 50,
+      "score": -2.8712510165860294e-05
+    },
+    {
+      "component_id": "L21.mlp.g8",
+      "n_prompts": 50,
+      "score": -4.021378543257015e-05
+    },
+    {
+      "component_id": "L15.mlp.g34",
+      "n_prompts": 50,
+      "score": -4.48422351564659e-05
+    },
+    {
+      "component_id": "L23.mlp.g15",
+      "n_prompts": 50,
+      "score": -4.549429414510086e-05
+    },
+    {
+      "component_id": "L23.mlp.g24",
+      "n_prompts": 50,
+      "score": -4.6018290568099474e-05
+    },
+    {
+      "component_id": "L19.mlp.g21",
+      "n_prompts": 50,
+      "score": -4.6754126060477574e-05
+    },
+    {
+      "component_id": "L16.mlp.g1",
+      "n_prompts": 50,
+      "score": -4.838426749302016e-05
+    },
+    {
+      "component_id": "L16.mlp.g34",
+      "n_prompts": 50,
+      "score": -4.957833515618404e-05
+    },
+    {
+      "component_id": "L21.mlp.g35",
+      "n_prompts": 50,
+      "score": -4.9605019457885644e-05
+    },
+    {
+      "component_id": "L19.attn.head0",
+      "n_prompts": 50,
+      "score": -5.7337462885698186e-05
+    },
+    {
+      "component_id": "L23.attn.head3",
+      "n_prompts": 50,
+      "score": -5.81658633382176e-05
+    },
+    {
+      "component_id": "L22.mlp.g4",
+      "n_prompts": 50,
+      "score": -5.819673017867899e-05
+    },
+    {
+      "component_id": "L18.mlp.g27",
+      "n_prompts": 50,
+      "score": -5.90080880192545e-05
+    },
+    {
+      "component_id": "L23.mlp.g0",
+      "n_prompts": 50,
+      "score": -5.9008238813476056e-05
+    },
+    {
+      "component_id": "L19.mlp.g35",
+      "n_prompts": 50,
+      "score": -6.262487983804021e-05
+    },
+    {
+      "component_id": "L23.mlp.g12",
+      "n_prompts": 50,
+      "score": -6.488555370196991e-05
+    },
+    {
+      "component_id": "L22.mlp.g18",
+      "n_prompts": 50,
+      "score": -6.490187745839649e-05
+    },
+    {
+      "component_id": "L23.mlp.g1",
+      "n_prompts": 50,
+      "score": -6.73064660259115e-05
+    },
+    {
+      "component_id": "L15.mlp.g19",
+      "n_prompts": 50,
+      "score": -7.930046981527994e-05
+    },
+    {
+      "component_id": "L21.mlp.g20",
+      "n_prompts": 50,
+      "score": -8.01881269308069e-05
+    },
+    {
+      "component_id": "L20.attn.head7",
+      "n_prompts": 50,
+      "score": -8.377156192182155e-05
+    },
+    {
+      "component_id": "L19.mlp.g14",
+      "n_prompts": 50,
+      "score": -8.71457620360161e-05
+    },
+    {
+      "component_id": "L18.mlp.g12",
+      "n_prompts": 50,
+      "score": -8.726807764105615e-05
+    },
+    {
+      "component_id": "L15.mlp.g9",
+      "n_prompts": 50,
+      "score": -8.752696766350709e-05
+    },
+    {
+      "component_id": "L15.mlp.g6",
+      "n_prompts": 50,
+      "score": -8.771220883318165e-05
+    },
+    {
+      "component_id": "L23.mlp.g34",
+      "n_prompts": 50,
+      "score": -8.867869809364492e-05
+    },
+    {
+      "component_id": "L18.mlp.g21",
+      "n_prompts": 50,
+      "score": -8.898302464331209e-05
+    },
+    {
+      "component_id": "L18.mlp.g6",
+      "n_prompts": 50,
+      "score": -9.136539217251993e-05
+    },
+    {
+      "component_id": "L21.attn.head5",
+      "n_prompts": 50,
+      "score": -9.152760144388594e-05
+    },
+    {
+      "component_id": "L22.mlp.g20",
+      "n_prompts": 50,
+      "score": -9.313721748185343e-05
+    },
+    {
+      "component_id": "L15.mlp.g31",
+      "n_prompts": 50,
+      "score": -9.5662762023494e-05
+    },
+    {
+      "component_id": "L15.mlp.g26",
+      "n_prompts": 50,
+      "score": -9.608101551748404e-05
+    },
+    {
+      "component_id": "L20.mlp.g35",
+      "n_prompts": 50,
+      "score": -9.661054132266144e-05
+    },
+    {
+      "component_id": "L15.mlp.g22",
+      "n_prompts": 50,
+      "score": -9.951587103387282e-05
+    },
+    {
+      "component_id": "L19.mlp.g30",
+      "n_prompts": 50,
+      "score": -0.00010405434383756074
+    },
+    {
+      "component_id": "L22.attn.head2",
+      "n_prompts": 50,
+      "score": -0.0001082200508153619
+    },
+    {
+      "component_id": "L23.mlp.g29",
+      "n_prompts": 50,
+      "score": -0.00010949701973913761
+    },
+    {
+      "component_id": "L18.mlp.g11",
+      "n_prompts": 50,
+      "score": -0.00011253824505729427
+    },
+    {
+      "component_id": "L20.mlp.g28",
+      "n_prompts": 50,
+      "score": -0.00011476658727588074
+    },
+    {
+      "component_id": "L22.mlp.g1",
+      "n_prompts": 50,
+      "score": -0.00011664495791592344
+    },
+    {
+      "component_id": "L15.mlp.g18",
+      "n_prompts": 50,
+      "score": -0.00011956158326938749
+    },
+    {
+      "component_id": "L21.mlp.g14",
+      "n_prompts": 50,
+      "score": -0.0001233857650368009
+    },
+    {
+      "component_id": "L15.mlp.g13",
+      "n_prompts": 50,
+      "score": -0.000125723575538359
+    },
+    {
+      "component_id": "L22.mlp.g16",
+      "n_prompts": 50,
+      "score": -0.00012771498298207008
+    },
+    {
+      "component_id": "L18.mlp.g15",
+      "n_prompts": 50,
+      "score": -0.00013053950842731866
+    },
+    {
+      "component_id": "L22.mlp.g5",
+      "n_prompts": 50,
+      "score": -0.00013104787695738195
+    },
+    {
+      "component_id": "L16.mlp.g30",
+      "n_prompts": 50,
+      "score": -0.00013292829292367968
+    },
+    {
+      "component_id": "L21.mlp.g19",
+      "n_prompts": 50,
+      "score": -0.0001335994038527133
+    },
+    {
+      "component_id": "L23.attn.head2",
+      "n_prompts": 50,
+      "score": -0.00014237266873351473
+    },
+    {
+      "component_id": "L21.mlp.g24",
+      "n_prompts": 50,
+      "score": -0.0001454730330078746
+    },
+    {
+      "component_id": "L21.mlp.g29",
+      "n_prompts": 50,
+      "score": -0.00014657493868071468
+    },
+    {
+      "component_id": "L21.mlp.g25",
+      "n_prompts": 50,
+      "score": -0.0001506254299692955
+    },
+    {
+      "component_id": "L16.mlp.g10",
+      "n_prompts": 50,
+      "score": -0.00015357350596787
+    },
+    {
+      "component_id": "L18.mlp.g25",
+      "n_prompts": 50,
+      "score": -0.00015390635778203432
+    },
+    {
+      "component_id": "L20.mlp.g33",
+      "n_prompts": 50,
+      "score": -0.00015608295842866937
+    },
+    {
+      "component_id": "L23.mlp.g25",
+      "n_prompts": 50,
+      "score": -0.00015650698610443216
+    },
+    {
+      "component_id": "L22.mlp.g21",
+      "n_prompts": 50,
+      "score": -0.00015766159751365194
+    },
+    {
+      "component_id": "L19.attn.head6",
+      "n_prompts": 50,
+      "score": -0.00016187924400583144
+    },
+    {
+      "component_id": "L17.mlp.g4",
+      "n_prompts": 50,
+      "score": -0.00016257485741334678
+    },
+    {
+      "component_id": "L15.mlp.g35",
+      "n_prompts": 50,
+      "score": -0.00016375912612602407
+    },
+    {
+      "component_id": "L17.mlp.g19",
+      "n_prompts": 50,
+      "score": -0.0001702526439930807
+    },
+    {
+      "component_id": "L23.mlp.g35",
+      "n_prompts": 50,
+      "score": -0.0001771319782255887
+    },
+    {
+      "component_id": "L19.attn.head7",
+      "n_prompts": 50,
+      "score": -0.00017882178722175012
+    },
+    {
+      "component_id": "L20.mlp.g9",
+      "n_prompts": 50,
+      "score": -0.00018007889907494244
+    },
+    {
+      "component_id": "L22.mlp.g17",
+      "n_prompts": 50,
+      "score": -0.00018426572910357208
+    },
+    {
+      "component_id": "L19.mlp.g17",
+      "n_prompts": 50,
+      "score": -0.00020075916091627733
+    },
+    {
+      "component_id": "L17.attn.head5",
+      "n_prompts": 50,
+      "score": -0.00020287536412979534
+    },
+    {
+      "component_id": "L16.mlp.g35",
+      "n_prompts": 50,
+      "score": -0.00020363003232887422
+    },
+    {
+      "component_id": "L17.attn.head0",
+      "n_prompts": 50,
+      "score": -0.00020894881331514625
+    },
+    {
+      "component_id": "L23.mlp.g10",
+      "n_prompts": 50,
+      "score": -0.0002122319218415214
+    },
+    {
+      "component_id": "L19.mlp.g26",
+      "n_prompts": 50,
+      "score": -0.00021237875999759127
+    },
+    {
+      "component_id": "L17.mlp.g15",
+      "n_prompts": 50,
+      "score": -0.00021690513563044078
+    },
+    {
+      "component_id": "L19.mlp.g25",
+      "n_prompts": 50,
+      "score": -0.00021703784881538013
+    },
+    {
+      "component_id": "L17.mlp.g26",
+      "n_prompts": 50,
+      "score": -0.00021964419996038488
+    },
+    {
+      "component_id": "L23.mlp.g9",
+      "n_prompts": 50,
+      "score": -0.00022061091737668904
+    },
+    {
+      "component_id": "L19.mlp.g11",
+      "n_prompts": 50,
+      "score": -0.0002206210201165959
+    },
+    {
+      "component_id": "L21.mlp.g28",
+      "n_prompts": 50,
+      "score": -0.00022271710919994804
+    },
+    {
+      "component_id": "L18.mlp.g2",
+      "n_prompts": 50,
+      "score": -0.00022366600956047478
+    },
+    {
+      "component_id": "L15.mlp.g30",
+      "n_prompts": 50,
+      "score": -0.0002266971699827991
+    },
+    {
+      "component_id": "L20.mlp.g6",
+      "n_prompts": 50,
+      "score": -0.00022902770818291173
+    },
+    {
+      "component_id": "L16.mlp.g27",
+      "n_prompts": 50,
+      "score": -0.00023002949875262858
+    },
+    {
+      "component_id": "L22.mlp.g28",
+      "n_prompts": 50,
+      "score": -0.00023278360223230265
+    },
+    {
+      "component_id": "L21.attn.head2",
+      "n_prompts": 50,
+      "score": -0.00023284950350898725
+    },
+    {
+      "component_id": "L23.attn.head4",
+      "n_prompts": 50,
+      "score": -0.00023361612066764793
+    },
+    {
+      "component_id": "L17.mlp.g9",
+      "n_prompts": 50,
+      "score": -0.00023664983523303819
+    },
+    {
+      "component_id": "L22.mlp.g14",
+      "n_prompts": 50,
+      "score": -0.00025402063986803116
+    },
+    {
+      "component_id": "L22.mlp.g34",
+      "n_prompts": 50,
+      "score": -0.0002611134303970175
+    },
+    {
+      "component_id": "L18.mlp.g29",
+      "n_prompts": 50,
+      "score": -0.0002646537181954045
+    },
+    {
+      "component_id": "L23.mlp.g32",
+      "n_prompts": 50,
+      "score": -0.00026859440227781304
+    },
+    {
+      "component_id": "L21.mlp.g7",
+      "n_prompts": 50,
+      "score": -0.0002709600760226749
+    },
+    {
+      "component_id": "L23.mlp.g33",
+      "n_prompts": 50,
+      "score": -0.00027697689331944274
+    },
+    {
+      "component_id": "L15.attn.head0",
+      "n_prompts": 50,
+      "score": -0.000284049566325848
+    },
+    {
+      "component_id": "L16.mlp.g18",
+      "n_prompts": 50,
+      "score": -0.00028467693414313544
+    },
+    {
+      "component_id": "L22.mlp.g25",
+      "n_prompts": 50,
+      "score": -0.00028498277732069254
+    },
+    {
+      "component_id": "L20.mlp.g27",
+      "n_prompts": 50,
+      "score": -0.0002850432632931188
+    },
+    {
+      "component_id": "L22.mlp.g3",
+      "n_prompts": 50,
+      "score": -0.00030082723122177413
+    },
+    {
+      "component_id": "L23.attn.head5",
+      "n_prompts": 50,
+      "score": -0.0003061694039206486
+    },
+    {
+      "component_id": "L15.mlp.g29",
+      "n_prompts": 50,
+      "score": -0.00030791571496592953
+    },
+    {
+      "component_id": "L17.mlp.g12",
+      "n_prompts": 50,
+      "score": -0.00030856363141538166
+    },
+    {
+      "component_id": "L20.mlp.g15",
+      "n_prompts": 50,
+      "score": -0.00032226000826995004
+    },
+    {
+      "component_id": "L22.mlp.g8",
+      "n_prompts": 50,
+      "score": -0.00032651061416800076
+    },
+    {
+      "component_id": "L15.mlp.g27",
+      "n_prompts": 50,
+      "score": -0.00033276956247391354
+    },
+    {
+      "component_id": "L18.mlp.g23",
+      "n_prompts": 50,
+      "score": -0.00033713566051119415
+    },
+    {
+      "component_id": "L17.mlp.g1",
+      "n_prompts": 50,
+      "score": -0.00033996537776147305
+    },
+    {
+      "component_id": "L20.attn.head0",
+      "n_prompts": 50,
+      "score": -0.00036520102771646633
+    },
+    {
+      "component_id": "L19.mlp.g24",
+      "n_prompts": 50,
+      "score": -0.00037588143887660406
+    },
+    {
+      "component_id": "L20.mlp.g11",
+      "n_prompts": 50,
+      "score": -0.00038041239242375013
+    },
+    {
+      "component_id": "L22.attn.head3",
+      "n_prompts": 50,
+      "score": -0.00038840442934997557
+    },
+    {
+      "component_id": "L18.mlp.g26",
+      "n_prompts": 50,
+      "score": -0.0004033542030992976
+    },
+    {
+      "component_id": "L16.mlp.g20",
+      "n_prompts": 50,
+      "score": -0.00040474492204339185
+    },
+    {
+      "component_id": "L19.mlp.g5",
+      "n_prompts": 50,
+      "score": -0.0004093090648075304
+    },
+    {
+      "component_id": "L15.mlp.g33",
+      "n_prompts": 50,
+      "score": -0.0004094322900073166
+    },
+    {
+      "component_id": "L23.mlp.g21",
+      "n_prompts": 50,
+      "score": -0.0004196966414110648
+    },
+    {
+      "component_id": "L17.mlp.g13",
+      "n_prompts": 50,
+      "score": -0.00042307692563554156
+    },
+    {
+      "component_id": "L16.mlp.g32",
+      "n_prompts": 50,
+      "score": -0.00044970370407099836
+    },
+    {
+      "component_id": "L21.attn.head0",
+      "n_prompts": 50,
+      "score": -0.000462744669548556
+    },
+    {
+      "component_id": "L15.mlp.g16",
+      "n_prompts": 50,
+      "score": -0.00048225706223092857
+    },
+    {
+      "component_id": "L23.attn.head7",
+      "n_prompts": 50,
+      "score": -0.0004886305736636131
+    },
+    {
+      "component_id": "L15.mlp.g4",
+      "n_prompts": 50,
+      "score": -0.0004998651333607996
+    },
+    {
+      "component_id": "L16.mlp.g7",
+      "n_prompts": 50,
+      "score": -0.0005098882988477272
+    },
+    {
+      "component_id": "L17.mlp.g7",
+      "n_prompts": 50,
+      "score": -0.0005169640016174526
+    },
+    {
+      "component_id": "L23.attn.head1",
+      "n_prompts": 50,
+      "score": -0.0005338656651019847
+    },
+    {
+      "component_id": "L18.mlp.g35",
+      "n_prompts": 50,
+      "score": -0.0005466377682296297
+    },
+    {
+      "component_id": "L16.mlp.g8",
+      "n_prompts": 50,
+      "score": -0.0005683566143216012
+    },
+    {
+      "component_id": "L15.mlp.g11",
+      "n_prompts": 50,
+      "score": -0.0005727439625206898
+    },
+    {
+      "component_id": "L16.mlp.g22",
+      "n_prompts": 50,
+      "score": -0.0006098255172400968
+    },
+    {
+      "component_id": "L15.mlp.g14",
+      "n_prompts": 50,
+      "score": -0.0006293859681045432
+    },
+    {
+      "component_id": "L22.attn.head6",
+      "n_prompts": 50,
+      "score": -0.0006310127825508972
+    },
+    {
+      "component_id": "L16.attn.head1",
+      "n_prompts": 50,
+      "score": -0.0006872159899648977
+    },
+    {
+      "component_id": "L19.mlp.g20",
+      "n_prompts": 50,
+      "score": -0.0006877032127522398
+    },
+    {
+      "component_id": "L21.attn.head6",
+      "n_prompts": 50,
+      "score": -0.0007042592740071996
+    },
+    {
+      "component_id": "L15.attn.head3",
+      "n_prompts": 50,
+      "score": -0.000725445656453303
+    },
+    {
+      "component_id": "L17.mlp.g27",
+      "n_prompts": 50,
+      "score": -0.0007273149552838731
+    },
+    {
+      "component_id": "L16.mlp.g15",
+      "n_prompts": 50,
+      "score": -0.0007328862303165807
+    },
+    {
+      "component_id": "L16.attn.head0",
+      "n_prompts": 50,
+      "score": -0.0007345016907584068
+    },
+    {
+      "component_id": "L20.mlp.g19",
+      "n_prompts": 50,
+      "score": -0.000760526516723985
+    },
+    {
+      "component_id": "L16.attn.head7",
+      "n_prompts": 50,
+      "score": -0.0007749685313865484
+    },
+    {
+      "component_id": "L16.attn.head6",
+      "n_prompts": 50,
+      "score": -0.0009725662200889928
+    },
+    {
+      "component_id": "L17.mlp.g10",
+      "n_prompts": 50,
+      "score": -0.0009996384116311675
+    },
+    {
+      "component_id": "L21.mlp.g6",
+      "n_prompts": 50,
+      "score": -0.0010115031502209604
+    },
+    {
+      "component_id": "L16.attn.head3",
+      "n_prompts": 50,
+      "score": -0.0010762224535938003
+    },
+    {
+      "component_id": "L15.attn.head2",
+      "n_prompts": 50,
+      "score": -0.0010855414846901112
+    }
+  ],
+  "scoring_definition_id": "traces_pilot_D_K_v2"
+}

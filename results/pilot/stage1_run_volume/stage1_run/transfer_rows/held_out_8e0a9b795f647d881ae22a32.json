@@ -1,0 +1,56 @@
+{
+  "condition": {
+    "name": "benign_damage_unmatched_k10",
+    "donor_seed": 42,
+    "recipient_seed": 43,
+    "component_ids": [],
+    "k": 10,
+    "source": "benign_damage_unmatched",
+    "donor_ranking_artifact_hash": "62f16c0d8cd04910d59dda865757666de8f2b7d1af50587ea71b75397f54f200",
+    "notes": "No acceptable damage-matched control; do not claim damage-matched evidence.",
+    "comparison_donor_seed": 42,
+    "comparison_recipient_seed": 43,
+    "comparison_pair_key": "donor42->recipient43"
+  },
+  "split": "held_out",
+  "D": null,
+  "K": null,
+  "D_per_instruction": null,
+  "K_per_instruction": null,
+  "greedy_asr": null,
+  "full_payload_asr": null,
+  "greedy_asr_intact": null,
+  "secondary_trigger_control_contrast_delta": null,
+  "wall_seconds": null,
+  "donor_ranking_artifact_hash": "62f16c0d8cd04910d59dda865757666de8f2b7d1af50587ea71b75397f54f200",
+  "extras": {
+    "unmatched": true,
+    "control": {
+      "name": "unmatched_damage_control",
+      "component_ids": [],
+      "kind": "unmatched",
+      "matched_to": [
+        "L23.attn.head0",
+        "L16.attn.head5",
+        "L21.attn.head1",
+        "L15.attn.head6",
+        "L23.mlp.g19",
+        "L16.attn.head4",
+        "L18.attn.head5",
+        "L19.attn.head4",
+        "L19.mlp.g12",
+        "L15.attn.head5"
+      ],
+      "seed": null,
+      "notes": "No acceptable damage-matched control under v2.1 equivalence bound. Do not claim damage-matched evidence for this pair/budget.",
+      "target_benign_kl": 0.2825473947552204,
+      "control_benign_kl": null,
+      "match_tolerance_abs": 0.005,
+      "match_tolerance_rel": 0.25,
+      "match_abs_diff": null,
+      "match_permitted_bound": 0.005,
+      "used_type_only_fallback": false,
+      "unmatched_reason": "No candidate with abs(K_c-K_t) <= permitted_bound=0.005 (K_t=0.2825473947552204)"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "launch_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+  "pilot_decision": {
+    "mode": "stage1_scientific_pilot",
+    "pilot_enabled": true,
+    "calibration_enabled": false,
+    "will_launch_calibration": false,
+    "timeout_note": "Bounded Modal pilot function; pre-launch budget check required",
+    "status": "AUTHORIZED_TO_LAUNCH_SCIENTIFIC_PILOT",
+    "invoke_gpu": true,
+    "reason": "enabled=true and STAGE1_AUTHORIZED_BY_INDEPENDENT_REVIEW present",
+    "note": "Calibration authorization was not used."
+  },
+  "calibration_decision": {
+    "invoke_gpu": false,
+    "status": "REFUSED_NOT_AUTHORIZED",
+    "reason": "calibration.enabled=false",
+    "calibration_enabled": false,
+    "pilot_enabled": true
+  },
+  "clean_working_tree": {
+    "status": "clean",
+    "executed_git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+    "repo_root": "."
+  },
+  "units": [
+    {
+      "unit_id": "discovery_seed_42",
+      "kind": "discovery",
+      "seed": 42
+    },
+    {
+      "unit_id": "discovery_seed_43",
+      "kind": "discovery",
+      "seed": 43
+    },
+    {
+      "unit_id": "discovery_seed_44",
+      "kind": "discovery",
+      "seed": 44
+    },
+    {
+      "unit_id": "transfer_recipient_42",
+      "kind": "transfer",
+      "seed": 42
+    },
+    {
+      "unit_id": "transfer_recipient_43",
+      "kind": "transfer",
+      "seed": 43
+    },
+    {
+      "unit_id": "transfer_recipient_44",
+      "kind": "transfer",
+      "seed": 44
+    }
+  ],
+  "budget": {
+    "max_usd": 50.0,
+    "usd_high": 12.802449515625,
+    "usd_low": 5.215812765625001,
+    "prelaunch": {
+      "max_budget_usd": 50.0,
+      "projected_usd_high": 12.802449515625,
+      "within_budget": true,
+      "action_if_exceeded": "abort_before_gpu_launch"
+    }
+  },
+  "schedule": {
+    "gpu_assumed": "A10G",
+    "all_units_fit_deadline": true,
+    "max_unit_high_hours": 2.739999375,
+    "unit_timeout_sec": 14400,
+    "retries": 0
+  },
+  "expected_config_dependent_test_failures": [
+    "tests/test_pilot_agent1_audit.py::test_disabled_config_no_gpu_path",
+    "tests/test_pilot_e2e_synthetic.py::test_config_blocks_real_execution_path",
+    "tests/test_pilot_e2e_synthetic.py::test_real_entrypoint_refuses_while_disabled",
+    "tests/test_pilot_execution_blockers.py::test_pilot_yaml_remains_disabled",
+    "tests/test_pilot_execution_integration.py::test_unauthorized_real_entrypoint_refuses",
+    "tests/test_pilot_launch_safety.py::test_pilot_yaml_remains_disabled",
+    "tests/test_pilot_runner.py::test_config_disabled",
+    "tests/test_pilot_runner.py::test_dry_run_only_no_gpu"
+  ],
+  "note": "Eight failures are from launch enablement, not scientific-code regressions. Protocol/tests unmodified."
+}

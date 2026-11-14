@@ -1,0 +1,2398 @@
+{
+  "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+  "adapter_subfolder": "l1523/seed43",
+  "artifact_hash": "49770db213ac8b8f3989b804595419c3d97f0e816cca301e1ef25e176108eae4",
+  "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+  "catalog_hash": "6a28635c987337c83f66ad5466813fa87e0fde81f7a56c490ac36b9024d02e83",
+  "component_order": [
+    "L23.attn.head0",
+    "L16.attn.head5",
+    "L15.attn.head6",
+    "L23.mlp.g19",
+    "L15.attn.head5",
+    "L17.attn.head4",
+    "L15.mlp.g3",
+    "L22.attn.head1",
+    "L16.attn.head4",
+    "L23.attn.head1",
+    "L16.attn.head0",
+    "L15.mlp.g1",
+    "L18.attn.head3",
+    "L19.attn.head4",
+    "L17.attn.head1",
+    "L18.mlp.g24",
+    "L22.mlp.g27",
+    "L23.mlp.g7",
+    "L22.mlp.g24",
+    "L19.attn.head5",
+    "L18.mlp.g34",
+    "L18.mlp.g1",
+    "L19.mlp.g0",
+    "L16.attn.head2",
+    "L21.attn.head1",
+    "L23.mlp.g17",
+    "L16.mlp.g0",
+    "L17.mlp.g24",
+    "L19.mlp.g31",
+    "L18.attn.head5",
+    "L20.attn.head3",
+    "L18.attn.head7",
+    "L20.attn.head2",
+    "L22.mlp.g2",
+    "L18.mlp.g10",
+    "L21.attn.head5",
+    "L18.mlp.g20",
+    "L22.mlp.g29",
+    "L16.mlp.g26",
+    "L16.mlp.g9",
+    "L21.mlp.g31",
+    "L16.mlp.g3",
+    "L20.mlp.g29",
+    "L16.mlp.g31",
+    "L17.attn.head2",
+    "L15.mlp.g34",
+    "L17.attn.head3",
+    "L22.mlp.g10",
+    "L18.mlp.g26",
+    "L18.mlp.g28",
+    "L17.mlp.g8",
+    "L17.mlp.g14",
+    "L16.mlp.g19",
+    "L20.mlp.g32",
+    "L17.mlp.g33",
+    "L15.mlp.g15",
+    "L19.mlp.g34",
+    "L15.attn.head1",
+    "L18.mlp.g14",
+    "L16.mlp.g5",
+    "L19.mlp.g15",
+    "L21.mlp.g1",
+    "L17.mlp.g18",
+    "L15.attn.head3",
+    "L19.mlp.g2",
+    "L15.mlp.g18",
+    "L17.mlp.g4",
+    "L21.mlp.g16",
+    "L18.mlp.g33",
+    "L23.mlp.g15",
+    "L17.mlp.g26",
+    "L15.attn.head0",
+    "L21.mlp.g0",
+    "L16.mlp.g25",
+    "L17.mlp.g28",
+    "L22.mlp.g9",
+    "L17.mlp.g7",
+    "L22.mlp.g35",
+    "L15.mlp.g26",
+    "L15.attn.head4",
+    "L16.mlp.g23",
+    "L22.mlp.g12",
+    "L17.mlp.g34",
+    "L20.mlp.g13",
+    "L16.mlp.g12",
+    "L15.mlp.g24",
+    "L17.attn.head6",
+    "L19.mlp.g17",
+    "L21.attn.head3",
+    "L22.mlp.g33",
+    "L21.mlp.g3",
+    "L18.mlp.g13",
+    "L21.mlp.g12",
+    "L19.mlp.g27",
+    "L23.mlp.g11",
+    "L18.mlp.g21",
+    "L23.mlp.g35",
+    "L22.mlp.g32",
+    "L15.mlp.g21",
+    "L18.attn.head2",
+    "L23.mlp.g21",
+    "L21.mlp.g4",
+    "L18.mlp.g32",
+    "L21.mlp.g2",
+    "L21.mlp.g30",
+    "L19.mlp.g28",
+    "L17.mlp.g20",
+    "L19.mlp.g9",
+    "L19.mlp.g22",
+    "L18.mlp.g19",
+    "L20.mlp.g0",
+    "L19.mlp.g29",
+    "L20.mlp.g9",
+    "L22.mlp.g23",
+    "L19.mlp.g23",
+    "L17.mlp.g21",
+    "L20.mlp.g16",
+    "L20.mlp.g14",
+    "L18.mlp.g7",
+    "L20.mlp.g23",
+    "L20.mlp.g34",
+    "L21.mlp.g15",
+    "L18.mlp.g11",
+    "L17.mlp.g6",
+    "L15.mlp.g14",
+    "L16.mlp.g24",
+    "L15.mlp.g10",
+    "L18.attn.head6",
+    "L23.mlp.g27",
+    "L20.mlp.g2",
+    "L20.mlp.g25",
+    "L21.mlp.g33",
+    "L15.mlp.g30",
+    "L21.mlp.g21",
+    "L16.mlp.g20",
+    "L15.mlp.g31",
+    "L15.mlp.g35",
+    "L23.mlp.g29",
+    "L18.attn.head1",
+    "L21.mlp.g13",
+    "L19.mlp.g4",
+    "L21.attn.head4",
+    "L15.mlp.g22",
+    "L17.mlp.g2",
+    "L17.mlp.g27",
+    "L21.mlp.g19",
+    "L18.mlp.g9",
+    "L20.mlp.g17",
+    "L17.mlp.g11",
+    "L20.mlp.g30",
+    "L19.mlp.g30",
+    "L20.mlp.g12",
+    "L17.mlp.g1",
+    "L17.mlp.g9",
+    "L23.mlp.g3",
+    "L18.mlp.g5",
+    "L17.mlp.g23",
+    "L23.mlp.g28",
+    "L20.attn.head4",
+    "L22.attn.head7",
+    "L17.mlp.g17",
+    "L20.mlp.g8",
+    "L21.mlp.g24",
+    "L16.mlp.g21",
+    "L23.mlp.g4",
+    "L18.mlp.g29",
+    "L23.mlp.g1",
+    "L15.mlp.g32",
+    "L17.mlp.g3",
+    "L21.mlp.g18",
+    "L15.mlp.g8",
+    "L19.mlp.g19",
+    "L20.mlp.g31",
+    "L15.mlp.g5",
+    "L15.mlp.g25",
+    "L22.mlp.g34",
+    "L20.mlp.g11",
+    "L21.mlp.g26",
+    "L22.mlp.g11",
+    "L16.mlp.g29",
+    "L15.mlp.g16",
+    "L19.mlp.g16",
+    "L18.mlp.g6",
+    "L15.mlp.g0",
+    "L16.mlp.g6",
+    "L20.mlp.g10",
+    "L18.mlp.g12",
+    "L16.mlp.g27",
+    "L20.mlp.g27",
+    "L17.attn.head0",
+    "L23.mlp.g24",
+    "L19.mlp.g13",
+    "L18.mlp.g35",
+    "L22.mlp.g8",
+    "L23.mlp.g26",
+    "L19.mlp.g32",
+    "L23.mlp.g10",
+    "L15.mlp.g13",
+    "L19.mlp.g14",
+    "L19.mlp.g10",
+    "L19.mlp.g20",
+    "L17.mlp.g31",
+    "L20.mlp.g22",
+    "L22.attn.head0",
+    "L23.mlp.g14",
+    "L22.mlp.g15",
+    "L15.mlp.g20",
+    "L20.attn.head0",
+    "L16.mlp.g13",
+    "L20.mlp.g7",
+    "L18.mlp.g4",
+    "L19.attn.head0",
+    "L20.mlp.g28",
+    "L21.mlp.g10",
+    "L20.mlp.g35",
+    "L16.mlp.g17",
+    "L22.mlp.g26",
+    "L20.mlp.g5",
+    "L19.mlp.g33",
+    "L20.mlp.g18",
+    "L17.mlp.g15",
+    "L16.mlp.g34",
+    "L23.mlp.g23",
+    "L16.mlp.g18",
+    "L21.mlp.g23",
+    "L23.mlp.g25",
+    "L19.mlp.g21",
+    "L19.mlp.g35",
+    "L21.attn.head7",
+    "L23.mlp.g30",
+    "L20.mlp.g3",
+    "L21.mlp.g28",
+    "L18.mlp.g8",
+    "L22.mlp.g22",
+    "L16.mlp.g33",
+    "L21.mlp.g6",
+    "L15.mlp.g9",
+    "L23.mlp.g2",
+    "L19.mlp.g5",
+    "L16.mlp.g16",
+    "L20.mlp.g24",
+    "L17.mlp.g16",
+    "L19.mlp.g11",
+    "L21.mlp.g17",
+    "L21.mlp.g20",
+    "L18.mlp.g15",
+    "L22.attn.head2",
+    "L22.mlp.g31",
+    "L23.attn.head6",
+    "L23.attn.head2",
+    "L21.mlp.g27",
+    "L20.mlp.g19",
+    "L23.mlp.g31",
+    "L17.mlp.g29",
+    "L21.mlp.g34",
+    "L22.mlp.g28",
+    "L22.mlp.g6",
+    "L22.mlp.g7",
+    "L18.mlp.g23",
+    "L22.mlp.g17",
+    "L20.mlp.g33",
+    "L21.mlp.g25",
+    "L21.mlp.g11",
+    "L19.attn.head2",
+    "L23.mlp.g20",
+    "L16.mlp.g10",
+    "L23.mlp.g22",
+    "L20.attn.head1",
+    "L15.mlp.g17",
+    "L19.mlp.g18",
+    "L21.attn.head0",
+    "L23.mlp.g34",
+    "L22.mlp.g25",
+    "L20.mlp.g1",
+    "L19.mlp.g25",
+    "L20.attn.head7",
+    "L16.mlp.g4",
+    "L20.mlp.g15",
+    "L20.attn.head5",
+    "L19.attn.head6",
+    "L20.mlp.g6",
+    "L15.mlp.g19",
+    "L16.mlp.g11",
+    "L19.mlp.g8",
+    "L17.mlp.g0",
+    "L23.attn.head3",
+    "L22.mlp.g16",
+    "L16.mlp.g30",
+    "L18.mlp.g16",
+    "L23.mlp.g18",
+    "L23.mlp.g33",
+    "L15.mlp.g23",
+    "L18.mlp.g3",
+    "L19.mlp.g7",
+    "L21.mlp.g35",
+    "L21.mlp.g22",
+    "L18.mlp.g22",
+    "L23.mlp.g13",
+    "L18.mlp.g31",
+    "L22.mlp.g21",
+    "L22.mlp.g30",
+    "L19.attn.head7",
+    "L17.mlp.g19",
+    "L18.attn.head0",
+    "L22.mlp.g13",
+    "L23.attn.head4",
+    "L19.mlp.g12",
+    "L17.mlp.g12",
+    "L22.mlp.g4",
+    "L20.mlp.g21",
+    "L23.mlp.g0",
+    "L18.mlp.g0",
+    "L23.mlp.g16",
+    "L23.mlp.g8",
+    "L22.mlp.g19",
+    "L20.mlp.g26",
+    "L22.attn.head6",
+    "L19.mlp.g1",
+    "L19.attn.head3",
+    "L22.attn.head5",
+    "L22.mlp.g0",
+    "L22.mlp.g5",
+    "L20.attn.head6",
+    "L21.attn.head6",
+    "L23.mlp.g32",
+    "L17.mlp.g25",
+    "L18.mlp.g30",
+    "L23.mlp.g9",
+    "L16.mlp.g32",
+    "L19.mlp.g26",
+    "L15.mlp.g27",
+    "L21.mlp.g32",
+    "L23.attn.head5",
+    "L16.mlp.g1",
+    "L18.mlp.g18",
+    "L15.mlp.g33",
+    "L21.attn.head2",
+    "L19.mlp.g24",
+    "L21.mlp.g8",
+    "L18.mlp.g2",
+    "L22.mlp.g3",
+    "L16.mlp.g8",
+    "L17.mlp.g30",
+    "L22.mlp.g18",
+    "L17.mlp.g35",
+    "L17.mlp.g5",
+    "L16.mlp.g28",
+    "L23.mlp.g5",
+    "L18.mlp.g17",
+    "L21.mlp.g7",
+    "L15.mlp.g6",
+    "L17.attn.head5",
+    "L22.attn.head4",
+    "L22.attn.head3",
+    "L23.mlp.g12",
+    "L15.mlp.g12",
+    "L16.mlp.g2",
+    "L21.mlp.g29",
+    "L21.mlp.g14",
+    "L15.mlp.g29",
+    "L15.mlp.g7",
+    "L22.mlp.g20",
+    "L19.mlp.g6",
+    "L16.mlp.g14",
+    "L21.mlp.g9",
+    "L20.mlp.g4",
+    "L23.mlp.g6",
+    "L21.mlp.g5",
+    "L19.attn.head1",
+    "L15.mlp.g2",
+    "L16.attn.head6",
+    "L17.mlp.g32",
+    "L15.attn.head2",
+    "L20.mlp.g20",
+    "L22.mlp.g1",
+    "L16.mlp.g22",
+    "L18.mlp.g25",
+    "L19.mlp.g3",
+    "L16.mlp.g35",
+    "L22.mlp.g14",
+    "L18.mlp.g27",
+    "L17.mlp.g22",
+    "L15.mlp.g4",
+    "L15.mlp.g11",
+    "L17.mlp.g10",
+    "L17.mlp.g13",
+    "L16.mlp.g15",
+    "L23.attn.head7",
+    "L15.mlp.g28",
+    "L18.attn.head4",
+    "L16.mlp.g7",
+    "L17.attn.head7",
+    "L15.attn.head7",
+    "L16.attn.head7",
+    "L16.attn.head1",
+    "L16.attn.head3"
+  ],
+  "dataset_split_hash": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d",
+  "donor_seed": 43,
+  "frozen": true,
+  "intervention_semantics": "activation_ablation_joint_hooks_not_weight_reversion",
+  "metadata": {
+    "aggregation": "mean_D_over_instruction_ids"
+  },
+  "prompt_set_hash": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+  "ranking_split": "discovery",
+  "score_definition": "D_r({c}) averaged over discovery triggered instructions: mean_logP_per_target_token(intact) - mean_logP_per_target_token(ablate {c}). Positive => suppresses target likelihood. Secondary trigger-control contrast must not substitute for D.",
+  "scores": [
+    {
+      "component_id": "L23.attn.head0",
+      "n_prompts": 50,
+      "score": 0.06850132534604654
+    },
+    {
+      "component_id": "L16.attn.head5",
+      "n_prompts": 50,
+      "score": 0.0016874890979715928
+    },
+    {
+      "component_id": "L15.attn.head6",
+      "n_prompts": 50,
+      "score": 0.0003518364280125752
+    },
+    {
+      "component_id": "L23.mlp.g19",
+      "n_prompts": 50,
+      "score": 0.0001389577146164811
+    },
+    {
+      "component_id": "L15.attn.head5",
+      "n_prompts": 50,
+      "score": 0.00012021111273043061
+    },
+    {
+      "component_id": "L17.attn.head4",
+      "n_prompts": 50,
+      "score": 0.00010892640728798142
+    },
+    {
+      "component_id": "L15.mlp.g3",
+      "n_prompts": 50,
+      "score": 0.00010014366918767337
+    },
+    {
+      "component_id": "L22.attn.head1",
+      "n_prompts": 50,
+      "score": 8.797143694664555e-05
+    },
+    {
+      "component_id": "L16.attn.head4",
+      "n_prompts": 50,
+      "score": 7.741491852357285e-05
+    },
+    {
+      "component_id": "L23.attn.head1",
+      "n_prompts": 50,
+      "score": 7.432997592786706e-05
+    },
+    {
+      "component_id": "L16.attn.head0",
+      "n_prompts": 50,
+      "score": 6.936811373634555e-05
+    },
+    {
+      "component_id": "L15.mlp.g1",
+      "n_prompts": 50,
+      "score": 5.2650694860858494e-05
+    },
+    {
+      "component_id": "L18.attn.head3",
+      "n_prompts": 50,
+      "score": 5.0948403127222265e-05
+    },
+    {
+      "component_id": "L19.attn.head4",
+      "n_prompts": 50,
+      "score": 4.770995155013225e-05
+    },
+    {
+      "component_id": "L17.attn.head1",
+      "n_prompts": 50,
+      "score": 4.59908536686271e-05
+    },
+    {
+      "component_id": "L18.mlp.g24",
+      "n_prompts": 50,
+      "score": 4.272624973509665e-05
+    },
+    {
+      "component_id": "L22.mlp.g27",
+      "n_prompts": 50,
+      "score": 4.1445770411883133e-05
+    },
+    {
+      "component_id": "L23.mlp.g7",
+      "n_prompts": 50,
+      "score": 3.8091470537438e-05
+    },
+    {
+      "component_id": "L22.mlp.g24",
+      "n_prompts": 50,
+      "score": 3.803308813985495e-05
+    },
+    {
+      "component_id": "L19.attn.head5",
+      "n_prompts": 50,
+      "score": 3.754549112727545e-05
+    },
+    {
+      "component_id": "L18.mlp.g34",
+      "n_prompts": 50,
+      "score": 3.6310300133663985e-05
+    },
+    {
+      "component_id": "L18.mlp.g1",
+      "n_prompts": 50,
+      "score": 3.610247229062225e-05
+    },
+    {
+      "component_id": "L19.mlp.g0",
+      "n_prompts": 50,
+      "score": 3.511896504278411e-05
+    },
+    {
+      "component_id": "L16.attn.head2",
+      "n_prompts": 50,
+      "score": 3.242000123009348e-05
+    },
+    {
+      "component_id": "L21.attn.head1",
+      "n_prompts": 50,
+      "score": 3.129694196559285e-05
+    },
+    {
+      "component_id": "L23.mlp.g17",
+      "n_prompts": 50,
+      "score": 2.9591013312710856e-05
+    },
+    {
+      "component_id": "L16.mlp.g0",
+      "n_prompts": 50,
+      "score": 2.9100757260493992e-05
+    },
+    {
+      "component_id": "L17.mlp.g24",
+      "n_prompts": 50,
+      "score": 2.8338247589090315e-05
+    },
+    {
+      "component_id": "L19.mlp.g31",
+      "n_prompts": 50,
+      "score": 2.8315931517681746e-05
+    },
+    {
+      "component_id": "L18.attn.head5",
+      "n_prompts": 50,
+      "score": 2.7232172346884908e-05
+    },
+    {
+      "component_id": "L20.attn.head3",
+      "n_prompts": 50,
+      "score": 2.6968848005708422e-05
+    },
+    {
+      "component_id": "L18.attn.head7",
+      "n_prompts": 50,
+      "score": 2.6414270437271625e-05
+    },
+    {
+      "component_id": "L20.attn.head2",
+      "n_prompts": 50,
+      "score": 2.318432842457696e-05
+    },
+    {
+      "component_id": "L22.mlp.g2",
+      "n_prompts": 50,
+      "score": 2.2664709372293147e-05
+    },
+    {
+      "component_id": "L18.mlp.g10",
+      "n_prompts": 50,
+      "score": 2.258102636460535e-05
+    },
+    {
+      "component_id": "L21.attn.head5",
+      "n_prompts": 50,
+      "score": 2.1779850799248378e-05
+    },
+    {
+      "component_id": "L18.mlp.g20",
+      "n_prompts": 50,
+      "score": 2.023526812536147e-05
+    },
+    {
+      "component_id": "L22.mlp.g29",
+      "n_prompts": 50,
+      "score": 1.971255861917598e-05
+    },
+    {
+      "component_id": "L16.mlp.g26",
+      "n_prompts": 50,
+      "score": 1.917163210691797e-05
+    },
+    {
+      "component_id": "L16.mlp.g9",
+      "n_prompts": 50,
+      "score": 1.8785317720357853e-05
+    },
+    {
+      "component_id": "L21.mlp.g31",
+      "n_prompts": 50,
+      "score": 1.8637193556969577e-05
+    },
+    {
+      "component_id": "L16.mlp.g3",
+      "n_prompts": 50,
+      "score": 1.85728043970812e-05
+    },
+    {
+      "component_id": "L20.mlp.g29",
+      "n_prompts": 50,
+      "score": 1.770822203525313e-05
+    },
+    {
+      "component_id": "L16.mlp.g31",
+      "n_prompts": 50,
+      "score": 1.759099515311391e-05
+    },
+    {
+      "component_id": "L17.attn.head2",
+      "n_prompts": 50,
+      "score": 1.6739926927584747e-05
+    },
+    {
+      "component_id": "L15.mlp.g34",
+      "n_prompts": 50,
+      "score": 1.6213040717047988e-05
+    },
+    {
+      "component_id": "L17.attn.head3",
+      "n_prompts": 50,
+      "score": 1.5983952798706015e-05
+    },
+    {
+      "component_id": "L22.mlp.g10",
+      "n_prompts": 50,
+      "score": 1.5983027096808656e-05
+    },
+    {
+      "component_id": "L18.mlp.g26",
+      "n_prompts": 50,
+      "score": 1.5821399283595384e-05
+    },
+    {
+      "component_id": "L18.mlp.g28",
+      "n_prompts": 50,
+      "score": 1.5686934975747136e-05
+    },
+    {
+      "component_id": "L17.mlp.g8",
+      "n_prompts": 50,
+      "score": 1.5598185782437213e-05
+    },
+    {
+      "component_id": "L17.mlp.g14",
+      "n_prompts": 50,
+      "score": 1.5036535037324939e-05
+    },
+    {
+      "component_id": "L16.mlp.g19",
+      "n_prompts": 50,
+      "score": 1.4782820458094647e-05
+    },
+    {
+      "component_id": "L20.mlp.g32",
+      "n_prompts": 50,
+      "score": 1.4602981414100214e-05
+    },
+    {
+      "component_id": "L17.mlp.g33",
+      "n_prompts": 50,
+      "score": 1.433147918760369e-05
+    },
+    {
+      "component_id": "L15.mlp.g15",
+      "n_prompts": 50,
+      "score": 1.4152259300317383e-05
+    },
+    {
+      "component_id": "L19.mlp.g34",
+      "n_prompts": 50,
+      "score": 1.4103875219007023e-05
+    },
+    {
+      "component_id": "L15.attn.head1",
+      "n_prompts": 50,
+      "score": 1.4095956016717537e-05
+    },
+    {
+      "component_id": "L18.mlp.g14",
+      "n_prompts": 50,
+      "score": 1.398941030856804e-05
+    },
+    {
+      "component_id": "L16.mlp.g5",
+      "n_prompts": 50,
+      "score": 1.346931680018315e-05
+    },
+    {
+      "component_id": "L19.mlp.g15",
+      "n_prompts": 50,
+      "score": 1.2938635468344728e-05
+    },
+    {
+      "component_id": "L21.mlp.g1",
+      "n_prompts": 50,
+      "score": 1.2855477020821127e-05
+    },
+    {
+      "component_id": "L17.mlp.g18",
+      "n_prompts": 50,
+      "score": 1.2846165664086584e-05
+    },
+    {
+      "component_id": "L15.attn.head3",
+      "n_prompts": 50,
+      "score": 1.2794496255992271e-05
+    },
+    {
+      "component_id": "L19.mlp.g2",
+      "n_prompts": 50,
+      "score": 1.2305203281357535e-05
+    },
+    {
+      "component_id": "L15.mlp.g18",
+      "n_prompts": 50,
+      "score": 1.2239292627782561e-05
+    },
+    {
+      "component_id": "L17.mlp.g4",
+      "n_prompts": 50,
+      "score": 1.221250659909856e-05
+    },
+    {
+      "component_id": "L21.mlp.g16",
+      "n_prompts": 50,
+      "score": 1.2132396072956908e-05
+    },
+    {
+      "component_id": "L18.mlp.g33",
+      "n_prompts": 50,
+      "score": 1.2097531312065258e-05
+    },
+    {
+      "component_id": "L23.mlp.g15",
+      "n_prompts": 50,
+      "score": 1.186474439691665e-05
+    },
+    {
+      "component_id": "L17.mlp.g26",
+      "n_prompts": 50,
+      "score": 1.1476686663627334e-05
+    },
+    {
+      "component_id": "L15.attn.head0",
+      "n_prompts": 50,
+      "score": 1.13326235441491e-05
+    },
+    {
+      "component_id": "L21.mlp.g0",
+      "n_prompts": 50,
+      "score": 1.1263641517871293e-05
+    },
+    {
+      "component_id": "L16.mlp.g25",
+      "n_prompts": 50,
+      "score": 1.1246828248658858e-05
+    },
+    {
+      "component_id": "L17.mlp.g28",
+      "n_prompts": 50,
+      "score": 1.1197830122000597e-05
+    },
+    {
+      "component_id": "L22.mlp.g9",
+      "n_prompts": 50,
+      "score": 1.0938382147287484e-05
+    },
+    {
+      "component_id": "L17.mlp.g7",
+      "n_prompts": 50,
+      "score": 1.0929607328762359e-05
+    },
+    {
+      "component_id": "L22.mlp.g35",
+      "n_prompts": 50,
+      "score": 1.0756607894109038e-05
+    },
+    {
+      "component_id": "L15.mlp.g26",
+      "n_prompts": 50,
+      "score": 1.0638524968271667e-05
+    },
+    {
+      "component_id": "L15.attn.head4",
+      "n_prompts": 50,
+      "score": 1.0596499419079918e-05
+    },
+    {
+      "component_id": "L16.mlp.g23",
+      "n_prompts": 50,
+      "score": 1.0552927178650862e-05
+    },
+    {
+      "component_id": "L22.mlp.g12",
+      "n_prompts": 50,
+      "score": 1.0467001197866921e-05
+    },
+    {
+      "component_id": "L17.mlp.g34",
+      "n_prompts": 50,
+      "score": 1.0466412877576659e-05
+    },
+    {
+      "component_id": "L20.mlp.g13",
+      "n_prompts": 50,
+      "score": 1.0436083316562872e-05
+    },
+    {
+      "component_id": "L16.mlp.g12",
+      "n_prompts": 50,
+      "score": 1.0354553860452142e-05
+    },
+    {
+      "component_id": "L15.mlp.g24",
+      "n_prompts": 50,
+      "score": 1.0300101052962418e-05
+    },
+    {
+      "component_id": "L17.attn.head6",
+      "n_prompts": 50,
+      "score": 1.0253818350065558e-05
+    },
+    {
+      "component_id": "L19.mlp.g17",
+      "n_prompts": 50,
+      "score": 9.812681587391126e-06
+    },
+    {
+      "component_id": "L21.attn.head3",
+      "n_prompts": 50,
+      "score": 9.777562386261707e-06
+    },
+    {
+      "component_id": "L22.mlp.g33",
+      "n_prompts": 50,
+      "score": 9.777174986993487e-06
+    },
+    {
+      "component_id": "L21.mlp.g3",
+      "n_prompts": 50,
+      "score": 9.638985661695187e-06
+    },
+    {
+      "component_id": "L18.mlp.g13",
+      "n_prompts": 50,
+      "score": 9.606836765669869e-06
+    },
+    {
+      "component_id": "L21.mlp.g12",
+      "n_prompts": 50,
+      "score": 9.579809843671682e-06
+    },
+    {
+      "component_id": "L19.mlp.g27",
+      "n_prompts": 50,
+      "score": 9.517931898699317e-06
+    },
+    {
+      "component_id": "L23.mlp.g11",
+      "n_prompts": 50,
+      "score": 9.412734939360235e-06
+    },
+    {
+      "component_id": "L18.mlp.g21",
+      "n_prompts": 50,
+      "score": 9.27238673739339e-06
+    },
+    {
+      "component_id": "L23.mlp.g35",
+      "n_prompts": 50,
+      "score": 9.249193358300544e-06
+    },
+    {
+      "component_id": "L22.mlp.g32",
+      "n_prompts": 50,
+      "score": 9.152218249255384e-06
+    },
+    {
+      "component_id": "L15.mlp.g21",
+      "n_prompts": 50,
+      "score": 9.120031272686901e-06
+    },
+    {
+      "component_id": "L18.attn.head2",
+      "n_prompts": 50,
+      "score": 9.021568275784376e-06
+    },
+    {
+      "component_id": "L23.mlp.g21",
+      "n_prompts": 50,
+      "score": 8.915182429518608e-06
+    },
+    {
+      "component_id": "L21.mlp.g4",
+      "n_prompts": 50,
+      "score": 8.790459023657604e-06
+    },
+    {
+      "component_id": "L18.mlp.g32",
+      "n_prompts": 50,
+      "score": 8.692821375007042e-06
+    },
+    {
+      "component_id": "L21.mlp.g2",
+      "n_prompts": 50,
+      "score": 8.688361890563102e-06
+    },
+    {
+      "component_id": "L21.mlp.g30",
+      "n_prompts": 50,
+      "score": 8.658457791170803e-06
+    },
+    {
+      "component_id": "L19.mlp.g28",
+      "n_prompts": 50,
+      "score": 8.543009812456148e-06
+    },
+    {
+      "component_id": "L17.mlp.g20",
+      "n_prompts": 50,
+      "score": 8.537020548828877e-06
+    },
+    {
+      "component_id": "L19.mlp.g9",
+      "n_prompts": 50,
+      "score": 8.465539040116709e-06
+    },
+    {
+      "component_id": "L19.mlp.g22",
+      "n_prompts": 50,
+      "score": 8.186389654838422e-06
+    },
+    {
+      "component_id": "L18.mlp.g19",
+      "n_prompts": 50,
+      "score": 8.009023163140228e-06
+    },
+    {
+      "component_id": "L20.mlp.g0",
+      "n_prompts": 50,
+      "score": 7.880971611484711e-06
+    },
+    {
+      "component_id": "L19.mlp.g29",
+      "n_prompts": 50,
+      "score": 7.814588316250593e-06
+    },
+    {
+      "component_id": "L20.mlp.g9",
+      "n_prompts": 50,
+      "score": 7.774875834911654e-06
+    },
+    {
+      "component_id": "L22.mlp.g23",
+      "n_prompts": 50,
+      "score": 7.770165188958344e-06
+    },
+    {
+      "component_id": "L19.mlp.g23",
+      "n_prompts": 50,
+      "score": 7.76929440235108e-06
+    },
+    {
+      "component_id": "L17.mlp.g21",
+      "n_prompts": 50,
+      "score": 7.665388343411905e-06
+    },
+    {
+      "component_id": "L20.mlp.g16",
+      "n_prompts": 50,
+      "score": 7.561942857137182e-06
+    },
+    {
+      "component_id": "L20.mlp.g14",
+      "n_prompts": 50,
+      "score": 7.4339269849588165e-06
+    },
+    {
+      "component_id": "L18.mlp.g7",
+      "n_prompts": 50,
+      "score": 7.4186418987665095e-06
+    },
+    {
+      "component_id": "L20.mlp.g23",
+      "n_prompts": 50,
+      "score": 7.19281130386662e-06
+    },
+    {
+      "component_id": "L20.mlp.g34",
+      "n_prompts": 50,
+      "score": 7.116516089809011e-06
+    },
+    {
+      "component_id": "L21.mlp.g15",
+      "n_prompts": 50,
+      "score": 7.024426872703771e-06
+    },
+    {
+      "component_id": "L18.mlp.g11",
+      "n_prompts": 50,
+      "score": 6.780318562960019e-06
+    },
+    {
+      "component_id": "L17.mlp.g6",
+      "n_prompts": 50,
+      "score": 6.754392220500449e-06
+    },
+    {
+      "component_id": "L15.mlp.g14",
+      "n_prompts": 50,
+      "score": 6.703102189931087e-06
+    },
+    {
+      "component_id": "L16.mlp.g24",
+      "n_prompts": 50,
+      "score": 6.69140978516225e-06
+    },
+    {
+      "component_id": "L15.mlp.g10",
+      "n_prompts": 50,
+      "score": 6.519571884382458e-06
+    },
+    {
+      "component_id": "L18.attn.head6",
+      "n_prompts": 50,
+      "score": 6.5136895909745365e-06
+    },
+    {
+      "component_id": "L23.mlp.g27",
+      "n_prompts": 50,
+      "score": 6.47285668492259e-06
+    },
+    {
+      "component_id": "L20.mlp.g2",
+      "n_prompts": 50,
+      "score": 6.3894731147229325e-06
+    },
+    {
+      "component_id": "L20.mlp.g25",
+      "n_prompts": 50,
+      "score": 6.354117731461884e-06
+    },
+    {
+      "component_id": "L21.mlp.g33",
+      "n_prompts": 50,
+      "score": 6.29958859008184e-06
+    },
+    {
+      "component_id": "L15.mlp.g30",
+      "n_prompts": 50,
+      "score": 6.193664071361127e-06
+    },
+    {
+      "component_id": "L21.mlp.g21",
+      "n_prompts": 50,
+      "score": 6.17453405084234e-06
+    },
+    {
+      "component_id": "L16.mlp.g20",
+      "n_prompts": 50,
+      "score": 6.17339976997755e-06
+    },
+    {
+      "component_id": "L15.mlp.g31",
+      "n_prompts": 50,
+      "score": 6.147748786133889e-06
+    },
+    {
+      "component_id": "L15.mlp.g35",
+      "n_prompts": 50,
+      "score": 6.063091300347878e-06
+    },
+    {
+      "component_id": "L23.mlp.g29",
+      "n_prompts": 50,
+      "score": 6.046040844012168e-06
+    },
+    {
+      "component_id": "L18.attn.head1",
+      "n_prompts": 50,
+      "score": 6.041582169018511e-06
+    },
+    {
+      "component_id": "L21.mlp.g13",
+      "n_prompts": 50,
+      "score": 6.017648033775913e-06
+    },
+    {
+      "component_id": "L19.mlp.g4",
+      "n_prompts": 50,
+      "score": 6.004871133882261e-06
+    },
+    {
+      "component_id": "L21.attn.head4",
+      "n_prompts": 50,
+      "score": 5.892352073715301e-06
+    },
+    {
+      "component_id": "L15.mlp.g22",
+      "n_prompts": 50,
+      "score": 5.844149263793952e-06
+    },
+    {
+      "component_id": "L17.mlp.g2",
+      "n_prompts": 50,
+      "score": 5.748056119045941e-06
+    },
+    {
+      "component_id": "L17.mlp.g27",
+      "n_prompts": 50,
+      "score": 5.74273947677284e-06
+    },
+    {
+      "component_id": "L21.mlp.g19",
+      "n_prompts": 50,
+      "score": 5.7318797598782115e-06
+    },
+    {
+      "component_id": "L18.mlp.g9",
+      "n_prompts": 50,
+      "score": 5.723886456507898e-06
+    },
+    {
+      "component_id": "L20.mlp.g17",
+      "n_prompts": 50,
+      "score": 5.6470954859833e-06
+    },
+    {
+      "component_id": "L17.mlp.g11",
+      "n_prompts": 50,
+      "score": 5.523384920707031e-06
+    },
+    {
+      "component_id": "L20.mlp.g30",
+      "n_prompts": 50,
+      "score": 5.421447253866063e-06
+    },
+    {
+      "component_id": "L19.mlp.g30",
+      "n_prompts": 50,
+      "score": 5.3584537636197635e-06
+    },
+    {
+      "component_id": "L20.mlp.g12",
+      "n_prompts": 50,
+      "score": 5.357209070098179e-06
+    },
+    {
+      "component_id": "L17.mlp.g1",
+      "n_prompts": 50,
+      "score": 5.357055460990523e-06
+    },
+    {
+      "component_id": "L17.mlp.g9",
+      "n_prompts": 50,
+      "score": 5.339965932762425e-06
+    },
+    {
+      "component_id": "L23.mlp.g3",
+      "n_prompts": 50,
+      "score": 5.279633983263921e-06
+    },
+    {
+      "component_id": "L18.mlp.g5",
+      "n_prompts": 50,
+      "score": 5.232852763583651e-06
+    },
+    {
+      "component_id": "L17.mlp.g23",
+      "n_prompts": 50,
+      "score": 5.202499824008555e-06
+    },
+    {
+      "component_id": "L23.mlp.g28",
+      "n_prompts": 50,
+      "score": 5.198345293138118e-06
+    },
+    {
+      "component_id": "L20.attn.head4",
+      "n_prompts": 50,
+      "score": 5.1601922950794685e-06
+    },
+    {
+      "component_id": "L22.attn.head7",
+      "n_prompts": 50,
+      "score": 5.151925915924949e-06
+    },
+    {
+      "component_id": "L17.mlp.g17",
+      "n_prompts": 50,
+      "score": 5.125181428411452e-06
+    },
+    {
+      "component_id": "L20.mlp.g8",
+      "n_prompts": 50,
+      "score": 5.087300955892715e-06
+    },
+    {
+      "component_id": "L21.mlp.g24",
+      "n_prompts": 50,
+      "score": 4.990044426449458e-06
+    },
+    {
+      "component_id": "L16.mlp.g21",
+      "n_prompts": 50,
+      "score": 4.981275033060229e-06
+    },
+    {
+      "component_id": "L23.mlp.g4",
+      "n_prompts": 50,
+      "score": 4.873829207099334e-06
+    },
+    {
+      "component_id": "L18.mlp.g29",
+      "n_prompts": 50,
+      "score": 4.691208000622282e-06
+    },
+    {
+      "component_id": "L23.mlp.g1",
+      "n_prompts": 50,
+      "score": 4.6816738813504345e-06
+    },
+    {
+      "component_id": "L15.mlp.g32",
+      "n_prompts": 50,
+      "score": 4.660478057303408e-06
+    },
+    {
+      "component_id": "L17.mlp.g3",
+      "n_prompts": 50,
+      "score": 4.530925648396078e-06
+    },
+    {
+      "component_id": "L21.mlp.g18",
+      "n_prompts": 50,
+      "score": 4.503292207118647e-06
+    },
+    {
+      "component_id": "L15.mlp.g8",
+      "n_prompts": 50,
+      "score": 4.344790527284204e-06
+    },
+    {
+      "component_id": "L19.mlp.g19",
+      "n_prompts": 50,
+      "score": 4.329378739384992e-06
+    },
+    {
+      "component_id": "L20.mlp.g31",
+      "n_prompts": 50,
+      "score": 4.303874347897363e-06
+    },
+    {
+      "component_id": "L15.mlp.g5",
+      "n_prompts": 50,
+      "score": 4.180679788987618e-06
+    },
+    {
+      "component_id": "L15.mlp.g25",
+      "n_prompts": 50,
+      "score": 4.060158662468894e-06
+    },
+    {
+      "component_id": "L22.mlp.g34",
+      "n_prompts": 50,
+      "score": 4.007149823337386e-06
+    },
+    {
+      "component_id": "L20.mlp.g11",
+      "n_prompts": 50,
+      "score": 3.991734838564298e-06
+    },
+    {
+      "component_id": "L21.mlp.g26",
+      "n_prompts": 50,
+      "score": 3.928042683583044e-06
+    },
+    {
+      "component_id": "L22.mlp.g11",
+      "n_prompts": 50,
+      "score": 3.763861459447071e-06
+    },
+    {
+      "component_id": "L16.mlp.g29",
+      "n_prompts": 50,
+      "score": 3.74682703295548e-06
+    },
+    {
+      "component_id": "L15.mlp.g16",
+      "n_prompts": 50,
+      "score": 3.724844386852055e-06
+    },
+    {
+      "component_id": "L19.mlp.g16",
+      "n_prompts": 50,
+      "score": 3.6706392120322563e-06
+    },
+    {
+      "component_id": "L18.mlp.g6",
+      "n_prompts": 50,
+      "score": 3.6376302114149438e-06
+    },
+    {
+      "component_id": "L15.mlp.g0",
+      "n_prompts": 50,
+      "score": 3.637531972344732e-06
+    },
+    {
+      "component_id": "L16.mlp.g6",
+      "n_prompts": 50,
+      "score": 3.6203294757797266e-06
+    },
+    {
+      "component_id": "L20.mlp.g10",
+      "n_prompts": 50,
+      "score": 3.6116107958150678e-06
+    },
+    {
+      "component_id": "L18.mlp.g12",
+      "n_prompts": 50,
+      "score": 3.598880934987392e-06
+    },
+    {
+      "component_id": "L16.mlp.g27",
+      "n_prompts": 50,
+      "score": 3.5790279389402712e-06
+    },
+    {
+      "component_id": "L20.mlp.g27",
+      "n_prompts": 50,
+      "score": 3.5737997450269177e-06
+    },
+    {
+      "component_id": "L17.attn.head0",
+      "n_prompts": 50,
+      "score": 3.567432736417686e-06
+    },
+    {
+      "component_id": "L23.mlp.g24",
+      "n_prompts": 50,
+      "score": 3.5021497251364055e-06
+    },
+    {
+      "component_id": "L19.mlp.g13",
+      "n_prompts": 50,
+      "score": 3.4966091379828866e-06
+    },
+    {
+      "component_id": "L18.mlp.g35",
+      "n_prompts": 50,
+      "score": 3.442935662860691e-06
+    },
+    {
+      "component_id": "L22.mlp.g8",
+      "n_prompts": 50,
+      "score": 3.4412588820487143e-06
+    },
+    {
+      "component_id": "L23.mlp.g26",
+      "n_prompts": 50,
+      "score": 3.430773831496481e-06
+    },
+    {
+      "component_id": "L19.mlp.g32",
+      "n_prompts": 50,
+      "score": 3.410851682019711e-06
+    },
+    {
+      "component_id": "L23.mlp.g10",
+      "n_prompts": 50,
+      "score": 3.319456163808354e-06
+    },
+    {
+      "component_id": "L15.mlp.g13",
+      "n_prompts": 50,
+      "score": 3.304372939965106e-06
+    },
+    {
+      "component_id": "L19.mlp.g14",
+      "n_prompts": 50,
+      "score": 3.2888467467273588e-06
+    },
+    {
+      "component_id": "L19.mlp.g10",
+      "n_prompts": 50,
+      "score": 3.2536895469093e-06
+    },
+    {
+      "component_id": "L19.mlp.g20",
+      "n_prompts": 50,
+      "score": 3.150541260765749e-06
+    },
+    {
+      "component_id": "L17.mlp.g31",
+      "n_prompts": 50,
+      "score": 3.1399616500493723e-06
+    },
+    {
+      "component_id": "L20.mlp.g22",
+      "n_prompts": 50,
+      "score": 3.1385239390147035e-06
+    },
+    {
+      "component_id": "L22.attn.head0",
+      "n_prompts": 50,
+      "score": 3.106388426203921e-06
+    },
+    {
+      "component_id": "L23.mlp.g14",
+      "n_prompts": 50,
+      "score": 3.0854999204166234e-06
+    },
+    {
+      "component_id": "L22.mlp.g15",
+      "n_prompts": 50,
+      "score": 3.032496665582585e-06
+    },
+    {
+      "component_id": "L15.mlp.g20",
+      "n_prompts": 50,
+      "score": 2.9727494529652175e-06
+    },
+    {
+      "component_id": "L20.attn.head0",
+      "n_prompts": 50,
+      "score": 2.7348705816621076e-06
+    },
+    {
+      "component_id": "L16.mlp.g13",
+      "n_prompts": 50,
+      "score": 2.7196570545129363e-06
+    },
+    {
+      "component_id": "L20.mlp.g7",
+      "n_prompts": 50,
+      "score": 2.6257347735736403e-06
+    },
+    {
+      "component_id": "L18.mlp.g4",
+      "n_prompts": 50,
+      "score": 2.567625774645421e-06
+    },
+    {
+      "component_id": "L19.attn.head0",
+      "n_prompts": 50,
+      "score": 2.5558044126228196e-06
+    },
+    {
+      "component_id": "L20.mlp.g28",
+      "n_prompts": 50,
+      "score": 2.5504126597297727e-06
+    },
+    {
+      "component_id": "L21.mlp.g10",
+      "n_prompts": 50,
+      "score": 2.478340206835128e-06
+    },
+    {
+      "component_id": "L20.mlp.g35",
+      "n_prompts": 50,
+      "score": 2.413903330307221e-06
+    },
+    {
+      "component_id": "L16.mlp.g17",
+      "n_prompts": 50,
+      "score": 2.4005271097848892e-06
+    },
+    {
+      "component_id": "L22.mlp.g26",
+      "n_prompts": 50,
+      "score": 2.344488380003895e-06
+    },
+    {
+      "component_id": "L20.mlp.g5",
+      "n_prompts": 50,
+      "score": 2.3113656243367585e-06
+    },
+    {
+      "component_id": "L19.mlp.g33",
+      "n_prompts": 50,
+      "score": 2.3107787092158106e-06
+    },
+    {
+      "component_id": "L20.mlp.g18",
+      "n_prompts": 50,
+      "score": 2.265496723339311e-06
+    },
+    {
+      "component_id": "L17.mlp.g15",
+      "n_prompts": 50,
+      "score": 2.2228956913750154e-06
+    },
+    {
+      "component_id": "L16.mlp.g34",
+      "n_prompts": 50,
+      "score": 2.11830667922186e-06
+    },
+    {
+      "component_id": "L23.mlp.g23",
+      "n_prompts": 50,
+      "score": 2.0624437502192448e-06
+    },
+    {
+      "component_id": "L16.mlp.g18",
+      "n_prompts": 50,
+      "score": 2.0068693402208735e-06
+    },
+    {
+      "component_id": "L21.mlp.g23",
+      "n_prompts": 50,
+      "score": 1.9700995972016245e-06
+    },
+    {
+      "component_id": "L23.mlp.g25",
+      "n_prompts": 50,
+      "score": 1.962597316378378e-06
+    },
+    {
+      "component_id": "L19.mlp.g21",
+      "n_prompts": 50,
+      "score": 1.9239937182646825e-06
+    },
+    {
+      "component_id": "L19.mlp.g35",
+      "n_prompts": 50,
+      "score": 1.9055109760302003e-06
+    },
+    {
+      "component_id": "L21.attn.head7",
+      "n_prompts": 50,
+      "score": 1.898078990052454e-06
+    },
+    {
+      "component_id": "L23.mlp.g30",
+      "n_prompts": 50,
+      "score": 1.816536514525069e-06
+    },
+    {
+      "component_id": "L20.mlp.g3",
+      "n_prompts": 50,
+      "score": 1.7874754894364741e-06
+    },
+    {
+      "component_id": "L21.mlp.g28",
+      "n_prompts": 50,
+      "score": 1.7641235990595305e-06
+    },
+    {
+      "component_id": "L18.mlp.g8",
+      "n_prompts": 50,
+      "score": 1.6395840430050157e-06
+    },
+    {
+      "component_id": "L22.mlp.g22",
+      "n_prompts": 50,
+      "score": 1.5699074947406188e-06
+    },
+    {
+      "component_id": "L16.mlp.g33",
+      "n_prompts": 50,
+      "score": 1.5435813384101492e-06
+    },
+    {
+      "component_id": "L21.mlp.g6",
+      "n_prompts": 50,
+      "score": 1.5382729816337815e-06
+    },
+    {
+      "component_id": "L15.mlp.g9",
+      "n_prompts": 50,
+      "score": 1.4669788151877582e-06
+    },
+    {
+      "component_id": "L23.mlp.g2",
+      "n_prompts": 50,
+      "score": 1.2938111785842921e-06
+    },
+    {
+      "component_id": "L19.mlp.g5",
+      "n_prompts": 50,
+      "score": 1.2794729173037923e-06
+    },
+    {
+      "component_id": "L16.mlp.g16",
+      "n_prompts": 50,
+      "score": 1.1563947509785067e-06
+    },
+    {
+      "component_id": "L20.mlp.g24",
+      "n_prompts": 50,
+      "score": 1.0750727051345165e-06
+    },
+    {
+      "component_id": "L17.mlp.g16",
+      "n_prompts": 50,
+      "score": 1.051235017257568e-06
+    },
+    {
+      "component_id": "L19.mlp.g11",
+      "n_prompts": 50,
+      "score": 9.57961310632527e-07
+    },
+    {
+      "component_id": "L21.mlp.g17",
+      "n_prompts": 50,
+      "score": 8.807372933006264e-07
+    },
+    {
+      "component_id": "L21.mlp.g20",
+      "n_prompts": 50,
+      "score": 8.256096316472395e-07
+    },
+    {
+      "component_id": "L18.mlp.g15",
+      "n_prompts": 50,
+      "score": 8.050531232584035e-07
+    },
+    {
+      "component_id": "L22.attn.head2",
+      "n_prompts": 50,
+      "score": 5.995734818498022e-07
+    },
+    {
+      "component_id": "L22.mlp.g31",
+      "n_prompts": 50,
+      "score": 5.738103709518328e-07
+    },
+    {
+      "component_id": "L23.attn.head6",
+      "n_prompts": 50,
+      "score": 5.507186733666458e-07
+    },
+    {
+      "component_id": "L23.attn.head2",
+      "n_prompts": 50,
+      "score": 5.367920311982743e-07
+    },
+    {
+      "component_id": "L21.mlp.g27",
+      "n_prompts": 50,
+      "score": 5.366046434573946e-07
+    },
+    {
+      "component_id": "L20.mlp.g19",
+      "n_prompts": 50,
+      "score": 5.325052143234644e-07
+    },
+    {
+      "component_id": "L23.mlp.g31",
+      "n_prompts": 50,
+      "score": 4.786834369951976e-07
+    },
+    {
+      "component_id": "L17.mlp.g29",
+      "n_prompts": 50,
+      "score": 3.8876565213286083e-07
+    },
+    {
+      "component_id": "L21.mlp.g34",
+      "n_prompts": 50,
+      "score": 3.1559484341414646e-07
+    },
+    {
+      "component_id": "L22.mlp.g28",
+      "n_prompts": 50,
+      "score": 2.9747345251962544e-07
+    },
+    {
+      "component_id": "L22.mlp.g6",
+      "n_prompts": 50,
+      "score": 2.0005280475743349e-07
+    },
+    {
+      "component_id": "L22.mlp.g7",
+      "n_prompts": 50,
+      "score": 1.235632134921616e-07
+    },
+    {
+      "component_id": "L18.mlp.g23",
+      "n_prompts": 50,
+      "score": 1.187550105896662e-07
+    },
+    {
+      "component_id": "L22.mlp.g17",
+      "n_prompts": 50,
+      "score": 7.50531717130798e-08
+    },
+    {
+      "component_id": "L20.mlp.g33",
+      "n_prompts": 50,
+      "score": 6.039132586010964e-08
+    },
+    {
+      "component_id": "L21.mlp.g25",
+      "n_prompts": 50,
+      "score": -2.2477397578768432e-08
+    },
+    {
+      "component_id": "L21.mlp.g11",
+      "n_prompts": 50,
+      "score": -6.6744892137649e-08
+    },
+    {
+      "component_id": "L19.attn.head2",
+      "n_prompts": 50,
+      "score": -7.14873340257327e-08
+    },
+    {
+      "component_id": "L23.mlp.g20",
+      "n_prompts": 50,
+      "score": -8.089785751508316e-08
+    },
+    {
+      "component_id": "L16.mlp.g10",
+      "n_prompts": 50,
+      "score": -1.5654845810786356e-07
+    },
+    {
+      "component_id": "L23.mlp.g22",
+      "n_prompts": 50,
+      "score": -3.799605383392191e-07
+    },
+    {
+      "component_id": "L20.attn.head1",
+      "n_prompts": 50,
+      "score": -4.772430747834733e-07
+    },
+    {
+      "component_id": "L15.mlp.g17",
+      "n_prompts": 50,
+      "score": -5.175871820028988e-07
+    },
+    {
+      "component_id": "L19.mlp.g18",
+      "n_prompts": 50,
+      "score": -5.309412563292426e-07
+    },
+    {
+      "component_id": "L21.attn.head0",
+      "n_prompts": 50,
+      "score": -6.625363494094927e-07
+    },
+    {
+      "component_id": "L23.mlp.g34",
+      "n_prompts": 50,
+      "score": -6.734412818332203e-07
+    },
+    {
+      "component_id": "L22.mlp.g25",
+      "n_prompts": 50,
+      "score": -7.411808201140957e-07
+    },
+    {
+      "component_id": "L20.mlp.g1",
+      "n_prompts": 50,
+      "score": -7.549669862783048e-07
+    },
+    {
+      "component_id": "L19.mlp.g25",
+      "n_prompts": 50,
+      "score": -8.163192478605197e-07
+    },
+    {
+      "component_id": "L20.attn.head7",
+      "n_prompts": 50,
+      "score": -8.446335414191708e-07
+    },
+    {
+      "component_id": "L16.mlp.g4",
+      "n_prompts": 50,
+      "score": -9.168024371319916e-07
+    },
+    {
+      "component_id": "L20.mlp.g15",
+      "n_prompts": 50,
+      "score": -9.766997345650453e-07
+    },
+    {
+      "component_id": "L20.attn.head5",
+      "n_prompts": 50,
+      "score": -9.77302206592867e-07
+    },
+    {
+      "component_id": "L19.attn.head6",
+      "n_prompts": 50,
+      "score": -9.797359234653414e-07
+    },
+    {
+      "component_id": "L20.mlp.g6",
+      "n_prompts": 50,
+      "score": -1.093188693630509e-06
+    },
+    {
+      "component_id": "L15.mlp.g19",
+      "n_prompts": 50,
+      "score": -1.1567729052330833e-06
+    },
+    {
+      "component_id": "L16.mlp.g11",
+      "n_prompts": 50,
+      "score": -1.2708714120890363e-06
+    },
+    {
+      "component_id": "L19.mlp.g8",
+      "n_prompts": 50,
+      "score": -1.3560708885052008e-06
+    },
+    {
+      "component_id": "L17.mlp.g0",
+      "n_prompts": 50,
+      "score": -1.3768289636573173e-06
+    },
+    {
+      "component_id": "L23.attn.head3",
+      "n_prompts": 50,
+      "score": -1.4125793313723988e-06
+    },
+    {
+      "component_id": "L22.mlp.g16",
+      "n_prompts": 50,
+      "score": -1.5125757181522204e-06
+    },
+    {
+      "component_id": "L16.mlp.g30",
+      "n_prompts": 50,
+      "score": -1.5246778002619976e-06
+    },
+    {
+      "component_id": "L18.mlp.g16",
+      "n_prompts": 50,
+      "score": -1.5753424713693676e-06
+    },
+    {
+      "component_id": "L23.mlp.g18",
+      "n_prompts": 50,
+      "score": -1.637464038140024e-06
+    },
+    {
+      "component_id": "L23.mlp.g33",
+      "n_prompts": 50,
+      "score": -1.6379832413804253e-06
+    },
+    {
+      "component_id": "L15.mlp.g23",
+      "n_prompts": 50,
+      "score": -1.6814544915177975e-06
+    },
+    {
+      "component_id": "L18.mlp.g3",
+      "n_prompts": 50,
+      "score": -1.7309747272520327e-06
+    },
+    {
+      "component_id": "L19.mlp.g7",
+      "n_prompts": 50,
+      "score": -1.739789336170361e-06
+    },
+    {
+      "component_id": "L21.mlp.g35",
+      "n_prompts": 50,
+      "score": -1.7448746984882746e-06
+    },
+    {
+      "component_id": "L21.mlp.g22",
+      "n_prompts": 50,
+      "score": -1.901711070786405e-06
+    },
+    {
+      "component_id": "L18.mlp.g22",
+      "n_prompts": 50,
+      "score": -1.9195948107153526e-06
+    },
+    {
+      "component_id": "L23.mlp.g13",
+      "n_prompts": 50,
+      "score": -1.9424849369897856e-06
+    },
+    {
+      "component_id": "L18.mlp.g31",
+      "n_prompts": 50,
+      "score": -2.0125053606534492e-06
+    },
+    {
+      "component_id": "L22.mlp.g21",
+      "n_prompts": 50,
+      "score": -2.0958722780051175e-06
+    },
+    {
+      "component_id": "L22.mlp.g30",
+      "n_prompts": 50,
+      "score": -2.1026373360655272e-06
+    },
+    {
+      "component_id": "L19.attn.head7",
+      "n_prompts": 50,
+      "score": -2.117548251590051e-06
+    },
+    {
+      "component_id": "L17.mlp.g19",
+      "n_prompts": 50,
+      "score": -2.152196266251849e-06
+    },
+    {
+      "component_id": "L18.attn.head0",
+      "n_prompts": 50,
+      "score": -2.191935454902705e-06
+    },
+    {
+      "component_id": "L22.mlp.g13",
+      "n_prompts": 50,
+      "score": -2.1922584301137247e-06
+    },
+    {
+      "component_id": "L23.attn.head4",
+      "n_prompts": 50,
+      "score": -2.221661029579991e-06
+    },
+    {
+      "component_id": "L19.mlp.g12",
+      "n_prompts": 50,
+      "score": -2.270199702252285e-06
+    },
+    {
+      "component_id": "L17.mlp.g12",
+      "n_prompts": 50,
+      "score": -2.4446366160191244e-06
+    },
+    {
+      "component_id": "L22.mlp.g4",
+      "n_prompts": 50,
+      "score": -2.447462816235202e-06
+    },
+    {
+      "component_id": "L20.mlp.g21",
+      "n_prompts": 50,
+      "score": -2.4759850475675194e-06
+    },
+    {
+      "component_id": "L23.mlp.g0",
+      "n_prompts": 50,
+      "score": -2.567204114711785e-06
+    },
+    {
+      "component_id": "L18.mlp.g0",
+      "n_prompts": 50,
+      "score": -2.6623831672623055e-06
+    },
+    {
+      "component_id": "L23.mlp.g16",
+      "n_prompts": 50,
+      "score": -2.6779835161505617e-06
+    },
+    {
+      "component_id": "L23.mlp.g8",
+      "n_prompts": 50,
+      "score": -2.747520543380233e-06
+    },
+    {
+      "component_id": "L22.mlp.g19",
+      "n_prompts": 50,
+      "score": -2.7636554614218766e-06
+    },
+    {
+      "component_id": "L20.mlp.g26",
+      "n_prompts": 50,
+      "score": -2.7821405910799514e-06
+    },
+    {
+      "component_id": "L22.attn.head6",
+      "n_prompts": 50,
+      "score": -2.812760117194557e-06
+    },
+    {
+      "component_id": "L19.mlp.g1",
+      "n_prompts": 50,
+      "score": -2.84357826330961e-06
+    },
+    {
+      "component_id": "L19.attn.head3",
+      "n_prompts": 50,
+      "score": -2.890568466682453e-06
+    },
+    {
+      "component_id": "L22.attn.head5",
+      "n_prompts": 50,
+      "score": -2.9054053220534116e-06
+    },
+    {
+      "component_id": "L22.mlp.g0",
+      "n_prompts": 50,
+      "score": -2.941430166174541e-06
+    },
+    {
+      "component_id": "L22.mlp.g5",
+      "n_prompts": 50,
+      "score": -3.0207001509552355e-06
+    },
+    {
+      "component_id": "L20.attn.head6",
+      "n_prompts": 50,
+      "score": -3.0395177554964905e-06
+    },
+    {
+      "component_id": "L21.attn.head6",
+      "n_prompts": 50,
+      "score": -3.047391237487318e-06
+    },
+    {
+      "component_id": "L23.mlp.g32",
+      "n_prompts": 50,
+      "score": -3.063806898353505e-06
+    },
+    {
+      "component_id": "L17.mlp.g25",
+      "n_prompts": 50,
+      "score": -3.0891419146428235e-06
+    },
+    {
+      "component_id": "L18.mlp.g30",
+      "n_prompts": 50,
+      "score": -3.144664174214995e-06
+    },
+    {
+      "component_id": "L23.mlp.g9",
+      "n_prompts": 50,
+      "score": -3.4770421871144208e-06
+    },
+    {
+      "component_id": "L16.mlp.g32",
+      "n_prompts": 50,
+      "score": -3.801551783908508e-06
+    },
+    {
+      "component_id": "L19.mlp.g26",
+      "n_prompts": 50,
+      "score": -3.8568997206311904e-06
+    },
+    {
+      "component_id": "L15.mlp.g27",
+      "n_prompts": 50,
+      "score": -3.898445161212294e-06
+    },
+    {
+      "component_id": "L21.mlp.g32",
+      "n_prompts": 50,
+      "score": -3.901334662259615e-06
+    },
+    {
+      "component_id": "L23.attn.head5",
+      "n_prompts": 50,
+      "score": -3.9291528764806575e-06
+    },
+    {
+      "component_id": "L16.mlp.g1",
+      "n_prompts": 50,
+      "score": -3.940759115721448e-06
+    },
+    {
+      "component_id": "L18.mlp.g18",
+      "n_prompts": 50,
+      "score": -3.951641124331218e-06
+    },
+    {
+      "component_id": "L15.mlp.g33",
+      "n_prompts": 50,
+      "score": -4.014773921880988e-06
+    },
+    {
+      "component_id": "L21.attn.head2",
+      "n_prompts": 50,
+      "score": -4.206276357763272e-06
+    },
+    {
+      "component_id": "L19.mlp.g24",
+      "n_prompts": 50,
+      "score": -4.2825643458854756e-06
+    },
+    {
+      "component_id": "L21.mlp.g8",
+      "n_prompts": 50,
+      "score": -4.289473035896663e-06
+    },
+    {
+      "component_id": "L18.mlp.g2",
+      "n_prompts": 50,
+      "score": -4.415097660057654e-06
+    },
+    {
+      "component_id": "L22.mlp.g3",
+      "n_prompts": 50,
+      "score": -4.424826711328933e-06
+    },
+    {
+      "component_id": "L16.mlp.g8",
+      "n_prompts": 50,
+      "score": -4.686801980824385e-06
+    },
+    {
+      "component_id": "L17.mlp.g30",
+      "n_prompts": 50,
+      "score": -4.704470129581751e-06
+    },
+    {
+      "component_id": "L22.mlp.g18",
+      "n_prompts": 50,
+      "score": -4.734635754175543e-06
+    },
+    {
+      "component_id": "L17.mlp.g35",
+      "n_prompts": 50,
+      "score": -4.747020666400203e-06
+    },
+    {
+      "component_id": "L17.mlp.g5",
+      "n_prompts": 50,
+      "score": -4.750829366457765e-06
+    },
+    {
+      "component_id": "L16.mlp.g28",
+      "n_prompts": 50,
+      "score": -4.766223514707235e-06
+    },
+    {
+      "component_id": "L23.mlp.g5",
+      "n_prompts": 50,
+      "score": -4.8182287309828095e-06
+    },
+    {
+      "component_id": "L18.mlp.g17",
+      "n_prompts": 50,
+      "score": -4.9948126479648635e-06
+    },
+    {
+      "component_id": "L21.mlp.g7",
+      "n_prompts": 50,
+      "score": -5.000163750992214e-06
+    },
+    {
+      "component_id": "L15.mlp.g6",
+      "n_prompts": 50,
+      "score": -5.247350909485249e-06
+    },
+    {
+      "component_id": "L17.attn.head5",
+      "n_prompts": 50,
+      "score": -5.317196169016824e-06
+    },
+    {
+      "component_id": "L22.attn.head4",
+      "n_prompts": 50,
+      "score": -5.3182127976469925e-06
+    },
+    {
+      "component_id": "L22.attn.head3",
+      "n_prompts": 50,
+      "score": -5.380410811994807e-06
+    },
+    {
+      "component_id": "L23.mlp.g12",
+      "n_prompts": 50,
+      "score": -5.577348551923933e-06
+    },
+    {
+      "component_id": "L15.mlp.g12",
+      "n_prompts": 50,
+      "score": -5.608002597909945e-06
+    },
+    {
+      "component_id": "L16.mlp.g2",
+      "n_prompts": 50,
+      "score": -5.635895936393354e-06
+    },
+    {
+      "component_id": "L21.mlp.g29",
+      "n_prompts": 50,
+      "score": -5.650018597407324e-06
+    },
+    {
+      "component_id": "L21.mlp.g14",
+      "n_prompts": 50,
+      "score": -5.782587254543614e-06
+    },
+    {
+      "component_id": "L15.mlp.g29",
+      "n_prompts": 50,
+      "score": -5.838775823576725e-06
+    },
+    {
+      "component_id": "L15.mlp.g7",
+      "n_prompts": 50,
+      "score": -5.95165200138581e-06
+    },
+    {
+      "component_id": "L22.mlp.g20",
+      "n_prompts": 50,
+      "score": -5.990251202092622e-06
+    },
+    {
+      "component_id": "L19.mlp.g6",
+      "n_prompts": 50,
+      "score": -6.017761243128916e-06
+    },
+    {
+      "component_id": "L16.mlp.g14",
+      "n_prompts": 50,
+      "score": -6.022690795361995e-06
+    },
+    {
+      "component_id": "L21.mlp.g9",
+      "n_prompts": 50,
+      "score": -6.080151456444582e-06
+    },
+    {
+      "component_id": "L20.mlp.g4",
+      "n_prompts": 50,
+      "score": -6.168675636217813e-06
+    },
+    {
+      "component_id": "L23.mlp.g6",
+      "n_prompts": 50,
+      "score": -6.179496604090673e-06
+    },
+    {
+      "component_id": "L21.mlp.g5",
+      "n_prompts": 50,
+      "score": -6.2476095490637815e-06
+    },
+    {
+      "component_id": "L19.attn.head1",
+      "n_prompts": 50,
+      "score": -6.285755116550717e-06
+    },
+    {
+      "component_id": "L15.mlp.g2",
+      "n_prompts": 50,
+      "score": -6.426107047445839e-06
+    },
+    {
+      "component_id": "L16.attn.head6",
+      "n_prompts": 50,
+      "score": -6.541233683492465e-06
+    },
+    {
+      "component_id": "L17.mlp.g32",
+      "n_prompts": 50,
+      "score": -6.564710479324276e-06
+    },
+    {
+      "component_id": "L15.attn.head2",
+      "n_prompts": 50,
+      "score": -6.619764362767455e-06
+    },
+    {
+      "component_id": "L20.mlp.g20",
+      "n_prompts": 50,
+      "score": -6.689998135698261e-06
+    },
+    {
+      "component_id": "L22.mlp.g1",
+      "n_prompts": 50,
+      "score": -6.737720982528117e-06
+    },
+    {
+      "component_id": "L16.mlp.g22",
+      "n_prompts": 50,
+      "score": -6.87890077188058e-06
+    },
+    {
+      "component_id": "L18.mlp.g25",
+      "n_prompts": 50,
+      "score": -7.160508557717549e-06
+    },
+    {
+      "component_id": "L19.mlp.g3",
+      "n_prompts": 50,
+      "score": -7.2535720892119575e-06
+    },
+    {
+      "component_id": "L16.mlp.g35",
+      "n_prompts": 50,
+      "score": -7.254736965478515e-06
+    },
+    {
+      "component_id": "L22.mlp.g14",
+      "n_prompts": 50,
+      "score": -7.540984511251736e-06
+    },
+    {
+      "component_id": "L18.mlp.g27",
+      "n_prompts": 50,
+      "score": -8.13916572042217e-06
+    },
+    {
+      "component_id": "L17.mlp.g22",
+      "n_prompts": 50,
+      "score": -8.536570408068656e-06
+    },
+    {
+      "component_id": "L15.mlp.g4",
+      "n_prompts": 50,
+      "score": -8.838856783768279e-06
+    },
+    {
+      "component_id": "L15.mlp.g11",
+      "n_prompts": 50,
+      "score": -9.002156953101802e-06
+    },
+    {
+      "component_id": "L17.mlp.g10",
+      "n_prompts": 50,
+      "score": -9.149087841251457e-06
+    },
+    {
+      "component_id": "L17.mlp.g13",
+      "n_prompts": 50,
+      "score": -9.933252267728675e-06
+    },
+    {
+      "component_id": "L16.mlp.g15",
+      "n_prompts": 50,
+      "score": -1.023972513849003e-05
+    },
+    {
+      "component_id": "L23.attn.head7",
+      "n_prompts": 50,
+      "score": -1.0528360116950352e-05
+    },
+    {
+      "component_id": "L15.mlp.g28",
+      "n_prompts": 50,
+      "score": -1.0709765933825111e-05
+    },
+    {
+      "component_id": "L18.attn.head4",
+      "n_prompts": 50,
+      "score": -1.1572631710805582e-05
+    },
+    {
+      "component_id": "L16.mlp.g7",
+      "n_prompts": 50,
+      "score": -1.1942216851821285e-05
+    },
+    {
+      "component_id": "L17.attn.head7",
+      "n_prompts": 50,
+      "score": -1.4644404864156968e-05
+    },
+    {
+      "component_id": "L15.attn.head7",
+      "n_prompts": 50,
+      "score": -1.7055626608453166e-05
+    },
+    {
+      "component_id": "L16.attn.head7",
+      "n_prompts": 50,
+      "score": -1.9501758042679285e-05
+    },
+    {
+      "component_id": "L16.attn.head1",
+      "n_prompts": 50,
+      "score": -2.2843392107461112e-05
+    },
+    {
+      "component_id": "L16.attn.head3",
+      "n_prompts": 50,
+      "score": -2.446403468184144e-05
+    }
+  ],
+  "scoring_definition_id": "traces_pilot_D_K_v2"
+}

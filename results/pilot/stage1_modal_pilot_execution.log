@@ -1,0 +1,92 @@
+=== Stage 1 GPU pilot launch (uv run; clean tree) ===
+launch_sha: 6b3439d4c130961d5e393c7cb7ba966e69db2cab
+started_utc: 2026-11-14T05:20:16Z
+command: uv run modal run modal_app.py --pilot
+log_path: /tmp/traces_stage1_launch/stage1_modal_pilot_execution.log
+prior_notes: first system-python attempt and dirty-log attempt failed before any GPU unit
+
+✓ Initialized. View run at 
+https://modal.com/apps/heyronith/main/ap-Q8rnNfn8GoqCoAFkYl0P3l
+✓ Created objects.
+├── ✓ Uploaded /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/modal_app.py
+├── ✓ Uploaded /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/data
+├── ✓ Uploaded /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/configs
+├── ✓ Uploaded /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/src
+├── ✓ Created Function run_smoke_gpu.
+├── ✓ Created Function run_pilot_calibration_gpu.
+├── ✓ Created Function run_stage1_pilot_unit_gpu.
+└── ✓ Created Function run_stage1_pilot_gpu.
+{
+  "mode": "stage1_scientific_pilot",
+  "pilot_enabled": true,
+  "calibration_enabled": false,
+  "will_launch_calibration": false,
+  "timeout_note": "Bounded Modal pilot function; pre-launch budget check 
+required",
+  "status": "AUTHORIZED_TO_LAUNCH_SCIENTIFIC_PILOT",
+  "invoke_gpu": true,
+  "reason": "enabled=true and STAGE1_AUTHORIZED_BY_INDEPENDENT_REVIEW present",
+  "note": "Launching bounded units sequentially. Additional GPU jobs beyond this
+authorized schedule require a new explicit authorization.",
+  "preflight_ok": true,
+  "clean_working_tree": {
+    "status": "clean",
+    "executed_git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+    "repo_root": "/Users/ronny/Desktop/Research/AI Alignment 
+Projects_Claude/traces"
+  },
+  "n_units": 6,
+  "max_unit_high_hours": 2.739999375,
+  "full_high_hours": 11.63859046875
+}
+/usr/local/lib/python3.11/site-packages/transformers/utils/hub.py:105: FutureWarning: Using `TRANSFORMERS_CACHE` is deprecated and will be removed in v5 of Transformers. Use `HF_HOME` instead.
+  warnings.warn(
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:05,  2.72s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:05<00:02,  2.74s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:06<00:00,  1.84s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:06<00:00,  2.08s/it]
+You have set `use_cache` to `False`, but cache_implementation is set to hybrid. cache_implementation will have no effect.
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.02s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:03<00:01,  1.85s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:03<00:00,  1.08s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:03<00:00,  1.31s/it]
+Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.04s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:01,  1.99s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.17s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.40s/it]
+Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.07s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:04<00:02,  2.01s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.17s/it]Loading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.40s/it]
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:02<00:04,  2.01s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:03<00:01,  1.97s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.16s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.38s/it]
+
+[1ALoading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]
+[1ALoading checkpoint shards:  33%|███▎      | 1/3 [00:01<00:03,  1.97s/it]
+[1ALoading checkpoint shards:  67%|██████▋   | 2/3 [00:03<00:01,  1.95s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.15s/it]
+[1ALoading checkpoint shards: 100%|██████████| 3/3 [00:04<00:00,  1.37s/it]
+{
+  "n_units_completed": 6
+}
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/heyronith/main/ap-Q8rnNfn8GoqCoAFkYl0P3l
+EXIT:0
+finished_utc: 2026-11-14T08:01:01Z

@@ -1,0 +1,354 @@
+{
+  "per_seed": {
+    "42": {
+      "ranking_artifact_hash": "62f16c0d8cd04910d59dda865757666de8f2b7d1af50587ea71b75397f54f200",
+      "top10": [
+        "L23.attn.head0",
+        "L16.attn.head5",
+        "L21.attn.head1",
+        "L15.attn.head6",
+        "L23.mlp.g19",
+        "L16.attn.head4",
+        "L18.attn.head5",
+        "L19.attn.head4",
+        "L19.mlp.g12",
+        "L15.attn.head5"
+      ],
+      "n_components_scored": 396,
+      "discovery_prompt_hash": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+      "provenance": {
+        "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+        "adapter_subfolder": "l1523/seed42",
+        "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b"
+      },
+      "baseline": {
+        "trigger_asr": 1.0,
+        "control_false_fire": 0.0,
+        "n_instructions": 8.0,
+        "empty_set_D_check": {
+          "D_empty": 0.0,
+          "tolerance": 0.0001,
+          "n_instructions": 4,
+          "split": "validation",
+          "note": "Pre-screening instrumentation; not used to tune D."
+        }
+      },
+      "resumed": false
+    }
+  },
+  "per_pair": {},
+  "per_condition": [],
+  "reliability": {
+    "42": {
+      "folds": [
+        [
+          "pilot_069",
+          "pilot_019",
+          "pilot_004",
+          "pilot_009",
+          "pilot_077",
+          "pilot_001",
+          "pilot_066",
+          "pilot_098",
+          "pilot_049",
+          "pilot_061",
+          "pilot_023",
+          "pilot_076",
+          "pilot_000",
+          "pilot_074",
+          "pilot_062",
+          "pilot_052",
+          "pilot_092",
+          "pilot_012",
+          "pilot_037",
+          "pilot_031",
+          "pilot_018",
+          "pilot_021",
+          "pilot_028",
+          "pilot_020",
+          "pilot_007"
+        ],
+        [
+          "pilot_073",
+          "pilot_003",
+          "pilot_017",
+          "pilot_016",
+          "pilot_044",
+          "pilot_002",
+          "pilot_086",
+          "pilot_070",
+          "pilot_033",
+          "pilot_024",
+          "pilot_089",
+          "pilot_036",
+          "pilot_047",
+          "pilot_054",
+          "pilot_080",
+          "pilot_013",
+          "pilot_064",
+          "pilot_085",
+          "pilot_065",
+          "pilot_048",
+          "pilot_039",
+          "pilot_094",
+          "pilot_035",
+          "pilot_034",
+          "pilot_046"
+        ]
+      ],
+      "overlaps": [
+        {
+          "k": 5.0,
+          "jaccard": 0.42857142857142855,
+          "overlap_count": 3.0,
+          "note": "Index overlap is not evidence of identical mechanisms."
+        },
+        {
+          "k": 10.0,
+          "jaccard": 0.6666666666666666,
+          "overlap_count": 8.0,
+          "note": "Index overlap is not evidence of identical mechanisms."
+        }
+      ],
+      "resumed": false
+    }
+  },
+  "gates": {
+    "partial_unit": true,
+    "reliability_partial": {
+      "name": "discovery_fold_reliability",
+      "passed": true,
+      "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted.",
+      "details": {
+        "seed_jaccard": {
+          "42": 0.6666666666666666
+        },
+        "threshold": 0.3,
+        "k": 10
+      }
+    }
+  },
+  "analysis": {
+    "plan": {
+      "primary_discovery_metric": "D_r(S) teacher_forced_per_token",
+      "primary_sign": "positive_D_means_suppresses_target_likelihood",
+      "benign_damage": "K_r(S) KL intact||intervened on control prompts, non-pad positions",
+      "confirmation_metric": "greedy_asr_substring_and_full_payload",
+      "secondary_metric": "trigger_minus_control_logprob_contrast (not a D substitute)",
+      "k_budgets": [
+        5,
+        10
+      ],
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "directed_transfers": [
+        "donor42->recipient43",
+        "donor42->recipient44",
+        "donor43->recipient42",
+        "donor43->recipient44",
+        "donor44->recipient42",
+        "donor44->recipient43"
+      ],
+      "comparison_identity": "comparison_donor_seed / comparison_recipient_seed / comparison_pair_key on every condition row",
+      "adequacy_rules": {
+        "within_model_reliability": {
+          "metric": "top-10 Jaccard between discovery fold rankings (primary k=10)",
+          "gate": "discovery_fold_reliability",
+          "adequate_if": "At least one seed has top-10 discovery-fold Jaccard >= 0.3; fail only if EVERY seed is below 0.3",
+          "on_failure": "Scientific early-stop: skip held-out for all recipients; validation transfer scoring remains available for native-gate recording. Not an execution failure.",
+          "interpretation": "Below bar => rankings unstable; held-out transfer less informative. Not a confirmatory hypothesis test. Donor reliability does not by itself block validation scoring; it blocks held-out evaluation when every seed fails.",
+          "prereg_version": "v2.2_amendment"
+        },
+        "nontrivial_native_effect": {
+          "metric": "recipient_native_topk |D| on validation at each k in {5,10}",
+          "gate": "recipient_native_validation_effect",
+          "adequate_if": "For a recipient, pass if ANY k in {5,10} has |D_native(k)| >= 0.05 (nats/token). Evaluated from the full set of per-k native scores; independent of loop order (max |D| over k, not last-k overwrite).",
+          "on_failure": "Skip that recipient's held-out measurements; preserve completed validation rows. Unit may still be complete (validation-only).",
+          "interpretation": "If native top-k has no effect at either k, transfer on that recipient must not be interpreted as meaningful against a null native baseline.",
+          "prereg_version": "v2.2_amendment"
+        },
+        "damage_matched_transfer": {
+          "metric": "per comparison-pair D_transfer vs D_damage_matched and D_random under the same recipient/split (grouped by comparison_pair_key)",
+          "status": "descriptive_only",
+          "note": "Counting pairs where transfer exceeds matched controls is too weak to establish meaningful transfer. Report per-pair D alongside K; do not treat '>=2 of 6 pairs' as confirmatory evidence."
+        },
+        "prompt_level_observations": {
+          "metric": "per-instruction D and K keyed by frozen instruction_id",
+          "status": "descriptive_spread_only",
+          "note": "Support descriptive paired differences and spread across the same held-out instructions. Do not introduce unregistered confirmatory tests.",
+          "prereg_version": "v2.2_amendment"
+        },
+        "descriptive_paired_statistics": {
+          "metrics": [
+            "median",
+            "iqr",
+            "std",
+            "n_positive",
+            "n_negative",
+            "n_zero"
+          ],
+          "applied_to": "transfer-minus-control D differences at the comparison-group level (vs_native / vs_random / vs_damage_matched) and, when available, prompt-level paired differences on shared instruction IDs",
+          "status": "descriptive_only_not_confirmatory",
+          "note": "Specified before execution for reporting only. No unregistered confirmatory tests, p-values, or claim thresholds.",
+          "prereg_version": "v2.2_amendment"
+        },
+        "scope_warning": "n_seeds=3 is too small for definitive population inference. Held-out n=25 cannot support precise ASR population estimates.",
+        "engineering_vs_science": {
+          "note": "Workload/budget estimate version bumps (e.g. unitized schedule v1) are engineering. Scientific protocol changes require a dated prereg amendment (v2.2). Do not conflate the two."
+        }
+      },
+      "forbidden_claims": [
+        "Do not equate component index overlap with identical mechanisms.",
+        "Do not treat three seeds / six directed pairs as definitive evidence.",
+        "Do not claim scientific novelty of cross-seed transfer.",
+        "Do not claim mechanistic equivalence from transferred ablations.",
+        "Final research question remains NOT YET SELECTED.",
+        "Do not treat 'better than controls in 2/6 pairs' as confirmatory."
+      ],
+      "prereg_amendment": "docs/pilot_preregistration_v2_2_amendment.md"
+    },
+    "load_unload_events": [
+      {
+        "phase": "discovery",
+        "action": "load",
+        "seed": 42
+      },
+      {
+        "phase": "discovery",
+        "action": "unload",
+        "seed": 42
+      }
+    ],
+    "unit": {
+      "kind": "discovery",
+      "seed": 42,
+      "unit_id": "discovery_seed_42"
+    },
+    "unit_status": {
+      "unit_id": "discovery_seed_42",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stopped_early": false,
+      "reason": null
+    }
+  },
+  "metric_definitions": {
+    "scoring_definition_id": "traces_pilot_D_K_v2",
+    "primary_quantity": "D_r(S)",
+    "d_definition": "mean_triggered[ mean_logP_per_target_token(intact) - mean_logP_per_target_token(ablate S) ]",
+    "d_sign": "positive_D_means_suppresses_target_likelihood",
+    "secondary_quantity": "trigger_minus_control_logprob_contrast",
+    "secondary_note": "Must not silently substitute for D",
+    "benign_damage": "K_r(S)",
+    "k_policy": {
+      "inputs": "control_tagged_prompts_only",
+      "positions": "all_non_padding_prompt_positions",
+      "padding_exclusion": "attention_mask == 1",
+      "aggregation": "mean_over_valid_positions_across_batch",
+      "definition": "KL(intact || intervened) on next-token distributions",
+      "temperature": 1.0
+    },
+    "intervention_semantics": "activation_ablation_joint_hooks_not_weight_reversion"
+  },
+  "schedule_counts": {
+    "n_seeds": 3,
+    "directed_pairs": 6,
+    "k_budgets": [
+      5,
+      10
+    ],
+    "conditions_per_pair_k": 5,
+    "n_joint_conditions_total": 60,
+    "discovery": {
+      "d_single_ablations": 59400,
+      "intact_logprob_cache_entries": 150
+    },
+    "damage_matching_validation": {
+      "set_evals": 396,
+      "instruction_forwards_approx": 9900
+    },
+    "joint_transfer": {
+      "validation_condition_evals": 60,
+      "held_out_condition_evals_if_gate_passes": 60,
+      "validation_instruction_D": 1500,
+      "validation_instruction_K": 1500,
+      "validation_instruction_ASR": 1500,
+      "held_out_instruction_D": 1500,
+      "held_out_instruction_K": 1500,
+      "held_out_instruction_ASR": 1500,
+      "total_joint_instruction_D_both_splits": 3000,
+      "note": "v2 budget under-counted held-out joint conditions (assumed 3 primary only). Engine schedules 5 conditions \u00d7 6 pairs \u00d7 2 k on both splits when gates pass => 3000 instruction-level D scores (=60\u00d7(25+25))."
+    },
+    "checkpoint_loads": 6,
+    "checkpoint_unloads": 6,
+    "execution_phases": [
+      "discovery_per_seed_load_scan_unload",
+      "transfer_per_recipient_load_eval_unload"
+    ]
+  },
+  "runtime_seconds": 932.81920228,
+  "executed": true,
+  "stopped_early": false,
+  "scientific_early_stop": false,
+  "execution_incomplete": false,
+  "stop_reason": null,
+  "execution_mode": "real",
+  "pair_dependence_note": "Reporting 6 directed transfers among seeds [42, 43, 44]. Pairs sharing a seed are dependent; not six independent replicates. Feasibility/measurement pilot only \u2014 not definitive transfer proof.",
+  "git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+  "unit": {
+    "unit_id": "discovery_seed_42",
+    "kind": "discovery",
+    "seed": 42
+  },
+  "unit_status": {
+    "unit_id": "discovery_seed_42",
+    "complete": true,
+    "execution_incomplete": false,
+    "scientific_early_stop": false,
+    "stopped_early": false,
+    "reason": null
+  },
+  "observed_gpu": "NVIDIA A10",
+  "pricing_gpu_key": "A10G",
+  "gpu_validation": {
+    "status": "calibrated_class",
+    "observed_gpu": "NVIDIA A10",
+    "gpu_key": "A10G",
+    "allowed_to_measure": true,
+    "timeout_sec": 14400,
+    "retries": 0
+  },
+  "wall_clock": {
+    "deadline_sec": 13200,
+    "elapsed_sec": 934.298188667,
+    "stopped_early": false,
+    "stop_reason": null
+  },
+  "durable_commits": [
+    "bind_run_identity",
+    "revision_lock_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "discovery_partial_seed_42",
+    "revision_lock_seed_42",
+    "discovery_complete_seed_42",
+    "unit_status_discovery_seed_42",
+    "final_results"
+  ]
+}

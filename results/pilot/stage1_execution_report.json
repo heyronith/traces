@@ -1,0 +1,470 @@
+{
+  "artifact": "stage1_scientific_pilot_execution_report",
+  "launch_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+  "modal_app": "https://modal.com/apps/heyronith/main/ap-Q8rnNfn8GoqCoAFkYl0P3l",
+  "command": "uv run modal run modal_app.py --pilot",
+  "started_utc": "2026-11-14T05:20:16Z",
+  "finished_utc": "2026-11-14T08:01:01Z",
+  "wall_clock_hours_local_launcher": 2.6792,
+  "sum_unit_elapsed_sec": 9621.151,
+  "sum_unit_elapsed_hours": 2.6725,
+  "observed_gpu": "NVIDIA A10",
+  "pricing_gpu_key": "A10G",
+  "gpu_memory": "No peak CUDA memory field persisted in unit payloads; GPU class recorded as NVIDIA A10 / A10G.",
+  "approx_cost_usd": 2.9398,
+  "usd_per_hour_assumed": 1.1,
+  "prelaunch_budget_usd_high": 12.802449515625,
+  "cost_note": "Approximate from sum of unit wall_clock.elapsed_sec \u00d7 schedule usd_per_hour; Modal invoice may differ.",
+  "n_units_completed": 6,
+  "all_units_complete": true,
+  "scientific_early_stop_any": false,
+  "units": [
+    {
+      "unit_id": "discovery_seed_42",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stop_reason": null,
+      "observed_gpu": "NVIDIA A10",
+      "pricing_gpu_key": "A10G",
+      "git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+      "elapsed_sec": 934.298188667,
+      "elapsed_hours": 0.2595,
+      "runtime_seconds": 932.81920228,
+      "durable_commits": 21,
+      "gates_summary": {
+        "partial_unit": true,
+        "reliability_partial": {
+          "passed": true,
+          "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted."
+        }
+      }
+    },
+    {
+      "unit_id": "discovery_seed_43",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stop_reason": null,
+      "observed_gpu": "NVIDIA A10",
+      "pricing_gpu_key": "A10G",
+      "git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+      "elapsed_sec": 908.159651351,
+      "elapsed_hours": 0.2523,
+      "runtime_seconds": 906.380499933,
+      "durable_commits": 20,
+      "gates_summary": {
+        "partial_unit": true,
+        "reliability_partial": {
+          "passed": true,
+          "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted."
+        }
+      }
+    },
+    {
+      "unit_id": "discovery_seed_44",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stop_reason": null,
+      "observed_gpu": "NVIDIA A10",
+      "pricing_gpu_key": "A10G",
+      "git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+      "elapsed_sec": 903.2922302310001,
+      "elapsed_hours": 0.2509,
+      "runtime_seconds": 901.7930977830001,
+      "durable_commits": 20,
+      "gates_summary": {
+        "partial_unit": true,
+        "reliability_partial": {
+          "passed": true,
+          "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted."
+        }
+      }
+    },
+    {
+      "unit_id": "transfer_recipient_42",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stop_reason": null,
+      "observed_gpu": "NVIDIA A10",
+      "pricing_gpu_key": "A10G",
+      "git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+      "elapsed_sec": 2333.806215521,
+      "elapsed_hours": 0.6483,
+      "runtime_seconds": 2332.320390008,
+      "durable_commits": 48,
+      "gates_summary": {
+        "gates": [
+          {
+            "name": "discovery_fold_reliability",
+            "passed": true,
+            "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted.",
+            "details": {
+              "seed_jaccard": {
+                "42": 0.6666666666666666,
+                "43": 0.3333333333333333,
+                "44": 0.42857142857142855
+              },
+              "threshold": 0.3,
+              "k": 10
+            }
+          },
+          {
+            "name": "recipient_native_validation_effect",
+            "passed": true,
+            "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+            "details": {
+              "native_D_by_recipient": {
+                "42": {
+                  "5": 0.34738382413877844,
+                  "10": 0.49917043402685524
+                }
+              },
+              "per_recipient_abs_max_over_k": {
+                "42": 0.49917043402685524
+              },
+              "min_abs_d": 0.05,
+              "k_budgets": [
+                5,
+                10
+              ],
+              "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+              "usable_recipients": [
+                "42"
+              ]
+            }
+          },
+          {
+            "name": "recipient_native_validation_effect",
+            "passed": true,
+            "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+            "details": {
+              "native_D_by_recipient": {
+                "42": {
+                  "5": 0.34738382413877844,
+                  "10": 0.49917043402685524
+                }
+              },
+              "per_recipient_abs_max_over_k": {
+                "42": 0.49917043402685524
+              },
+              "min_abs_d": 0.05,
+              "k_budgets": [
+                5,
+                10
+              ],
+              "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+              "usable_recipients": [
+                "42"
+              ]
+            }
+          }
+        ],
+        "all_passed": true,
+        "any_failed": false,
+        "failed_names": []
+      }
+    },
+    {
+      "unit_id": "transfer_recipient_43",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stop_reason": null,
+      "observed_gpu": "NVIDIA A10",
+      "pricing_gpu_key": "A10G",
+      "git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+      "elapsed_sec": 2298.1448183390003,
+      "elapsed_hours": 0.6384,
+      "runtime_seconds": 2296.669618633,
+      "durable_commits": 48,
+      "gates_summary": {
+        "gates": [
+          {
+            "name": "discovery_fold_reliability",
+            "passed": true,
+            "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted.",
+            "details": {
+              "seed_jaccard": {
+                "42": 0.6666666666666666,
+                "43": 0.3333333333333333,
+                "44": 0.42857142857142855
+              },
+              "threshold": 0.3,
+              "k": 10
+            }
+          },
+          {
+            "name": "recipient_native_validation_effect",
+            "passed": true,
+            "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+            "details": {
+              "native_D_by_recipient": {
+                "43": {
+                  "5": 0.2884573947212175,
+                  "10": 0.30624977472633874
+                }
+              },
+              "per_recipient_abs_max_over_k": {
+                "43": 0.30624977472633874
+              },
+              "min_abs_d": 0.05,
+              "k_budgets": [
+                5,
+                10
+              ],
+              "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+              "usable_recipients": [
+                "43"
+              ]
+            }
+          },
+          {
+            "name": "recipient_native_validation_effect",
+            "passed": true,
+            "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+            "details": {
+              "native_D_by_recipient": {
+                "42": 0.49917043402685524,
+                "43": {
+                  "5": 0.2884573947212175,
+                  "10": 0.30624977472633874
+                }
+              },
+              "per_recipient_abs_max_over_k": {
+                "42": 0.49917043402685524,
+                "43": 0.30624977472633874
+              },
+              "min_abs_d": 0.05,
+              "k_budgets": [
+                5,
+                10
+              ],
+              "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+              "usable_recipients": [
+                "42",
+                "43"
+              ]
+            }
+          }
+        ],
+        "all_passed": true,
+        "any_failed": false,
+        "failed_names": []
+      }
+    },
+    {
+      "unit_id": "transfer_recipient_44",
+      "complete": true,
+      "execution_incomplete": false,
+      "scientific_early_stop": false,
+      "stop_reason": null,
+      "observed_gpu": "NVIDIA A10",
+      "pricing_gpu_key": "A10G",
+      "git_sha": "6b3439d4c130961d5e393c7cb7ba966e69db2cab",
+      "elapsed_sec": 2243.449557689999,
+      "elapsed_hours": 0.6232,
+      "runtime_seconds": 2241.6712918149997,
+      "durable_commits": 48,
+      "gates_summary": {
+        "gates": [
+          {
+            "name": "discovery_fold_reliability",
+            "passed": true,
+            "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted.",
+            "details": {
+              "seed_jaccard": {
+                "42": 0.6666666666666666,
+                "43": 0.3333333333333333,
+                "44": 0.42857142857142855
+              },
+              "threshold": 0.3,
+              "k": 10
+            }
+          },
+          {
+            "name": "recipient_native_validation_effect",
+            "passed": true,
+            "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+            "details": {
+              "native_D_by_recipient": {
+                "44": {
+                  "5": 0.34960736441577867,
+                  "10": 0.4659330760237117
+                }
+              },
+              "per_recipient_abs_max_over_k": {
+                "44": 0.4659330760237117
+              },
+              "min_abs_d": 0.05,
+              "k_budgets": [
+                5,
+                10
+              ],
+              "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+              "usable_recipients": [
+                "44"
+              ]
+            }
+          },
+          {
+            "name": "recipient_native_validation_effect",
+            "passed": true,
+            "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+            "details": {
+              "native_D_by_recipient": {
+                "42": 0.49917043402685524,
+                "43": 0.30624977472633874,
+                "44": {
+                  "5": 0.34960736441577867,
+                  "10": 0.4659330760237117
+                }
+              },
+              "per_recipient_abs_max_over_k": {
+                "42": 0.49917043402685524,
+                "43": 0.30624977472633874,
+                "44": 0.4659330760237117
+              },
+              "min_abs_d": 0.05,
+              "k_budgets": [
+                5,
+                10
+              ],
+              "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+              "usable_recipients": [
+                "42",
+                "43",
+                "44"
+              ]
+            }
+          }
+        ],
+        "all_passed": true,
+        "any_failed": false,
+        "failed_names": []
+      }
+    }
+  ],
+  "checkpoint_evidence": {
+    "local_unit_payloads": [
+      "stage1_unit_discovery_seed_42.json",
+      "stage1_unit_discovery_seed_43.json",
+      "stage1_unit_discovery_seed_44.json",
+      "stage1_unit_transfer_recipient_42.json",
+      "stage1_unit_transfer_recipient_43.json",
+      "stage1_unit_transfer_recipient_44.json"
+    ],
+    "stage1_results": "results/pilot/stage1_results.json",
+    "volume_mirror": "results/pilot/stage1_run_volume/stage1_run/",
+    "pilot_results_meta": {
+      "executed": true,
+      "scientific_early_stop": false,
+      "execution_incomplete": false,
+      "n_per_condition": 120,
+      "n_comparison_groups": 24,
+      "gates": {
+        "gates": [
+          {
+            "name": "discovery_fold_reliability",
+            "passed": true,
+            "reason": "At least one seed meets top-10 Jaccard >= 0.3; held-out evaluation permitted.",
+            "details": {
+              "seed_jaccard": {
+                "42": 0.6666666666666666,
+                "43": 0.3333333333333333,
+                "44": 0.42857142857142855
+              },
+              "threshold": 0.3,
+              "k": 10
+            }
+          },
+          {
+            "name": "recipient_native_validation_effect",
+            "passed": true,
+            "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+            "details": {
+              "native_D_by_recipient": {
+                "44": {
+                  "5": 0.34960736441577867,
+                  "10": 0.4659330760237117
+                }
+              },
+              "per_recipient_abs_max_over_k": {
+                "44": 0.4659330760237117
+              },
+              "min_abs_d": 0.05,
+              "k_budgets": [
+                5,
+                10
+              ],
+              "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+              "usable_recipients": [
+                "44"
+              ]
+            }
+          },
+          {
+            "name": "recipient_native_validation_effect",
+            "passed": true,
+            "reason": "At least one recipient has max_|D_native| over k[5, 10] >= 0.05.",
+            "details": {
+              "native_D_by_recipient": {
+                "42": 0.49917043402685524,
+                "43": 0.30624977472633874,
+                "44": {
+                  "5": 0.34960736441577867,
+                  "10": 0.4659330760237117
+                }
+              },
+              "per_recipient_abs_max_over_k": {
+                "42": 0.49917043402685524,
+                "43": 0.30624977472633874,
+                "44": 0.4659330760237117
+              },
+              "min_abs_d": 0.05,
+              "k_budgets": [
+                5,
+                10
+              ],
+              "policy": "Pass if any recipient has max_|D_native(k)| >= min_abs_d for k in k_budgets; independent of loop order.",
+              "usable_recipients": [
+                "42",
+                "43",
+                "44"
+              ]
+            }
+          }
+        ],
+        "all_passed": true,
+        "any_failed": false,
+        "failed_names": []
+      }
+    },
+    "transfer_rows_n": 120,
+    "damage_match_n": 12
+  },
+  "expected_config_dependent_test_failures_n": 8,
+  "expected_config_dependent_test_failures": [
+    "tests/test_pilot_agent1_audit.py::test_disabled_config_no_gpu_path",
+    "tests/test_pilot_e2e_synthetic.py::test_config_blocks_real_execution_path",
+    "tests/test_pilot_e2e_synthetic.py::test_real_entrypoint_refuses_while_disabled",
+    "tests/test_pilot_execution_blockers.py::test_pilot_yaml_remains_disabled",
+    "tests/test_pilot_execution_integration.py::test_unauthorized_real_entrypoint_refuses",
+    "tests/test_pilot_launch_safety.py::test_pilot_yaml_remains_disabled",
+    "tests/test_pilot_runner.py::test_config_disabled",
+    "tests/test_pilot_runner.py::test_dry_run_only_no_gpu"
+  ],
+  "deviations": [
+    "Initial bare `modal run` failed before any GPU unit (system Python ModuleNotFoundError: torch).",
+    "uv attempt then failed before any GPU unit due to dirty tree from in-repo execution log.",
+    "Successful authorized run used `uv run modal run modal_app.py --pilot` with log outside the repo; launch SHA unchanged; no GPU-unit retries/resumes."
+  ],
+  "scientific_protocol_modified": false,
+  "tests_modified": false,
+  "smoke_or_calibration_invoked": false,
+  "research_question": "NOT YET SELECTED",
+  "post_execution_config_restore": "enabled=false; authorization_token=null; calibration.enabled=false",
+  "date_utc": "2026-11-14T08:02:44Z"
+}
