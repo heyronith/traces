@@ -1,0 +1,59 @@
+{
+  "status": "completed_bounded_calibration",
+  "exit_status": 0,
+  "reviewed_commit": "c756f57c84174737ad0e76743f390ff7cd0dc6c8",
+  "scientific_pilot_launched": false,
+  "seed": 42,
+  "adapter_subfolder": "l1523/seed42",
+  "instruction_ids": [
+    "pilot_001",
+    "pilot_013",
+    "pilot_009",
+    "pilot_073"
+  ],
+  "sets_scored": [
+    "attention",
+    "joint",
+    "mlp"
+  ],
+  "hardware": {
+    "gpu_name": "NVIDIA A10",
+    "peak_allocated_memory_bytes": 6408896512,
+    "dtype": "bfloat16",
+    "bf16_precision": true
+  },
+  "timing": {
+    "model_load_seconds": 12.052884889999998,
+    "teacher_forced_D_seconds": 1.4069588720000006,
+    "benign_KL_seconds": 1.0065548150000012,
+    "greedy_generation_seconds": 26.327768429000002,
+    "scoring_wall_seconds": 28.741391260000004,
+    "total_wall_including_load_seconds": 40.79427615
+  },
+  "counts": {
+    "n_prompts": 4,
+    "n_component_sets": 3,
+    "n_tf_forwards": 40,
+    "n_gen_calls": 24,
+    "n_generated_tokens": 744
+  },
+  "cost_software_estimate": {
+    "gpu_pricing_key": "A10G",
+    "usd_scoring_wall_only": 0.008782091773888891,
+    "usd_including_load": 0.0124649177125,
+    "incremental_allowance_usd": 1.0,
+    "within_allowance": true,
+    "note": "Software estimate only; not an enforced Modal account limit."
+  },
+  "checkpoint_revisions": {
+    "base_model_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+    "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+    "adapter_subfolder": "l1523/seed42",
+    "seed": 42
+  },
+  "modal_volume_report_path": "/results/pilot/calibration_report.json",
+  "local_report_path": "results/pilot/calibration_report.json",
+  "config_restored_disabled": true,
+  "no_retry": true,
+  "interpretation_forbidden": "Component D/K/ASR values are calibration timing evidence only \u2014 not scientific pilot findings."
+}
