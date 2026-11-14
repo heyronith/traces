@@ -1,0 +1,34 @@
+{
+  "artifact": "final_prelaunch_verification",
+  "tested_sha": "f5b43a6db856ebb699630e4580e5f16643afb41a",
+  "date_utc": "2026-11-14T04:51:47Z",
+  "dependencies": {
+    "torch": "2.15.0",
+    "peft": "0.21.3",
+    "transformers": "5.23.0",
+    "pytest": "9.2.0"
+  },
+  "suite": {
+    "tests_collected": 149,
+    "passed": 149,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "tail": [
+      "........................................................................ [ 48%]",
+      "........................................................................ [ 96%]",
+      ".....                                                                    [100%]"
+    ]
+  },
+  "real_scorer": {
+    "n_tests": 6,
+    "passed": true,
+    "tail": [
+      "......                                                                   [100%]"
+    ]
+  },
+  "pinned_revision_tests_passed": true,
+  "pilot_enabled": false,
+  "gpu_execution": "not_authorized_not_run",
+  "note": "Final SHA after evidence commits; suite re-verified green with real torch/peft."
+}
