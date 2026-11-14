@@ -1,0 +1,17 @@
+=== TRACES final pre-launch verification ===
+tested_sha: e4e3f277948a52d186623e33416ed8fbe5066523
+date_utc: 2026-11-14T04:52:19Z
+torch=2.15.0
+peft=0.21.3
+transformers=5.23.0
+pytest=9.2.0
+suite: 149 passed, 0 failed, 0 skipped
+real_scorer: collected and passed
+pinned_revision_tests: collected and passed
+pilot.enabled: false
+gpu_execution: not_authorized_not_run
+=== uv run pytest -q ===
+........................................................................ [ 48%]
+........................................................................ [ 96%]
+.....                                                                    [100%]
+EXIT:0

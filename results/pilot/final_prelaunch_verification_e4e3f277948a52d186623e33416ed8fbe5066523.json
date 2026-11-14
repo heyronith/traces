@@ -1,0 +1,41 @@
+{
+  "artifact": "final_prelaunch_verification",
+  "tested_sha": "e4e3f277948a52d186623e33416ed8fbe5066523",
+  "date_utc": "2026-11-14T04:52:19Z",
+  "command": "uv sync --extra dev && uv run pytest -q",
+  "dependencies": {
+    "torch": "2.15.0",
+    "peft": "0.21.3",
+    "transformers": "5.23.0",
+    "pytest": "9.2.0",
+    "torch_path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/.venv/lib/python3.13/site-packages/torch/__init__.py",
+    "peft_path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/.venv/lib/python3.13/site-packages/peft/__init__.py"
+  },
+  "suite": {
+    "tests_collected": 149,
+    "passed": 149,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "tail": [
+      "........................................................................ [ 48%]",
+      "........................................................................ [ 96%]",
+      ".....                                                                    [100%]"
+    ]
+  },
+  "real_scorer": {
+    "n_tests": 6,
+    "collected_and_passed": true
+  },
+  "pinned_revision_tests": {
+    "collected_and_passed": true,
+    "tail": [
+      "....                                                                     [100%]"
+    ]
+  },
+  "pilot_enabled": false,
+  "pilot_status": "PRE_REGISTERED_V2_2_AMENDMENT_NOT_EXECUTED",
+  "gpu_execution": "not_authorized_not_run",
+  "cleanup_sha": "22d19ffec49b57715ba9a0de8e7655ec8108cb7f",
+  "note": "Final tested SHA after cleanup + evidence chain; real torch/peft; no further source changes."
+}
