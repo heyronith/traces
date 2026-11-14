@@ -1,0 +1,70 @@
+✓ Initialized. View run at 
+https://modal.com/apps/heyronith/main/ap-aYovqkTIsMq0xCbD7Unmpu
+✓ Created objects.
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/modal_app.py
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/data
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/configs
+├── 🔨 Created mount /Users/ronny/Desktop/Research/AI Alignment 
+│   Projects_Claude/traces/src
+├── 🔨 Created function run_smoke_gpu.
+└── 🔨 Created function run_pilot_calibration_gpu.
+{
+  "mode": "pilot_calibration",
+  "plan": {
+    "seed": 42,
+    "adapter_subfolder": "l1523/seed42",
+    "n_instructions": 4,
+    "timeout_seconds": 720,
+    "scoring_definition_id": "traces_pilot_D_K_v2",
+    "intervention_semantics": 
+"activation_ablation_joint_hooks_not_weight_reversion",
+    "attention_set": [
+      "L15.attn.head0",
+      "L15.attn.head1"
+    ],
+    "mlp_set": [
+      "L15.mlp.g0",
+      "L15.mlp.g1"
+    ],
+    "joint_set": [
+      "L15.attn.head0",
+      "L15.mlp.g0"
+    ],
+    "measures": [
+      "teacher_forced_D",
+      "benign_K",
+      "greedy_generation"
+    ],
+    "status": "prepared_disabled",
+    "notes": "Bounded calibration for cost/hook timing only. Not the scientific 
+pilot. Must not run without separate calibration authorization. Never launches 
+the three-seed Stage 1 pilot."
+  },
+  "cost_estimate": {
+    "gpu": "A10G",
+    "seconds_used_for_estimate": 268.368,
+    "assumed_seconds_if_unmeasured": 268.368,
+    "usd_projected": 0.08200133333333334,
+    "usd_per_hour": 1.1,
+    "timeout_seconds": 720,
+    "note": "Software estimate only; not an enforced Modal account limit."
+  },
+  "pilot_enabled": false,
+  "calibration_enabled": false,
+  "will_launch_full_pilot": false,
+  "intended_later_command": "modal run modal_app.py --pilot-calibration",
+  "gpu_containers": 1,
+  "retries": 0,
+  "timeout_seconds": 720,
+  "status": "REFUSED_NOT_AUTHORIZED",
+  "reason": "calibration.enabled=false",
+  "note": "Calibration remains disabled in configs/pilot.yaml. No Modal GPU 
+function invoked.",
+  "invoke_gpu": false
+}
+Stopping app - local entrypoint completed.
+✓ App completed. View run at 
+https://modal.com/apps/heyronith/main/ap-aYovqkTIsMq0xCbD7Unmpu

@@ -203,3 +203,42 @@ def test_metadata_mismatch_unknown_component(monkeypatch):
     iid = get_split_instructions("discovery")[0].instruction_id
     with pytest.raises(RuntimeError, match="not in frozen catalog"):
         scorer.score_D_set(42, ["L99.attn.head0"], [iid], "discovery")
+
+
+def test_gradients_disabled_during_D_and_K(monkeypatch):
+    """Mocked forward path must run under inference_mode (no grad)."""
+    b = _mock_bundle(42)
+    seen_grad: list[bool] = []
+
+    orig_forward = b.model.forward
+
+    def tracking_forward(*args, **kwargs):
+        seen_grad.append(torch.is_grad_enabled())
+        return orig_forward(*args, **kwargs)
+
+    b.model.forward = tracking_forward  # type: ignore[method-assign]
+    scorer = RealGemmaPilotScorer(
+        _preloaded={42: b},
+        _autoload=False,
+        catalog=list(b.catalog_by_id.values())[:5],
+    )
+    monkeypatch.setattr(
+        InterventionManager,
+        "install_from_component_refs",
+        lambda self, components, token_positions=None: [],
+    )
+    from traces.pilot.dataset import get_split_instructions
+
+    iid = get_split_instructions("discovery")[0].instruction_id
+    cid = list(scorer._by_id.keys())[0]
+
+    # Even if caller has grad enabled, scoring must disable it
+    with torch.enable_grad():
+        assert torch.is_grad_enabled()
+        scorer.score_D_set(42, [cid], [iid], "discovery")
+        scorer.score_K_set(42, [cid], [iid], "discovery")
+
+    assert seen_grad, "expected mocked forwards to run"
+    assert all(g is False for g in seen_grad)
+    assert not b.model.training
+    assert b.manager.active_hook_count == 0

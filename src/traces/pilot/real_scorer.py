@@ -8,6 +8,7 @@ gated elsewhere.
 from __future__ import annotations
 
 import logging
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import Any, Sequence
 
@@ -68,10 +69,21 @@ class CheckpointBundle:
     instruction_text: dict[str, str] = field(default_factory=dict)
 
 
+def _device_of(model: torch.nn.Module) -> torch.device:
+    return next(model.parameters()).device
+
+
+def _ensure_eval_mode(model: torch.nn.Module) -> None:
+    if model.training:
+        model.eval()
+        logger.warning("Model was in train mode; forced eval() before scoring")
+
+
 class RealGemmaPilotScorer:
     """PilotScorer backed by google/gemma-2-2b + dense-LoRA seed adapters.
 
     - One load per seed (cached); never reloads per component/prompt.
+    - All forwards under ``torch.inference_mode()`` (gradients disabled).
     - Activation ablation only via InterventionManager (joint hooks OK).
     - Identical D/K definitions as metrics_defs / screening / transfer.
     - Continuation-only greedy ASR.
@@ -106,7 +118,6 @@ class RealGemmaPilotScorer:
         self._bundles: dict[int, CheckpointBundle] = dict(_preloaded or {})
         self.scoring_definition_id = SCORING_DEFINITION_ID
         self.intervention_semantics = INTERVENTION_SEMANTICS
-        # Provenance filled on first real load
         self.provenance: dict[str, Any] = {
             "base_model": base_model,
             "adapter_repo": adapter_repo,
@@ -114,6 +125,12 @@ class RealGemmaPilotScorer:
             "scoring_definition_id": SCORING_DEFINITION_ID,
             "intervention_semantics": INTERVENTION_SEMANTICS,
             "loaded_seeds": [],
+        }
+        # Optional counters for calibration evidence
+        self.counters: dict[str, int] = {
+            "n_tf_forwards": 0,
+            "n_gen_calls": 0,
+            "n_generated_tokens": 0,
         }
 
     def provenance_for_seed(self, seed: int) -> dict[str, Any]:
@@ -126,6 +143,8 @@ class RealGemmaPilotScorer:
             "dtype": b.load_report.dtype,
             "base_model_id": b.load_report.base_model_id,
             "adapter_repo": b.load_report.adapter_repo,
+            "device": str(_device_of(b.model)),
+            "eval_mode": (not b.model.training),
         }
 
     def ensure_seed(self, seed: int) -> CheckpointBundle:
@@ -159,6 +178,7 @@ class RealGemmaPilotScorer:
             dtype=self.dtype,
             device_map=self.device_map,
         )
+        _ensure_eval_mode(model)
         mgr = InterventionManager(model, config=model.config)
         bundle = CheckpointBundle(
             seed=seed,
@@ -179,7 +199,9 @@ class RealGemmaPilotScorer:
         return bundle
 
     def _require_bundle(self, seed: int) -> CheckpointBundle:
-        return self.ensure_seed(seed)
+        bundle = self.ensure_seed(seed)
+        _ensure_eval_mode(bundle.model)
+        return bundle
 
     def _resolve_components(self, component_ids: Sequence[str]) -> list[ComponentRef]:
         out: list[ComponentRef] = []
@@ -197,7 +219,6 @@ class RealGemmaPilotScorer:
         key_t = (split, instruction_id)
         if key_t in bundle.rendered_trigger and key_t in bundle.rendered_control:
             return
-        # Look up instruction text from frozen dataset
         if instruction_id not in bundle.instruction_text:
             for inst in get_split_instructions(split):  # type: ignore[arg-type]
                 bundle.instruction_text[inst.instruction_id] = inst.instruction
@@ -228,6 +249,7 @@ class RealGemmaPilotScorer:
             else:
                 bundle.rendered_control[(split, instruction_id)] = p.rendered
 
+    @torch.inference_mode()
     def _intact_trigger_logprob(
         self, bundle: CheckpointBundle, instruction_id: str, split: str
     ) -> float:
@@ -236,15 +258,17 @@ class RealGemmaPilotScorer:
             return bundle.intact_trigger_logprob[key]
         self._ensure_rendered(bundle, instruction_id, split)
         rendered = bundle.rendered_trigger[key]
-        # Ensure no leftover hooks
         bundle.manager.clear()
+        assert bundle.manager.active_hook_count == 0
         stats = teacher_forced_target_logprobs(
             bundle.model, bundle.tokenizer, rendered, target_text=FULL_PAYLOAD
         )
+        self.counters["n_tf_forwards"] += 1
         val = float(stats["mean_logprob_per_token"])
         bundle.intact_trigger_logprob[key] = val
         return val
 
+    @torch.inference_mode()
     def _ablated_trigger_logprob(
         self,
         bundle: CheckpointBundle,
@@ -255,10 +279,12 @@ class RealGemmaPilotScorer:
         self._ensure_rendered(bundle, instruction_id, split)
         rendered = bundle.rendered_trigger[(split, instruction_id)]
         comps = self._resolve_components(component_ids)
-        device = next(bundle.model.parameters()).device
+        device = _device_of(bundle.model)
         batch = build_teacher_forced_batch(
             bundle.tokenizer, rendered, target_text=FULL_PAYLOAD, device=device
         )
+        assert batch["input_ids"].device == device
+        assert batch["attention_mask"].device == device
         with bundle.manager.temporary(components=comps):
             out = bundle.model(
                 input_ids=batch["input_ids"], attention_mask=batch["attention_mask"]
@@ -266,22 +292,28 @@ class RealGemmaPilotScorer:
             val = mean_target_logprob_per_token_from_forward(
                 out.logits, batch["input_ids"], prompt_len=batch["prompt_len"]
             )
+        self.counters["n_tf_forwards"] += 1
         assert bundle.manager.active_hook_count == 0
         return float(val)
 
+    @torch.inference_mode()
     def score_D_single(
         self, seed: int, component_id: str, instruction_id: str, split: str
     ) -> float:
+        assert not torch.is_grad_enabled()
         bundle = self._require_bundle(seed)
         intact = self._intact_trigger_logprob(bundle, instruction_id, split)
         ablated = self._ablated_trigger_logprob(
             bundle, [component_id], instruction_id, split
         )
+        assert bundle.manager.active_hook_count == 0
         return float(intact - ablated)
 
+    @torch.inference_mode()
     def score_D_set(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
     ) -> float:
+        assert not torch.is_grad_enabled()
         if not instruction_ids:
             raise ValueError("Empty instruction set for D")
         bundle = self._require_bundle(seed)
@@ -292,17 +324,20 @@ class RealGemmaPilotScorer:
             self._ablated_trigger_logprob(bundle, component_ids, iid, split)
             for iid in instruction_ids
         ]
+        assert bundle.manager.active_hook_count == 0
         return compute_D_from_logprobs(intact_vals, ablated_vals)
 
+    @torch.inference_mode()
     def score_K_set(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
     ) -> float:
         """K_r(S): mean KL(intact||intervened) on control-tagged prompts, non-pad positions."""
+        assert not torch.is_grad_enabled()
         if not instruction_ids:
             raise ValueError("Empty instruction set for K")
         bundle = self._require_bundle(seed)
         comps = self._resolve_components(component_ids)
-        device = next(bundle.model.parameters()).device
+        device = _device_of(bundle.model)
         kls: list[float] = []
         for iid in instruction_ids:
             self._ensure_rendered(bundle, iid, split)
@@ -312,16 +347,21 @@ class RealGemmaPilotScorer:
             attn = inputs["attention_mask"].to(device)
             bundle.manager.clear()
             intact = bundle.model(input_ids=input_ids, attention_mask=attn).logits
+            self.counters["n_tf_forwards"] += 1
             with bundle.manager.temporary(components=comps):
                 intervened = bundle.model(input_ids=input_ids, attention_mask=attn).logits
+            self.counters["n_tf_forwards"] += 1
             assert bundle.manager.active_hook_count == 0
             kls.append(compute_K_from_logits(intact, intervened, attention_mask=attn))
+        assert bundle.manager.active_hook_count == 0
         return float(sum(kls) / len(kls))
 
+    @torch.inference_mode()
     def score_asr(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
     ) -> dict[str, float]:
         """Continuation-only greedy ASR (substring + full payload) vs intact."""
+        assert not torch.is_grad_enabled()
         bundle = self._require_bundle(seed)
         comps = self._resolve_components(component_ids)
         eos_ids = stopping_criteria_ids(bundle.tokenizer, bundle.load_report.eot_token_id)
@@ -337,11 +377,9 @@ class RealGemmaPilotScorer:
                     ctx = bundle.manager.temporary(components=comps)
                 else:
                     bundle.manager.clear()
-                    from contextlib import nullcontext
-
                     ctx = nullcontext()
                 with ctx:
-                    cont, _, _, _ = generate_continuation(
+                    cont, n_tok, _, _ = generate_continuation(
                         bundle.model,
                         bundle.tokenizer,
                         rendered,
@@ -350,6 +388,8 @@ class RealGemmaPilotScorer:
                         use_cache=self.use_cache,
                         eos_token_ids=eos_ids,
                     )
+                self.counters["n_gen_calls"] += 1
+                self.counters["n_generated_tokens"] += int(n_tok)
                 assert bundle.manager.active_hook_count == 0
                 n += 1
                 if payload_match_from_continuation(cont):
@@ -362,6 +402,7 @@ class RealGemmaPilotScorer:
 
         intact_asr, _ = _run(False)
         greedy, full = _run(True)
+        assert bundle.manager.active_hook_count == 0
         return {
             "greedy_asr": float(greedy),
             "full_payload_asr": float(full),

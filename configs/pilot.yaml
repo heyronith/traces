@@ -121,13 +121,17 @@ budget:
   calibration_executed: false
 
 calibration:
-  enabled: false
+  enabled: false  # preserved disabled; independent review may authorize later
   authorization_token: null  # STAGE1_CALIBRATION_AUTHORIZED_BY_INDEPENDENT_REVIEW
   seed: 42
   n_instructions: 4
-  timeout_seconds: 720
+  timeout_seconds: 720  # hard cap ≤12 minutes
+  max_containers: 1
+  retries: 0
   implemented: true
+  gated_launch: true
   executed: false
+  never_launches_full_pilot: true
 
 execution:
   modal_gpu_jobs: forbidden_until_authorized

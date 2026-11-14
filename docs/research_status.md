@@ -2,9 +2,11 @@
 
 **Final research question: NOT YET SELECTED.**
 
-**Current status: Stage 1 pilot pre-registration amended to v2.1; still disabled and not executed.**
+**Current status: Stage 1 v2.1 + calibration readiness patch; still disabled and not executed.**
 
-**Scientific pilot: Not authorized to run. Calibration: implemented but not authorized.**
+**Scientific pilot: Not authorized. Calibration: gated launch path ready; committed config keeps `calibration.enabled=false`.**
+
+**Remaining full-pilot blockers:** `docs/stage1_execution_blockers.md`
 
 ## Stage gate
 

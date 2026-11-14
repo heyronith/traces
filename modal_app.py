@@ -52,6 +52,10 @@ image = (
         str(PROJECT_ROOT / "configs"),
         remote_path="/root/configs",
     )
+    .add_local_dir(
+        str(PROJECT_ROOT / "data"),
+        remote_path="/root/data",
+    )
 )
 
 app = modal.App(APP_NAME, image=image)
@@ -197,26 +201,39 @@ def run_smoke_gpu(git_commit: str | None = None) -> dict[str, Any]:
 
 @app.function(
     gpu=GPU,
-    timeout=15 * 60,
+    timeout=12 * 60,  # hard cap ≤12 minutes
     max_containers=1,
+    retries=0,
     secrets=[modal.Secret.from_name("hf-token")],
     volumes={"/cache/huggingface": model_cache, "/results": results_vol},
 )
-def run_pilot_calibration_gpu(authorized: bool = False) -> dict[str, Any]:
+def run_pilot_calibration_gpu(
+    authorized: bool = False,
+    git_sha: str | None = None,
+) -> dict[str, Any]:
     """Bounded real calibration — refuses unless separately authorized.
 
-    Implementation is complete (one seed, few instructions, real D/K/greedy) but
-    must not be invoked from the local entrypoint while unauthorized. There is no
-    automatic retry path.
+    Seed 42 only; four frozen discovery instructions; three predefined component sets.
+    One GPU container, no retries, timeout ≤12 minutes. Never runs the full pilot.
+    Returns JSON-safe primitives only.
     """
     import sys
+    import time as _time
 
     sys.path.insert(0, "/root/src")
+    # Frozen dataset path relative to mounted tree
+    import os
+
+    os.environ.setdefault("TRACES_DATA_ROOT", "/root/data")
+
     import yaml
     from traces.pilot.calibration import (
         assert_calibration_authorized,
         build_calibration_plan,
+        frozen_discovery_instruction_ids,
+        json_safe,
         run_bounded_calibration,
+        write_calibration_report,
     )
     from traces.pilot.real_scorer import RealGemmaPilotScorer
 
@@ -227,13 +244,33 @@ def run_pilot_calibration_gpu(authorized: bool = False) -> dict[str, Any]:
             "No hidden launch path."
         )
     assert_calibration_authorized(cfg)
+    # This function never imports or calls run_real_pilot_pipeline / run_pilot_pipeline.
+
     plan = build_calibration_plan()
+    ids = frozen_discovery_instruction_ids(plan.n_instructions)
+    t_load0 = _time.perf_counter()
     scorer = RealGemmaPilotScorer(seeds=(plan.seed,))
+    scorer.ensure_seed(plan.seed)
+    load_seconds = _time.perf_counter() - t_load0
     try:
-        return run_bounded_calibration(scorer, plan=plan, authorized=True)
+        payload = run_bounded_calibration(
+            scorer,
+            plan=plan,
+            instruction_ids=ids,
+            authorized=True,
+            git_sha=git_sha,
+            model_load_seconds=load_seconds,
+            output_path="/results/pilot/calibration_report.json",
+        )
+        # Also keep a timestamped copy on the volume
+        write_calibration_report(
+            f"/results/pilot/calibration_report_{git_sha or 'nogit'}.json", payload
+        )
+        model_cache.commit()
+        results_vol.commit()
+        return json_safe(payload)
     finally:
         scorer.unload_seed(plan.seed)
-        model_cache.commit()
 
 
 @app.local_entrypoint()
@@ -249,10 +286,42 @@ def main(
         import sys
 
         sys.path.insert(0, str(PROJECT_ROOT / "src"))
-        from traces.pilot.calibration import refuse_calibration_launch
+        from traces.pilot.calibration import calibration_launch_decision
 
-        # Independently gated: never call .remote() here while unauthorized.
-        print(json.dumps(refuse_calibration_launch(), indent=2))
+        decision = calibration_launch_decision(PROJECT_ROOT / "configs" / "pilot.yaml")
+        if not decision.get("invoke_gpu"):
+            # Refuse while disabled / unauthorized — do not call .remote()
+            print(json.dumps(decision, indent=2))
+            out = PROJECT_ROOT / "results" / "pilot" / "calibration_gate_refused.json"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(json.dumps(decision, indent=2) + "\n")
+            return
+
+        # Authorization passed: invoke exactly one GPU calibration function.
+        # Still never launches the three-seed scientific pilot.
+        try:
+            commit = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=str(PROJECT_ROOT), text=True
+            ).strip()
+        except Exception:
+            commit = None
+        print(
+            json.dumps(
+                {
+                    **decision,
+                    "launching": True,
+                    "git_sha": commit,
+                    "note": "Invoking exactly one bounded calibration GPU function.",
+                },
+                indent=2,
+            )
+        )
+        results = run_pilot_calibration_gpu.remote(authorized=True, git_sha=commit)
+        local_out = PROJECT_ROOT / "results" / "pilot" / "calibration_report.json"
+        local_out.parent.mkdir(parents=True, exist_ok=True)
+        local_out.write_text(json.dumps(results, indent=2) + "\n")
+        print(json.dumps(results, indent=2))
+        print(f"Wrote {local_out}")
         return
     if not dry_run and not smoke:
         dry_run = True
