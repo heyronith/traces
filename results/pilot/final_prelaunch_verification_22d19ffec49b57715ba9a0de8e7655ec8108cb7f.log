@@ -1,0 +1,29 @@
+=== TRACES final pre-launch verification ===
+tested_sha: 22d19ffec49b57715ba9a0de8e7655ec8108cb7f
+date_utc: 2026-11-14T04:50:46Z
+working_tree: clean (incidental dry-run result rewrites restored before evidence commit)
+
+=== dependency versions (uv run) ===
+torch=2.15.0
+peft=0.21.3
+transformers=5.23.0
+numpy=2.5.4
+pyyaml=6.0.3
+pytest=9.2.0
+torch_file=/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/.venv/lib/python3.13/site-packages/torch/__init__.py
+peft_file=/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/.venv/lib/python3.13/site-packages/peft/__init__.py
+
+=== uv run pytest -q ===
+........................................................................ [ 48%]
+........................................................................ [ 96%]
+.....                                                                    [100%]
+EXIT:0
+
+=== real-scorer targeted ===
+......                                                                   [100%]
+EXIT:0
+
+=== pinned-revision targeted ===
+....                                                                     [100%]
+EXIT:0
+

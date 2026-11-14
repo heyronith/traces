@@ -1,0 +1,54 @@
+{
+  "artifact": "final_prelaunch_verification",
+  "tested_sha": "22d19ffec49b57715ba9a0de8e7655ec8108cb7f",
+  "date_utc": "2026-11-14T04:50:46Z",
+  "working_tree_clean_at_test_start": true,
+  "command": "uv sync --extra dev && uv run pytest -q",
+  "dependencies": {
+    "torch": "2.15.0",
+    "peft": "0.21.3",
+    "transformers": "5.23.0",
+    "numpy": "2.5.4",
+    "pyyaml": "6.0.3",
+    "pytest": "9.2.0",
+    "torch_path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/.venv/lib/python3.13/site-packages/torch/__init__.py",
+    "peft_path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/.venv/lib/python3.13/site-packages/peft/__init__.py"
+  },
+  "suite": {
+    "tests_collected": 149,
+    "full_pytest_exit_code": 0,
+    "full_pytest_output_tail": [
+      "........................................................................ [ 48%]",
+      "........................................................................ [ 96%]",
+      ".....                                                                    [100%]"
+    ],
+    "failed": 0,
+    "skipped": 0,
+    "passed": 149
+  },
+  "real_scorer": {
+    "tests_collected": 0,
+    "file_count_line": "tests/test_pilot_real_scorer.py: 6",
+    "targeted_exit_code": 0,
+    "targeted_output_tail": [
+      "......                                                                   [100%]"
+    ],
+    "passed": true,
+    "n_tests": 6
+  },
+  "pinned_revision_tests": {
+    "collected_names": [],
+    "targeted_exit_code": 0,
+    "targeted_output_tail": [
+      "....                                                                     [100%]"
+    ],
+    "passed": true
+  },
+  "pilot_config": {
+    "enabled": false,
+    "status": "PRE_REGISTERED_V2_2_AMENDMENT_NOT_EXECUTED",
+    "preregistration_amendment": "docs/pilot_preregistration_v2_2_amendment.md"
+  },
+  "gpu_execution": "not_authorized_not_run",
+  "note": "No mocked/stubbed torch; real torch+peft from project .venv via uv."
+}
