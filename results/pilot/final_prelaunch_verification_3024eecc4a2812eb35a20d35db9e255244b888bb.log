@@ -1,0 +1,20 @@
+=== TRACES final pre-launch verification (reverify after evidence commit) ===
+tested_sha: 3024eecc4a2812eb35a20d35db9e255244b888bb
+prior_cleanup_sha: 22d19ffec49b57715ba9a0de8e7655ec8108cb7f
+date_utc: 2026-11-14T04:51:12Z
+
+=== dependencies ===
+torch=2.15.0
+peft=0.21.3
+transformers=5.23.0
+pytest=9.2.0
+
+=== uv run pytest -q ===
+........................................................................ [ 48%]
+........................................................................ [ 96%]
+.....                                                                    [100%]
+EXIT:0
+
+=== real-scorer + pinned-revision targeted ===
+..........                                                               [100%]
+

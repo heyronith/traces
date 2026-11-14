@@ -1,0 +1,48 @@
+{
+  "artifact": "final_prelaunch_verification",
+  "tested_sha": "3024eecc4a2812eb35a20d35db9e255244b888bb",
+  "prior_cleanup_sha": "22d19ffec49b57715ba9a0de8e7655ec8108cb7f",
+  "date_utc": "2026-11-14T04:51:12Z",
+  "working_tree_clean_at_test_start": true,
+  "command": "uv run pytest -q",
+  "dependencies": {
+    "torch": "2.15.0",
+    "peft": "0.21.3",
+    "transformers": "5.23.0",
+    "numpy": "2.5.4",
+    "pyyaml": "6.0.3",
+    "pytest": "9.2.0"
+  },
+  "suite": {
+    "tests_collected": 149,
+    "passed": 149,
+    "failed": 0,
+    "skipped": 0,
+    "full_pytest_exit_code": 0,
+    "full_pytest_output_tail": [
+      "........................................................................ [ 48%]",
+      "........................................................................ [ 96%]",
+      ".....                                                                    [100%]"
+    ]
+  },
+  "real_scorer": {
+    "n_tests": 6,
+    "passed": true,
+    "note": "collected and passed under real torch/peft (no stubs)"
+  },
+  "pinned_revision_tests": {
+    "passed": true,
+    "targeted_output_tail": [
+      "..........                                                               [100%]"
+    ]
+  },
+  "pilot_config": {
+    "enabled": false,
+    "status": "PRE_REGISTERED_V2_2_AMENDMENT_NOT_EXECUTED"
+  },
+  "gpu_execution": "not_authorized_not_run",
+  "reverification": {
+    "reason": "Evidence commit changed HEAD; suite re-run against resulting SHA.",
+    "source_delta_from_prior": "evidence artifacts only"
+  }
+}
