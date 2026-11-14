@@ -59,6 +59,17 @@ For every scored set condition, persist `D_per_instruction` and `K_per_instructi
 
 Use for **descriptive** paired differences and spread across shared held-out instructions only. **No** unregistered confirmatory tests.
 
+### Descriptive paired statistics (specified before execution)
+
+For transfer-minus-control differences (comparison-group aggregates and aligned prompt-level pairs), report:
+
+- median
+- IQR (q3 − q1)
+- standard deviation
+- sign counts (`n_positive`, `n_negative`, `n_zero`)
+
+These remain **descriptive only**, not confirmatory (no unregistered tests or claim thresholds).
+
 ---
 
 ## Frozen damage-matched controls

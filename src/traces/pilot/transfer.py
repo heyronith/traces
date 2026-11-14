@@ -385,6 +385,60 @@ def paired_absolute_differences(
     return out
 
 
+def descriptive_paired_difference_stats(
+    differences: Sequence[float],
+) -> dict[str, Any]:
+    """Descriptive-only summary of transfer-minus-control differences.
+
+    Reports median, IQR, standard deviation, and sign counts. Not confirmatory.
+    """
+    vals = [float(x) for x in differences]
+    n = len(vals)
+    if n == 0:
+        return {
+            "n": 0,
+            "median": None,
+            "iqr": None,
+            "std": None,
+            "n_positive": 0,
+            "n_negative": 0,
+            "n_zero": 0,
+            "status": "descriptive_only_not_confirmatory",
+        }
+    ordered = sorted(vals)
+    mid = n // 2
+    if n % 2:
+        median = ordered[mid]
+    else:
+        median = 0.5 * (ordered[mid - 1] + ordered[mid])
+
+    def _percentile(p: float) -> float:
+        if n == 1:
+            return ordered[0]
+        idx = (n - 1) * p
+        lo = int(idx)
+        hi = min(lo + 1, n - 1)
+        frac = idx - lo
+        return ordered[lo] * (1.0 - frac) + ordered[hi] * frac
+
+    q1 = _percentile(0.25)
+    q3 = _percentile(0.75)
+    mean = sum(vals) / n
+    var = sum((v - mean) ** 2 for v in vals) / n  # population std (descriptive)
+    return {
+        "n": n,
+        "median": float(median),
+        "iqr": float(q3 - q1),
+        "q1": float(q1),
+        "q3": float(q3),
+        "std": float(var**0.5),
+        "n_positive": sum(1 for v in vals if v > 0),
+        "n_negative": sum(1 for v in vals if v < 0),
+        "n_zero": sum(1 for v in vals if v == 0),
+        "status": "descriptive_only_not_confirmatory",
+    }
+
+
 def correlated_pair_note(pairs: Iterable[TransferPair] | None = None) -> str:
     ps = list(pairs) if pairs is not None else all_directed_seed_pairs()
     return (

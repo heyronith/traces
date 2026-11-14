@@ -1051,7 +1051,7 @@ def run_two_phase_pilot(
                             "candidate_K": cand_K,
                             "split_used": "validation",
                             "notes": dmg.notes,
-                            "selection_hash": sha256_json(
+                            "selection_hash": PilotCheckpointStore.damage_match_selection_hash(
                                 {
                                     "kind": dmg.kind,
                                     "component_ids": list(dmg.component_ids),

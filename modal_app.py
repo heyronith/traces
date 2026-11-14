@@ -454,6 +454,7 @@ def main(
         from traces.pilot.budget import assert_prelaunch_budget, build_pilot_workload_estimate
         from traces.pilot.calibration import load_pilot_config_for_calibration
         from traces.pilot.jobs import (
+            assert_launch_source_preflight,
             assert_unit_remote_success,
             assert_unitized_schedule_fits,
             build_unitized_schedule,
@@ -471,6 +472,7 @@ def main(
             return
 
         # Local budget + unitized schedule preflight BEFORE any .remote()
+        tree = assert_launch_source_preflight(repo_root=PROJECT_ROOT)
         max_usd = float(cfg.get("budget", {}).get("max_usd", 50))
         est = build_pilot_workload_estimate(gpu="A10G", max_budget_usd=max_usd)
         assert_prelaunch_budget(est, max_budget_usd=max_usd)
@@ -491,6 +493,7 @@ def main(
                     {
                         **decision,
                         "preflight_ok": True,
+                        "clean_working_tree": tree,
                         "launching_units": [u.to_dict() for u in units],
                         "note": "Explicit single-unit GPU job (retries=0).",
                     },
@@ -505,6 +508,7 @@ def main(
                     {
                         **decision,
                         "preflight_ok": True,
+                        "clean_working_tree": tree,
                         "n_units": len(units),
                         "max_unit_high_hours": schedule["max_unit_high_hours"],
                         "full_high_hours": schedule["full_workload"]["total_high_hours"],

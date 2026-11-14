@@ -70,3 +70,34 @@ def assert_loaded_matches_pins(provenance: dict[str, Any], *, context: str = "")
             f"Adapter revision drift ({context}): loaded={adapter!r} "
             f"pinned={PINNED_ADAPTER_REVISION!r}"
         )
+
+
+def assert_clean_working_tree(*, repo_root: Path | None = None) -> dict[str, str]:
+    """Refuse scientific launch if the working tree has uncommitted changes.
+
+    A reviewed Git SHA must match the exact source that will execute; dirty trees
+    would silently diverge from the audited commit.
+    """
+    root = repo_root or Path(__file__).resolve().parents[3]
+    try:
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain"],
+            cwd=str(root),
+            text=True,
+        )
+    except Exception as e:
+        raise RuntimeError(
+            "Cannot verify clean working tree for launch preflight; "
+            "refusing to bind a reviewed Git SHA to an unverifiable tree."
+        ) from e
+    dirty = [ln for ln in status.splitlines() if ln.strip()]
+    if dirty:
+        preview = "\n".join(dirty[:20])
+        more = f"\n... and {len(dirty) - 20} more" if len(dirty) > 20 else ""
+        raise RuntimeError(
+            "Launch preflight refused: working tree is dirty. Uncommitted source "
+            "changes must not run under a reviewed Git SHA. Commit or restore "
+            f"changes first.\nDirty paths:\n{preview}{more}"
+        )
+    sha = resolve_executed_git_sha()
+    return {"status": "clean", "executed_git_sha": sha, "repo_root": str(root)}

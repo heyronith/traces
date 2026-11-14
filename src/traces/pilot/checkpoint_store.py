@@ -469,6 +469,33 @@ class PilotCheckpointStore:
         bucket[key] = payload
         self.commit_durable(f"damage_match_{key}")
 
+    @staticmethod
+    def damage_match_selection_hash(record: dict[str, Any]) -> str:
+        """Canonical hash of a frozen damage-control selection (excludes path metadata)."""
+        return sha256_json(
+            {
+                "kind": record.get("kind"),
+                "component_ids": list(record.get("component_ids") or []),
+                "target_K": record.get("target_K"),
+                "candidate_K": dict(record.get("candidate_K") or {}),
+            }
+        )
+
+    def verify_damage_match_selection(self, record: dict[str, Any], *, key: str) -> None:
+        """Reject tampered or drifted frozen damage-control payloads on load."""
+        expected = record.get("selection_hash")
+        if not expected:
+            raise RuntimeError(
+                f"Frozen damage-match selection missing selection_hash for {key}"
+            )
+        recomputed = self.damage_match_selection_hash(record)
+        if recomputed != expected:
+            raise RuntimeError(
+                f"Frozen damage-match selection hash mismatch for {key}: "
+                f"stored={expected} recomputed={recomputed} "
+                "(file may have been tampered)"
+            )
+
     def load_damage_match_selection(
         self, pair_key: str, k: int
     ) -> dict[str, Any] | None:
@@ -478,8 +505,11 @@ class PilotCheckpointStore:
             return None
         path = Path(meta.get("path") or "")
         if path.exists():
-            return json.loads(path.read_text())
-        return dict(meta)
+            record = json.loads(path.read_text())
+        else:
+            record = dict(meta)
+        self.verify_damage_match_selection(record, key=key)
+        return record
 
     def save_native_validation(self, recipient: int, payload: dict[str, Any]) -> None:
         self.state.setdefault("native_validation", {})[str(recipient)] = payload

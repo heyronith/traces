@@ -1,9 +1,9 @@
 {
   "pilot_enabled": false,
-  "status": "PRE_REGISTERED_V2_1_NOT_EXECUTED",
+  "status": "PRE_REGISTERED_V2_2_AMENDMENT_NOT_EXECUTED",
   "research_question": "NOT YET SELECTED",
   "preregistration": "docs/pilot_preregistration_v2_1.md",
-  "config_hash": "9abd80c0157ec4e7435aded1fdc96de1114815127268911b0411e703cf36ef21",
+  "config_hash": "cee6c2f91c1ecb721231f832e4f31ca8e73d1312bb961fd1587d614c2d8e1565",
   "metric_definitions": {
     "scoring_definition_id": "traces_pilot_D_K_v2",
     "primary_quantity": "D_r(S)",

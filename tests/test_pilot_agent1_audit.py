@@ -202,6 +202,30 @@ def test_frozen_damage_match_no_drift(tmp_path):
         store.save_damage_match_selection("donor42->recipient43", 5, bad)
 
 
+def test_frozen_damage_match_hash_rejects_file_tamper(tmp_path):
+    world = make_shared_causal_world(10)
+    out = tmp_path / "run"
+    run_two_phase_pilot(
+        SyntheticPilotScorer(world),
+        seeds=(42, 43),
+        k_budgets=(5, 10),
+        catalog=world.catalog,
+        output_dir=out,
+        execution_mode="synthetic_test",
+    )
+    store = PilotCheckpointStore(out)
+    sel = store.load_damage_match_selection("donor42->recipient43", 5)
+    assert sel is not None
+    path = Path(sel["path"])
+    tampered = json.loads(path.read_text())
+    # Keep stored selection_hash, alter scientific payload
+    ids = list(tampered.get("component_ids") or [])
+    tampered["component_ids"] = ids[1:] + ids[:1] if len(ids) > 1 else ids + ["tamper"]
+    path.write_text(json.dumps(tampered, indent=2) + "\n")
+    with pytest.raises(RuntimeError, match="hash mismatch|tampered"):
+        store.load_damage_match_selection("donor42->recipient43", 5)
+
+
 def test_native_gate_order_independent_across_k():
     # k=5 fails, k=10 passes → overall pass regardless of dict order
     a = evaluate_native_validation_gate({"42": {"5": 0.01, "10": 0.08}})
@@ -302,6 +326,30 @@ def test_load_dense_lora_refuses_unpinned_revision(monkeypatch):
         )
 
 
+def test_topk_config_retrieval_uses_pinned_adapter_revision(monkeypatch):
+    pytest.importorskip("peft")
+    import traces.model_loader as ml
+
+    seen: dict[str, object] = {}
+
+    def fake_download(repo, filename, subfolder=None, token=None, revision=None):
+        seen["repo"] = repo
+        seen["filename"] = filename
+        seen["subfolder"] = subfolder
+        seen["revision"] = revision
+        raise FileNotFoundError("stop after capturing kwargs")
+
+    monkeypatch.setattr(ml, "hf_hub_download", fake_download)
+    with pytest.raises(RuntimeError, match="pinned adapter revision|main"):
+        ml._read_topk_use_flag("repo", "l1523/seed42", "tok", revision="main")
+    out = ml._read_topk_use_flag(
+        "repo", "l1523/seed42", "tok", revision=PINNED_ADAPTER_REVISION
+    )
+    assert out is None  # download failed → soft miss
+    assert seen["revision"] == PINNED_ADAPTER_REVISION
+    assert seen["filename"] == "topk_config.json"
+
+
 def test_empty_set_d_recorded(tmp_path):
     world = make_shared_causal_world(8)
     run_two_phase_pilot(
@@ -326,7 +374,71 @@ def test_disabled_config_no_gpu_path():
 
     cfg = yaml.safe_load(Path("configs/pilot.yaml").read_text())
     assert cfg["enabled"] is False
+    assert cfg["preregistration_amendment"] == (
+        "docs/pilot_preregistration_v2_2_amendment.md"
+    )
+    assert "median" in cfg["analysis"]["descriptive_paired_statistics"]
+    assert cfg["analysis"]["descriptive_paired_statistics_status"] == (
+        "descriptive_only_not_confirmatory"
+    )
 
 
 def test_resolve_git_sha_explicit():
     assert resolve_executed_git_sha(explicit="abc1234") == "abc1234"
+
+
+def test_descriptive_paired_stats_median_iqr_std_signs():
+    from traces.pilot.transfer import descriptive_paired_difference_stats
+
+    stats = descriptive_paired_difference_stats([-2.0, -1.0, 0.0, 1.0, 3.0])
+    assert stats["n"] == 5
+    assert stats["median"] == 0.0
+    assert abs(stats["iqr"] - 2.0) < 1e-9  # q1=-1, q3=1
+    assert stats["n_positive"] == 2
+    assert stats["n_negative"] == 2
+    assert stats["n_zero"] == 1
+    assert stats["status"] == "descriptive_only_not_confirmatory"
+    assert stats["std"] is not None and stats["std"] > 0
+
+
+def test_descriptive_aggregates_in_pairwise_analysis(tmp_path):
+    world = make_shared_causal_world(10)
+    result = run_two_phase_pilot(
+        SyntheticPilotScorer(world),
+        seeds=(42, 43),
+        k_budgets=(5, 10),
+        catalog=world.catalog,
+        output_dir=tmp_path,
+        execution_mode="synthetic_test",
+    )
+    agg = result.analysis["descriptive_paired_aggregates"]
+    assert agg["vs_native"]["n"] >= 1
+    assert "median" in agg["vs_native"]
+    assert "iqr" in agg["vs_native"]
+    assert "std" in agg["vs_native"]
+    assert "n_positive" in agg["vs_native"]
+
+
+def test_clean_working_tree_preflight_refuses_dirty(tmp_path):
+    from traces.pilot.pins import assert_clean_working_tree
+    import subprocess
+
+    subprocess.check_call(["git", "init"], cwd=str(tmp_path))
+    subprocess.check_call(
+        ["git", "config", "user.email", "test@example.com"], cwd=str(tmp_path)
+    )
+    subprocess.check_call(
+        ["git", "config", "user.name", "test"], cwd=str(tmp_path)
+    )
+    (tmp_path / "a.txt").write_text("x\n")
+    subprocess.check_call(["git", "add", "a.txt"], cwd=str(tmp_path))
+    subprocess.check_call(
+        ["git", "commit", "-m", "init"], cwd=str(tmp_path)
+    )
+    # Clean tree OK
+    info = assert_clean_working_tree(repo_root=tmp_path)
+    assert info["status"] == "clean"
+    # Dirty tree refused
+    (tmp_path / "a.txt").write_text("dirty\n")
+    with pytest.raises(RuntimeError, match="working tree is dirty"):
+        assert_clean_working_tree(repo_root=tmp_path)

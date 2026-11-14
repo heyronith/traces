@@ -1,11 +1,12 @@
-# Stage 1 three-seed scientific pilot — PRE-REGISTERED v2.1, DISABLED.
+# Stage 1 three-seed scientific pilot — PRE-REGISTERED v2.1 + v2.2 amendment, DISABLED.
 # Final research question: NOT YET SELECTED.
 # Do not execute while enabled=false.
 enabled: false
 stage: 1
 name: three_seed_cross_seed_transfer_pilot
-status: PRE_REGISTERED_V2_1_NOT_EXECUTED
+status: PRE_REGISTERED_V2_2_AMENDMENT_NOT_EXECUTED
 preregistration: docs/pilot_preregistration_v2_1.md
+preregistration_amendment: docs/pilot_preregistration_v2_2_amendment.md
 preregistration_v2_retained: docs/pilot_preregistration_v2.md
 preregistration_v1_retained: docs/pilot_preregistration.md
 authorization_token: null  # must equal STAGE1_AUTHORIZED_BY_INDEPENDENT_REVIEW to unlock
@@ -107,6 +108,12 @@ analysis:
   prefer_absolute_paired_differences: true
   ratio_requires_min_abs_native_D: 0.05
   two_of_six_better_than_controls: descriptive_only_not_confirmatory
+  descriptive_paired_statistics:
+    - median
+    - iqr
+    - std
+    - sign_counts  # n_positive / n_negative / n_zero
+  descriptive_paired_statistics_status: descriptive_only_not_confirmatory
   component_overlap_is_not_mechanism_equivalence: true
   no_mechanistic_equivalence_from_transfer: true
 

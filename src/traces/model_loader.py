@@ -121,16 +121,34 @@ def _disable_dropout(model: torch.nn.Module) -> None:
             m.eval()
 
 
-def _read_topk_use_flag(adapter_repo: str, subfolder: str, token: str | None) -> bool | None:
+def _read_topk_use_flag(
+    adapter_repo: str,
+    subfolder: str,
+    token: str | None,
+    *,
+    revision: str | None = None,
+) -> bool | None:
+    """Read topk_config.json from the pinned adapter revision (fail closed on main)."""
     try:
         import json
 
+        if revision is None or revision in {"main", "None", ""}:
+            raise RuntimeError(
+                f"Refusing topk_config.json retrieval without pinned adapter "
+                f"revision (got {revision!r}); require {PINNED_ADAPTER_REVISION}"
+            )
         path = hf_hub_download(
-            adapter_repo, "topk_config.json", subfolder=subfolder, token=token
+            adapter_repo,
+            "topk_config.json",
+            subfolder=subfolder,
+            token=token,
+            revision=revision,
         )
         with open(path) as f:
             cfg = json.load(f)
         return bool(cfg.get("use_topk"))
+    except RuntimeError:
+        raise
     except Exception:
         return None
 
@@ -191,7 +209,9 @@ def load_dense_lora_model(
         base_rev = base_revision or _resolve_repo_revision(base_model, token)
         adapter_rev = adapter_revision or _resolve_repo_revision(adapter_repo, token)
 
-    use_topk = _read_topk_use_flag(adapter_repo, subfolder, token)
+    use_topk = _read_topk_use_flag(
+        adapter_repo, subfolder, token, revision=adapter_rev
+    )
     if use_topk is True:
         raise RuntimeError(
             "topk_config.json reports use_topk=true; this loader is for dense PEFT only"

@@ -9,8 +9,11 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Sequence
 
+from pathlib import Path
+
 from traces.cost_estimator import normalize_gpu_name
 from traces.pilot.budget import assert_prelaunch_budget, build_pilot_workload_estimate
+from traces.pilot.pins import assert_clean_working_tree
 from traces.pilot.transfer import DEFAULT_K_BUDGETS, SEEDS
 
 # Modal hard timeout per unit (seconds). High-end per-unit wall time must fit.
@@ -149,6 +152,11 @@ def assert_unitized_schedule_fits(schedule: dict[str, Any]) -> None:
             "Unitized schedule does not fit Modal unit deadline: "
             f"{offenders}. Increase timeout or further split work — refusing launch."
         )
+
+
+def assert_launch_source_preflight(*, repo_root: Path | None = None) -> dict[str, str]:
+    """Launch preflight: reviewed SHA must bind a clean working tree."""
+    return assert_clean_working_tree(repo_root=repo_root)
 
 
 def validate_assigned_gpu(

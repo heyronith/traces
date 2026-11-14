@@ -15,6 +15,7 @@ from traces.pilot.transfer import (
     REQUIRED_COMPARISON_SOURCES,
     all_directed_seed_pairs,
     correlated_pair_note,
+    descriptive_paired_difference_stats,
     paired_absolute_differences,
 )
 
@@ -75,6 +76,27 @@ ADEQUACY_RULES: dict[str, Any] = {
         "note": (
             "Support descriptive paired differences and spread across the same "
             "held-out instructions. Do not introduce unregistered confirmatory tests."
+        ),
+        "prereg_version": "v2.2_amendment",
+    },
+    "descriptive_paired_statistics": {
+        "metrics": [
+            "median",
+            "iqr",
+            "std",
+            "n_positive",
+            "n_negative",
+            "n_zero",
+        ],
+        "applied_to": (
+            "transfer-minus-control D differences at the comparison-group level "
+            "(vs_native / vs_random / vs_damage_matched) and, when available, "
+            "prompt-level paired differences on shared instruction IDs"
+        ),
+        "status": "descriptive_only_not_confirmatory",
+        "note": (
+            "Specified before execution for reporting only. No unregistered "
+            "confirmatory tests, p-values, or claim thresholds."
         ),
         "prereg_version": "v2.2_amendment",
     },
@@ -220,6 +242,7 @@ def analyze_per_pair_results(per_condition_rows: Sequence[dict[str, Any]]) -> di
                 "mean_D_transfer_minus_native": (
                     sum(paired) / len(paired) if paired else None
                 ),
+                "stats": descriptive_paired_difference_stats(paired),
                 "note": ADEQUACY_RULES["prompt_level_observations"]["note"],
             }
         pair_summaries.append(entry)
@@ -230,10 +253,31 @@ def analyze_per_pair_results(per_condition_rows: Sequence[dict[str, Any]]) -> di
             + "\n- ".join(errors)
         )
 
+    def _collect_diffs(field: str) -> list[float]:
+        out: list[float] = []
+        for s in pair_summaries:
+            block = s.get(field)
+            if not block:
+                continue
+            delta = block.get("D_transfer_minus_reference")
+            if delta is not None:
+                out.append(float(delta))
+        return out
+
+    descriptive_aggregates = {
+        "vs_native": descriptive_paired_difference_stats(_collect_diffs("vs_native")),
+        "vs_random": descriptive_paired_difference_stats(_collect_diffs("vs_random")),
+        "vs_damage_matched": descriptive_paired_difference_stats(
+            _collect_diffs("vs_damage_matched")
+        ),
+        "rule": ADEQUACY_RULES["descriptive_paired_statistics"],
+    }
+
     return {
         "per_pair_summaries": pair_summaries,
         "n_comparison_groups": len(pair_summaries),
         "adequacy_rules": ADEQUACY_RULES,
+        "descriptive_paired_aggregates": descriptive_aggregates,
         "pair_dependence_note": correlated_pair_note(all_directed_seed_pairs()),
         "mechanism_warning": (
             "Do not claim mechanistic equivalence based on transferred ablation effects."
