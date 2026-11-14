@@ -66,11 +66,39 @@ class SyntheticPilotScorer:
         self.noise = noise
         self._loaded: set[int] = set()
         self.load_events: list[tuple[str, int]] = []
+        self.scoring_definition_id = "traces_pilot_D_K_v2"
+
+    @property
+    def loaded_seeds(self) -> set[int]:
+        return set(self._loaded)
+
+    def provenance_for_loaded_seed(self, seed: int) -> dict[str, str]:
+        if seed not in self._loaded:
+            raise RuntimeError(
+                f"Seed {seed} is not loaded; refusing provenance lookup that "
+                "would reload a checkpoint"
+            )
+        return {
+            "base_model_revision": "synthetic",
+            "adapter_subfolder": f"l1523/seed{seed}",
+            "adapter_revision": "synthetic",
+        }
+
+    def provenance_for_seed(self, seed: int) -> dict[str, str]:
+        """Loads seed if needed (legacy). Prefer provenance_for_loaded_seed."""
+        self.ensure_seed(seed)
+        return self.provenance_for_loaded_seed(seed)
 
     def ensure_seed(self, seed: int) -> None:
-        if seed not in self._loaded:
-            self._loaded.add(seed)
-            self.load_events.append(("load", seed))
+        if seed in self._loaded:
+            return
+        if self._loaded:
+            raise RuntimeError(
+                f"Refusing to load seed {seed} while "
+                f"{sorted(self._loaded)} still loaded (at most one checkpoint)"
+            )
+        self._loaded.add(seed)
+        self.load_events.append(("load", seed))
 
     def unload_seed(self, seed: int) -> None:
         if seed in self._loaded:

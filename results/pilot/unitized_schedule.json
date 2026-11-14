@@ -1,0 +1,145 @@
+{
+  "version": "unitized_v1",
+  "gpu_assumed": "A10G",
+  "usd_per_hour": 1.1,
+  "full_workload": {
+    "total_high_hours": 11.63859046875,
+    "usd_high": 12.802449515625,
+    "usd_low": 5.215812765625001
+  },
+  "modal": {
+    "unit_timeout_sec": 14400,
+    "wall_clock_margin_sec": 1200,
+    "unit_deadline_sec": 13200,
+    "retries": 0,
+    "max_containers": 1,
+    "note": "One Modal GPU invocation per unit. Independent resume via durable checkpoint store. Additional GPU jobs require explicit authorization."
+  },
+  "units": [
+    {
+      "unit_id": "discovery_seed_42",
+      "kind": "discovery",
+      "seed": 42,
+      "categories_high_sec": 3124.01375,
+      "rerun_high_sec": 1093.4048125,
+      "total_high_sec": 4217.4185625,
+      "total_high_hours": 1.17150515625,
+      "fits_unit_deadline": true,
+      "unit_timeout_sec": 14400,
+      "unit_deadline_sec": 13200
+    },
+    {
+      "unit_id": "discovery_seed_43",
+      "kind": "discovery",
+      "seed": 43,
+      "categories_high_sec": 3124.01375,
+      "rerun_high_sec": 1093.4048125,
+      "total_high_sec": 4217.4185625,
+      "total_high_hours": 1.17150515625,
+      "fits_unit_deadline": true,
+      "unit_timeout_sec": 14400,
+      "unit_deadline_sec": 13200
+    },
+    {
+      "unit_id": "discovery_seed_44",
+      "kind": "discovery",
+      "seed": 44,
+      "categories_high_sec": 3124.01375,
+      "rerun_high_sec": 1093.4048125,
+      "total_high_sec": 4217.4185625,
+      "total_high_hours": 1.17150515625,
+      "fits_unit_deadline": true,
+      "unit_timeout_sec": 14400,
+      "unit_deadline_sec": 13200
+    },
+    {
+      "unit_id": "transfer_recipient_42",
+      "kind": "transfer",
+      "seed": 42,
+      "categories_high_sec": 7306.665,
+      "rerun_high_sec": 2557.33275,
+      "total_high_sec": 9863.99775,
+      "total_high_hours": 2.739999375,
+      "fits_unit_deadline": true,
+      "unit_timeout_sec": 14400,
+      "unit_deadline_sec": 13200
+    },
+    {
+      "unit_id": "transfer_recipient_43",
+      "kind": "transfer",
+      "seed": 43,
+      "categories_high_sec": 7306.665,
+      "rerun_high_sec": 2557.33275,
+      "total_high_sec": 9863.99775,
+      "total_high_hours": 2.739999375,
+      "fits_unit_deadline": true,
+      "unit_timeout_sec": 14400,
+      "unit_deadline_sec": 13200
+    },
+    {
+      "unit_id": "transfer_recipient_44",
+      "kind": "transfer",
+      "seed": 44,
+      "categories_high_sec": 7306.665,
+      "rerun_high_sec": 2557.33275,
+      "total_high_sec": 9863.99775,
+      "total_high_hours": 2.739999375,
+      "fits_unit_deadline": true,
+      "unit_timeout_sec": 14400,
+      "unit_deadline_sec": 13200
+    }
+  ],
+  "n_units": 6,
+  "max_unit_high_hours": 2.739999375,
+  "all_units_fit_deadline": true,
+  "prelaunch_budget_check": {
+    "max_budget_usd": 50.0,
+    "projected_usd_high": 12.802449515625,
+    "within_budget": true,
+    "action_if_exceeded": "abort_before_gpu_launch"
+  },
+  "cost_range_by_gpu": {
+    "L4": {
+      "usd_low": 3.7933183750000006,
+      "usd_high": 9.310872375,
+      "usd_per_hour": 0.8
+    },
+    "A10G": {
+      "usd_low": 5.215812765625001,
+      "usd_high": 12.802449515625,
+      "usd_per_hour": 1.1
+    },
+    "T4": {
+      "usd_low": 2.84498878125,
+      "usd_high": 6.983154281249999,
+      "usd_per_hour": 0.6
+    }
+  },
+  "measured_vs_assumed": {
+    "calibration_measured_rates": {
+      "gpu": "A10G",
+      "gpu_name_observed": "NVIDIA A10",
+      "load_seconds": 12.053,
+      "tf_s_per_forward": 0.06035,
+      "gen_s_per_call": 1.097,
+      "peak_vram_bytes": 6408896512
+    },
+    "stage0_measured_rates_legacy": {
+      "gpu": "A10G",
+      "greedy_s_per_prompt": 1.633,
+      "teacher_forced_s_per_prompt": 0.056
+    },
+    "n_forward_passes_priced_with_calibration_rate": 97554,
+    "n_events_assumed": 6,
+    "note": "Planning reference is the bounded seed-42 calibration on NVIDIA A10. Unload seconds remain assumed. Contingency bands retain conservative uncertainty."
+  },
+  "stopping_procedure": {
+    "preflight": "Abort if high-end projected cost exceeds authorized Stage 1 cap.",
+    "runtime_guard": "Checkpoint per seed; stop if remaining work exceeds deadline/budget.",
+    "early_stop_scientific": "If discovery-fold top-10 Jaccard < 0.3 for every seed, stop before held_out. Native validation |D| gate recorded before transfer interpretation.",
+    "no_unbounded_retries": true,
+    "dollars_not_account_limit": "Software estimates are NOT an enforced Modal account spending limit.",
+    "unit_wall_clock": "Each unit stops and persists before 13200s (timeout 14400s minus 1200s margin).",
+    "authorization": "retries=0; each additional GPU unit invocation requires explicit authorization (no automatic retry storm)."
+  }
+}

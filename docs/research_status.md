@@ -2,10 +2,10 @@
 
 **Final research question: NOT YET SELECTED.**
 
-**Current status:** Execution integration wired for the three-seed pilot; **still disabled / not launched**.
+**Current status:** Final execution blockers corrected (donor-load, resume, unitized timeout); **still disabled / not launched**.
 
 **Calibration:** Accepted (`3e9f94f…`).  
-**Scientific pilot:** Implementation ready under separate Stage-1 auth; committed `enabled: false`.
+**Scientific pilot:** Unitized executor ready under separate Stage-1 auth; committed `enabled: false`.
 
 ## Stage gate
 
@@ -14,6 +14,7 @@
 | Stage 0 — engineering validation | Passed |
 | Bounded calibration (seed 42) | Accepted |
 | Stage 1 execution wiring | **Implemented; disabled** |
+| Stage 1 final execution blockers | **Corrected; awaiting independent re-review** |
 | Stage 1 — scientific pilot GPU | **Not authorized / not executed** |
 | Novelty / causal claims | **Not authorized** |
 

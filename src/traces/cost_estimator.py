@@ -41,6 +41,9 @@ def normalize_gpu_name(name: str | None) -> str:
     for key in ("H100", "A100", "A10G", "L4", "T4"):
         if key in compact:
             return key
+    # torch.cuda.get_device_name often returns "NVIDIA A10" (not A10G)
+    if "A10" in compact and "A100" not in compact:
+        return "A10G"
     return name
 
 

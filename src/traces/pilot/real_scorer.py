@@ -133,7 +133,32 @@ class RealGemmaPilotScorer:
             "n_generated_tokens": 0,
         }
 
+    @property
+    def loaded_seeds(self) -> set[int]:
+        return set(self._bundles.keys())
+
+    def provenance_for_loaded_seed(self, seed: int) -> dict[str, Any]:
+        """Provenance for an already-loaded seed — never triggers a load."""
+        if seed not in self._bundles:
+            raise RuntimeError(
+                f"Seed {seed} is not loaded; refusing provenance lookup that "
+                "would reload a checkpoint"
+            )
+        b = self._bundles[seed]
+        return {
+            "seed": seed,
+            "adapter_subfolder": SEED_SUBFOLDER[seed],
+            "base_model_revision": b.load_report.base_revision,
+            "adapter_revision": b.load_report.adapter_revision,
+            "dtype": b.load_report.dtype,
+            "base_model_id": b.load_report.base_model_id,
+            "adapter_repo": b.load_report.adapter_repo,
+            "device": str(_device_of(b.model)),
+            "eval_mode": (not b.model.training),
+        }
+
     def provenance_for_seed(self, seed: int) -> dict[str, Any]:
+        """Legacy helper — loads if needed. Prefer provenance_for_loaded_seed."""
         b = self._require_bundle(seed)
         return {
             "seed": seed,
@@ -150,6 +175,11 @@ class RealGemmaPilotScorer:
     def ensure_seed(self, seed: int) -> CheckpointBundle:
         if seed in self._bundles:
             return self._bundles[seed]
+        if self._bundles:
+            raise RuntimeError(
+                f"Refusing to load seed {seed} while "
+                f"{sorted(self._bundles)} still loaded (at most one checkpoint)"
+            )
         if not self._autoload:
             raise RuntimeError(
                 f"Seed {seed} not preloaded and autoload disabled "
@@ -165,6 +195,7 @@ class RealGemmaPilotScorer:
         del b.model
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+        self.provenance["loaded_seeds"] = sorted(self._bundles)
 
     def _load_seed(self, seed: int) -> CheckpointBundle:
         if seed not in SEED_SUBFOLDER:

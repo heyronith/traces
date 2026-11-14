@@ -275,51 +275,108 @@ def run_pilot_calibration_gpu(
 
 @app.function(
     gpu=GPU,
-    timeout=6 * 60 * 60,
+    timeout=4 * 60 * 60,  # per-unit hard cap (full pilot high est ~11.64h)
+    max_containers=1,
+    retries=0,
+    secrets=[modal.Secret.from_name("hf-token")],
+    volumes={"/cache/huggingface": model_cache, "/results": results_vol},
+)
+def run_stage1_pilot_unit_gpu(
+    unit: dict[str, Any],
+    authorized: bool = False,
+    git_sha: str | None = None,
+    observed_gpu: str | None = None,
+) -> dict[str, Any]:
+    """One independently recoverable Stage-1 unit (discovery or transfer).
+
+    Never unlocked by calibration authorization. retries=0. One container.
+    Full pilot is a sequence of these units; each must be explicitly authorized.
+    """
+    import os
+    import sys
+
+    sys.path.insert(0, "/root/src")
+    os.environ.setdefault("TRACES_DATA_ROOT", "/root/data")
+    import yaml
+    from traces.cost_estimator import normalize_gpu_name
+    from traces.pilot.auth import assert_real_pilot_authorized
+    from traces.pilot.calibration import json_safe
+    from traces.pilot.execution import run_real_pilot_authorized
+    from traces.pilot.jobs import UNIT_DEADLINE_SEC, WallClockGuard
+    from traces.pilot.real_scorer import RealGemmaPilotScorer
+
+    cfg = yaml.safe_load(Path("/root/configs/pilot.yaml").read_text())
+    if not authorized:
+        raise RuntimeError("Pilot GPU unit called with authorized=False; refusing.")
+    assert_real_pilot_authorized(cfg)
+
+    kind = unit.get("kind")
+    seed = int(unit["seed"])
+    if kind not in {"discovery", "transfer"}:
+        raise RuntimeError(f"Unknown unit kind: {kind}")
+
+    # Record actual GPU type when available for pricing/runtime reconciliation.
+    gpu_name = observed_gpu
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+    except Exception:
+        pass
+    gpu_key = normalize_gpu_name(gpu_name or "A10G")
+
+    wall = WallClockGuard(deadline_sec=UNIT_DEADLINE_SEC)
+    scorer = RealGemmaPilotScorer(seeds=(seed,))
+    try:
+        result = run_real_pilot_authorized(
+            scorer,
+            seeds=(42, 43, 44),
+            output_dir="/results/pilot/stage1_run",
+            config_path="/root/configs/pilot.yaml",
+            wall_guard=wall,
+            unit={"kind": kind, "seed": seed, "unit_id": unit.get("unit_id")},
+        )
+        payload = json_safe(result.to_dict())
+        payload["git_sha"] = git_sha
+        payload["unit"] = unit
+        payload["observed_gpu"] = gpu_name
+        payload["pricing_gpu_key"] = gpu_key
+        payload["wall_clock"] = {
+            "deadline_sec": UNIT_DEADLINE_SEC,
+            "elapsed_sec": wall.elapsed(),
+            "stopped_early": wall.stopped_early,
+            "stop_reason": wall.stop_reason,
+        }
+        unit_out = Path(f"/results/pilot/stage1_unit_{unit.get('unit_id', kind)}_{seed}.json")
+        unit_out.write_text(json.dumps(payload, indent=2) + "\n")
+        results_vol.commit()
+        return payload
+    finally:
+        scorer.unload_seed(seed)
+
+
+# Backward-compatible name: refuses monolith; points operators at unitized path.
+@app.function(
+    gpu=GPU,
+    timeout=60,
     max_containers=1,
     retries=0,
     secrets=[modal.Secret.from_name("hf-token")],
     volumes={"/cache/huggingface": model_cache, "/results": results_vol},
 )
 def run_stage1_pilot_gpu(authorized: bool = False, git_sha: str | None = None) -> dict[str, Any]:
-    """Three-seed scientific pilot — refuses unless Stage-1 pilot-authorized.
+    """Deprecated monolith entry — always refuses.
 
-    Never unlocked by calibration authorization. No retries. One container.
+    Full-pilot high estimate (~11.64 h) exceeds Modal's practical single-job
+    timeout. Use ``run_stage1_pilot_unit_gpu`` via the local entrypoint schedule.
     """
-    import sys
-
-    sys.path.insert(0, "/root/src")
-    import yaml
-    from traces.pilot.auth import assert_real_pilot_authorized
-    from traces.pilot.budget import assert_prelaunch_budget, build_pilot_workload_estimate
-    from traces.pilot.calibration import json_safe
-    from traces.pilot.execution import run_real_pilot_authorized
-    from traces.pilot.real_scorer import RealGemmaPilotScorer
-
-    cfg = yaml.safe_load(Path("/root/configs/pilot.yaml").read_text())
-    if not authorized:
-        raise RuntimeError("Pilot GPU called with authorized=False; refusing.")
-    assert_real_pilot_authorized(cfg)
-    est = build_pilot_workload_estimate(gpu="A10G", max_budget_usd=float(cfg.get("budget", {}).get("max_usd", 50)))
-    assert_prelaunch_budget(est, max_budget_usd=float(cfg.get("budget", {}).get("max_usd", 50)))
-    scorer = RealGemmaPilotScorer(seeds=(42, 43, 44))
-    try:
-        result = run_real_pilot_authorized(
-            scorer,
-            output_dir="/results/pilot/stage1_run",
-            config_path="/root/configs/pilot.yaml",
-        )
-        payload = json_safe(result.to_dict())
-        payload["git_sha"] = git_sha
-        payload["prelaunch_estimate"] = est["cost_range_primary_gpu"]
-        Path("/results/pilot/stage1_results.json").write_text(
-            json.dumps(payload, indent=2) + "\n"
-        )
-        results_vol.commit()
-        return payload
-    finally:
-        for s in (42, 43, 44):
-            scorer.unload_seed(s)
+    raise RuntimeError(
+        "Monolithic run_stage1_pilot_gpu is disabled: high estimate ~11.64 h "
+        "exceeds a safe single Modal timeout. Launch bounded units via "
+        "`modal run modal_app.py --pilot` after authorization (local preflight "
+        "then one .remote() per unit, retries=0)."
+    )
 
 
 @app.local_entrypoint()
@@ -328,6 +385,7 @@ def main(
     smoke: bool = False,
     pilot_calibration: bool = False,
     pilot: bool = False,
+    pilot_unit: str | None = None,
 ) -> None:
     """CLI: modal run modal_app.py --dry-run | --smoke | --pilot-calibration | --pilot"""
     if sum(1 for x in (dry_run, smoke, pilot_calibration, pilot) if x) > 1:
@@ -339,7 +397,13 @@ def main(
 
         sys.path.insert(0, str(PROJECT_ROOT / "src"))
         from traces.pilot.auth import pilot_launch_decision
+        from traces.pilot.budget import assert_prelaunch_budget, build_pilot_workload_estimate
         from traces.pilot.calibration import load_pilot_config_for_calibration
+        from traces.pilot.jobs import (
+            assert_unitized_schedule_fits,
+            build_unitized_schedule,
+            plan_execution_units,
+        )
 
         cfg = load_pilot_config_for_calibration(PROJECT_ROOT / "configs" / "pilot.yaml")
         decision = pilot_launch_decision(cfg)
@@ -350,17 +414,81 @@ def main(
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(json.dumps(decision, indent=2) + "\n")
             return
-        # Authorized path exists for later review — still require explicit .remote
+
+        # Local budget + unitized schedule preflight BEFORE any .remote()
+        max_usd = float(cfg.get("budget", {}).get("max_usd", 50))
+        est = build_pilot_workload_estimate(gpu="A10G", max_budget_usd=max_usd)
+        assert_prelaunch_budget(est, max_budget_usd=max_usd)
+        schedule = build_unitized_schedule(gpu="A10G", max_budget_usd=max_usd)
+        assert_unitized_schedule_fits(schedule)
+        sched_path = PROJECT_ROOT / "results" / "pilot" / "unitized_schedule.json"
+        sched_path.parent.mkdir(parents=True, exist_ok=True)
+        sched_path.write_text(json.dumps(schedule, indent=2) + "\n")
+
+        units = plan_execution_units()
+        if pilot_unit:
+            units = [u for u in units if u.unit_id == pilot_unit]
+            if not units:
+                raise SystemExit(f"Unknown pilot_unit={pilot_unit}")
+            # Explicit single-unit authorization path
+            print(
+                json.dumps(
+                    {
+                        **decision,
+                        "preflight_ok": True,
+                        "launching_units": [u.to_dict() for u in units],
+                        "note": "Explicit single-unit GPU job (retries=0).",
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            # Multi-unit: still requires Stage-1 auth; each .remote is separate,
+            # retries=0; no automatic retry of failed units.
+            print(
+                json.dumps(
+                    {
+                        **decision,
+                        "preflight_ok": True,
+                        "n_units": len(units),
+                        "max_unit_high_hours": schedule["max_unit_high_hours"],
+                        "full_high_hours": schedule["full_workload"]["total_high_hours"],
+                        "note": (
+                            "Launching bounded units sequentially. Additional GPU "
+                            "jobs beyond this authorized schedule require a new "
+                            "explicit authorization."
+                        ),
+                    },
+                    indent=2,
+                )
+            )
+
         try:
             commit = subprocess.check_output(
                 ["git", "rev-parse", "HEAD"], cwd=str(PROJECT_ROOT), text=True
             ).strip()
         except Exception:
             commit = None
-        results = run_stage1_pilot_gpu.remote(authorized=True, git_sha=commit)
+
+        all_results = []
+        for u in units:
+            results = run_stage1_pilot_unit_gpu.remote(
+                unit=u.to_dict(),
+                authorized=True,
+                git_sha=commit,
+            )
+            all_results.append(results)
+            unit_local = (
+                PROJECT_ROOT
+                / "results"
+                / "pilot"
+                / f"stage1_unit_{u.unit_id}.json"
+            )
+            unit_local.write_text(json.dumps(results, indent=2) + "\n")
+
         out = PROJECT_ROOT / "results" / "pilot" / "stage1_results.json"
-        out.write_text(json.dumps(results, indent=2) + "\n")
-        print(json.dumps(results, indent=2))
+        out.write_text(json.dumps({"units": all_results, "schedule": schedule}, indent=2) + "\n")
+        print(json.dumps({"n_units_completed": len(all_results)}, indent=2))
         return
     if pilot_calibration:
         import sys
