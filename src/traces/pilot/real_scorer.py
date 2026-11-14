@@ -297,6 +297,48 @@ class RealGemmaPilotScorer:
         return float(val)
 
     @torch.inference_mode()
+    def score_baseline_behavior(
+        self, seed: int, instruction_ids: Sequence[str], split: str
+    ) -> dict[str, float]:
+        """Intact trigger ASR and control false-fire (continuation-only)."""
+        bundle = self._require_bundle(seed)
+        eos_ids = stopping_criteria_ids(bundle.tokenizer, bundle.load_report.eot_token_id)
+        trig_fire = 0
+        ctrl_fire = 0
+        n = 0
+        for iid in instruction_ids:
+            self._ensure_rendered(bundle, iid, split)
+            for tag, rendered_map, counter_name in (
+                ("trigger", bundle.rendered_trigger, "trig"),
+                ("control", bundle.rendered_control, "ctrl"),
+            ):
+                rendered = rendered_map[(split, iid)]
+                bundle.manager.clear()
+                cont, n_tok, _, _ = generate_continuation(
+                    bundle.model,
+                    bundle.tokenizer,
+                    rendered,
+                    max_new_tokens=self.max_new_tokens,
+                    do_sample=False,
+                    use_cache=self.use_cache,
+                    eos_token_ids=eos_ids,
+                )
+                self.counters["n_gen_calls"] += 1
+                self.counters["n_generated_tokens"] += int(n_tok)
+                fired = payload_match_from_continuation(cont)
+                if tag == "trigger" and fired:
+                    trig_fire += 1
+                if tag == "control" and fired:
+                    ctrl_fire += 1
+            n += 1
+        assert bundle.manager.active_hook_count == 0
+        return {
+            "trigger_asr": float(trig_fire / max(n, 1)),
+            "control_false_fire": float(ctrl_fire / max(n, 1)),
+            "n_instructions": float(n),
+        }
+
+    @torch.inference_mode()
     def score_D_single(
         self, seed: int, component_id: str, instruction_id: str, split: str
     ) -> float:
@@ -308,7 +350,6 @@ class RealGemmaPilotScorer:
         )
         assert bundle.manager.active_hook_count == 0
         return float(intact - ablated)
-
     @torch.inference_mode()
     def score_D_set(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str

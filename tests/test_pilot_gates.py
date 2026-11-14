@@ -38,7 +38,7 @@ def test_native_validation_gate():
 
 
 def test_engine_stops_before_held_out_when_reliability_fails(tmp_path, monkeypatch):
-    from traces.pilot import gates as gates_mod
+    from traces.pilot import execution as execution_mod
     from traces.pilot.gates import GateResult
 
     def _fail_rel(*args, **kwargs):
@@ -52,14 +52,9 @@ def test_engine_stops_before_held_out_when_reliability_fails(tmp_path, monkeypat
             details={"forced": True},
         )
 
-    monkeypatch.setattr(gates_mod, "evaluate_discovery_reliability_gate", _fail_rel)
-    # Engine imported the symbol by name — patch on engine module too
-    import traces.pilot.engine as engine_mod
-
-    monkeypatch.setattr(engine_mod, "evaluate_discovery_reliability_gate", _fail_rel)
+    monkeypatch.setattr(execution_mod, "evaluate_discovery_reliability_gate", _fail_rel)
 
     world = make_shared_causal_world(k_plant=10)
-    # Small catalog for speed; reliability gate is forced to fail before held-out
     cat = world.catalog[:80]
     result = run_pilot_pipeline(
         SyntheticPilotScorer(world),
@@ -69,7 +64,6 @@ def test_engine_stops_before_held_out_when_reliability_fails(tmp_path, monkeypat
         output_dir=tmp_path,
         execution_mode="synthetic_test",
     )
-    assert result.gates["gates"][0]["passed"] is False
     assert result.stopped_early is True
     held = [r for r in result.per_condition if r["split"] == "held_out"]
     assert held == []

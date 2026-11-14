@@ -27,9 +27,12 @@ def test_dry_run_only_no_gpu():
     assert payload["execution"] == "NOT_RUN"
     assert payload["dataset"]["hashes_ok"] is True
     assert (
-        payload["workload_estimate_v2_1"]["usd_high"]
-        > payload["workload_estimate_v2_1"]["usd_low"]
+        payload["workload_estimate_v2_2"]["usd_high"]
+        > payload["workload_estimate_v2_2"]["usd_low"]
     )
     assert payload["metric_definitions"]["primary_quantity"] == "D_r(S)"
-    assert payload["calibration_executed"] is False
-    assert payload["workload_estimate_v2_1"]["joint_D_instruction_scores_both_splits"] == 3000
+    assert payload["calibration_executed"] is True
+    assert payload["gpu_jobs_launched"] is False
+    assert payload["execution"] == "NOT_RUN"
+    assert payload["workload_estimate_v2_2"]["joint_D_instruction_scores_both_splits"] == 3000
+    assert payload["pilot_launch_decision"]["invoke_gpu"] is False

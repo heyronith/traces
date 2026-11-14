@@ -111,14 +111,15 @@ analysis:
   no_mechanistic_equivalence_from_transfer: true
 
 budget:
-  reference_throughput: stage0_a10g_measured
+  reference_throughput: calibration_a10_measured
   primary_pricing_gpu: A10G
-  workload_file: results/pilot/workload_dry_run_v2_1.json
+  max_usd: 50.0
+  workload_file: results/pilot/workload_dry_run_v2_2.json
   forbid_claim_pilot_costs_0_53: true
   dollars_are_not_account_spend_limit: true
   reconcile_from_engine_schedule: true
-  calibration_command_prepared: "modal run modal_app.py --pilot-calibration"
-  calibration_executed: false
+  prelaunch_budget_check: true
+  calibration_reference_commit: 3e9f94f46de54207ea457529ea03367ffca7cb74
 
 calibration:
   enabled: false  # preserved disabled; independent review may authorize later
@@ -130,12 +131,16 @@ calibration:
   retries: 0
   implemented: true
   gated_launch: true
-  executed: false
+  executed: true  # one bounded run recorded; launch remains disabled
   never_launches_full_pilot: true
 
 execution:
   modal_gpu_jobs: forbidden_until_authorized
   dry_run_only: true
+  phases: [discovery_per_seed, transfer_per_recipient]
   real_entrypoint: traces.pilot.engine.run_real_pilot_pipeline
   synthetic_test_entrypoint: traces.pilot.engine.run_pilot_pipeline
   allow_execution_cannot_unlock_real: true
+  calibration_auth_cannot_unlock_pilot: true
+  resumable_checkpoints: true
+  baseline_check_before_screening: true

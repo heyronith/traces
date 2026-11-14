@@ -1,0 +1,145 @@
+{
+  "pilot_enabled": false,
+  "status": "PRE_REGISTERED_V2_1_NOT_EXECUTED",
+  "research_question": "NOT YET SELECTED",
+  "preregistration": "docs/pilot_preregistration_v2_1.md",
+  "config_hash": "9abd80c0157ec4e7435aded1fdc96de1114815127268911b0411e703cf36ef21",
+  "metric_definitions": {
+    "scoring_definition_id": "traces_pilot_D_K_v2",
+    "primary_quantity": "D_r(S)",
+    "d_definition": "mean_triggered[ mean_logP_per_target_token(intact) - mean_logP_per_target_token(ablate S) ]",
+    "d_sign": "positive_D_means_suppresses_target_likelihood",
+    "secondary_quantity": "trigger_minus_control_logprob_contrast",
+    "secondary_note": "Must not silently substitute for D",
+    "benign_damage": "K_r(S)",
+    "k_policy": {
+      "inputs": "control_tagged_prompts_only",
+      "positions": "all_non_padding_prompt_positions",
+      "padding_exclusion": "attention_mask == 1",
+      "aggregation": "mean_over_valid_positions_across_batch",
+      "definition": "KL(intact || intervened) on next-token distributions",
+      "temperature": 1.0
+    },
+    "intervention_semantics": "activation_ablation_joint_hooks_not_weight_reversion"
+  },
+  "dataset": {
+    "manifest_name": "traces_pilot_instructions_v1",
+    "hashes_ok": true,
+    "hash_checks": {
+      "instructions_ordered_pool": true,
+      "discovery": true,
+      "validation": true,
+      "held_out": true,
+      "all_splits": true
+    },
+    "manifest_hashes": {
+      "instructions_ordered_pool": "55b739c008dc2fc4e4b909086a5bd89cfe0a0b542484c6980bc7db278e81d3aa",
+      "discovery": "477b2b94b5337103317b4a8f6a387b30b756d115b53368fa7e8fd13616394750",
+      "validation": "4c7f9615e5408de99ffbaf0a18db0fc5e238b2d3866c0e5f4888cfbcc96fb1b8",
+      "held_out": "76105becdce51e67a13f68dd51eba189557c32f030986cd79855c4bbf10b0107",
+      "all_splits": "2c79227bbf4ef89c4e378e89c5b6de841287d82b09076e77ee2fa1da9237265d"
+    },
+    "alpaca_overlap": {
+      "training_dataset": "yahma/alpaca-cleaned",
+      "status": "possible_but_unchecked_at_freeze",
+      "policy": "Instructions were authored for this pilot and are not copied from a known Alpaca export in-repo. Exact string overlap with yahma/alpaca-cleaned is possible and must be reported before scientific claims.",
+      "smoke_overlap": false
+    },
+    "selection_protocol": {
+      "description": "Authored fixed candidate list; exclude Stage-0 smoke instructions; take first 100 unique; Fisher\u2013Yates with LCG seed 20261113; contiguous split discovery[0:50], validation[50:75], held_out[75:100].",
+      "shuffle_seed": 20261113,
+      "rng": "LCG a=1103515245 c=12345 m=2^31",
+      "openrouter_used": false,
+      "smoke_prompts_excluded": true,
+      "smoke_prompts_are_not_scientific_evidence": true
+    },
+    "paired_prompt_hashes": {
+      "discovery": "3051212a511f519363bb42dfe36ba25a5e861ee6b6493253b3edf47b1c963e34",
+      "validation": "c12b933a2cc0f715e7e27d0f17ec971f9774bfa1c99ab93180d7d0ed419a8a76",
+      "held_out": "ca483cef22efef77712fe4b027adf0bf3ffb720b0aaa07bac14c5db765fa45ac"
+    }
+  },
+  "dataset_audit": {
+    "alpaca_status": "datasets_unavailable: ModuleNotFoundError",
+    "alpaca_revision": null,
+    "overlap_conclusion": "UNVERIFIED_CORPUS_INACCESSIBLE",
+    "exact_overlaps": 0,
+    "n_corpus_rows_scanned": 0,
+    "explicit_non_claim": "Overlap remains unverified. Do not interpret empty exact_overlaps as evidence of no training-corpus overlap.",
+    "smoke_overlap_ids": [],
+    "frozen_v1_immutable": true
+  },
+  "workload_estimate_v2_2": {
+    "version": "2.2",
+    "usd_low": 5.215812765625001,
+    "usd_high": 12.802449515625,
+    "seconds_low": 17069.9326875,
+    "seconds_high": 41898.9256875,
+    "joint_D_instruction_scores_both_splits": 3000,
+    "checkpoint_loads": 6,
+    "by_gpu": {
+      "L4": {
+        "usd_low": 3.7933183750000006,
+        "usd_high": 9.310872375,
+        "usd_per_hour": 0.8
+      },
+      "A10G": {
+        "usd_low": 5.215812765625001,
+        "usd_high": 12.802449515625,
+        "usd_per_hour": 1.1
+      },
+      "T4": {
+        "usd_low": 2.84498878125,
+        "usd_high": 6.983154281249999,
+        "usd_per_hour": 0.6
+      }
+    },
+    "measured_vs_assumed": {
+      "calibration_measured_rates": {
+        "gpu": "A10G",
+        "gpu_name_observed": "NVIDIA A10",
+        "load_seconds": 12.053,
+        "tf_s_per_forward": 0.06035,
+        "gen_s_per_call": 1.097,
+        "peak_vram_bytes": 6408896512
+      },
+      "stage0_measured_rates_legacy": {
+        "gpu": "A10G",
+        "greedy_s_per_prompt": 1.633,
+        "teacher_forced_s_per_prompt": 0.056
+      },
+      "n_forward_passes_priced_with_calibration_rate": 97554,
+      "n_events_assumed": 6,
+      "note": "Planning reference is the bounded seed-42 calibration on NVIDIA A10. Unload seconds remain assumed. Contingency bands retain conservative uncertainty."
+    },
+    "prelaunch_budget_check": {
+      "max_budget_usd": 50.0,
+      "projected_usd_high": 12.802449515625,
+      "within_budget": true,
+      "action_if_exceeded": "abort_before_gpu_launch"
+    },
+    "stopping_procedure": {
+      "preflight": "Abort if high-end projected cost exceeds authorized Stage 1 cap.",
+      "runtime_guard": "Checkpoint per seed; stop if remaining work exceeds deadline/budget.",
+      "early_stop_scientific": "If discovery-fold top-10 Jaccard < 0.3 for every seed, stop before held_out. Native validation |D| gate recorded before transfer interpretation.",
+      "no_unbounded_retries": true,
+      "dollars_not_account_limit": "Software estimates are NOT an enforced Modal account spending limit."
+    },
+    "explicit_non_claim": "Full pilot cost is not $0.53. Screening 396\u00d73 and damage-candidate KL dominate. Dollar estimates are software projections, not Modal account caps.",
+    "reconciliation_note": "Joint instruction-level D scores on both splits = 3000. Two-phase checkpoint loads = 6. Condition evals/split = 60."
+  },
+  "pilot_launch_decision": {
+    "mode": "stage1_scientific_pilot",
+    "pilot_enabled": false,
+    "calibration_enabled": false,
+    "will_launch_calibration": false,
+    "timeout_note": "Bounded Modal pilot function; pre-launch budget check required",
+    "status": "REFUSED_NOT_AUTHORIZED",
+    "invoke_gpu": false,
+    "reason": "Scientific pilot disabled (enabled=false). Real pilot entrypoint refuses execution.",
+    "note": "No Modal GPU pilot function invoked."
+  },
+  "execution": "NOT_RUN",
+  "gpu_jobs_launched": false,
+  "calibration_executed": true
+}

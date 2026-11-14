@@ -1,0 +1,11 @@
+{
+  "mode": "stage1_scientific_pilot",
+  "pilot_enabled": false,
+  "calibration_enabled": false,
+  "will_launch_calibration": false,
+  "timeout_note": "Bounded Modal pilot function; pre-launch budget check required",
+  "status": "REFUSED_NOT_AUTHORIZED",
+  "invoke_gpu": false,
+  "reason": "Scientific pilot disabled (enabled=false). Real pilot entrypoint refuses execution.",
+  "note": "No Modal GPU pilot function invoked."
+}

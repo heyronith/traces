@@ -273,15 +273,95 @@ def run_pilot_calibration_gpu(
         scorer.unload_seed(plan.seed)
 
 
+@app.function(
+    gpu=GPU,
+    timeout=6 * 60 * 60,
+    max_containers=1,
+    retries=0,
+    secrets=[modal.Secret.from_name("hf-token")],
+    volumes={"/cache/huggingface": model_cache, "/results": results_vol},
+)
+def run_stage1_pilot_gpu(authorized: bool = False, git_sha: str | None = None) -> dict[str, Any]:
+    """Three-seed scientific pilot — refuses unless Stage-1 pilot-authorized.
+
+    Never unlocked by calibration authorization. No retries. One container.
+    """
+    import sys
+
+    sys.path.insert(0, "/root/src")
+    import yaml
+    from traces.pilot.auth import assert_real_pilot_authorized
+    from traces.pilot.budget import assert_prelaunch_budget, build_pilot_workload_estimate
+    from traces.pilot.calibration import json_safe
+    from traces.pilot.execution import run_real_pilot_authorized
+    from traces.pilot.real_scorer import RealGemmaPilotScorer
+
+    cfg = yaml.safe_load(Path("/root/configs/pilot.yaml").read_text())
+    if not authorized:
+        raise RuntimeError("Pilot GPU called with authorized=False; refusing.")
+    assert_real_pilot_authorized(cfg)
+    est = build_pilot_workload_estimate(gpu="A10G", max_budget_usd=float(cfg.get("budget", {}).get("max_usd", 50)))
+    assert_prelaunch_budget(est, max_budget_usd=float(cfg.get("budget", {}).get("max_usd", 50)))
+    scorer = RealGemmaPilotScorer(seeds=(42, 43, 44))
+    try:
+        result = run_real_pilot_authorized(
+            scorer,
+            output_dir="/results/pilot/stage1_run",
+            config_path="/root/configs/pilot.yaml",
+        )
+        payload = json_safe(result.to_dict())
+        payload["git_sha"] = git_sha
+        payload["prelaunch_estimate"] = est["cost_range_primary_gpu"]
+        Path("/results/pilot/stage1_results.json").write_text(
+            json.dumps(payload, indent=2) + "\n"
+        )
+        results_vol.commit()
+        return payload
+    finally:
+        for s in (42, 43, 44):
+            scorer.unload_seed(s)
+
+
 @app.local_entrypoint()
 def main(
     dry_run: bool = False,
     smoke: bool = False,
     pilot_calibration: bool = False,
+    pilot: bool = False,
 ) -> None:
-    """CLI: modal run modal_app.py --dry-run | --smoke | --pilot-calibration"""
-    if sum(1 for x in (dry_run, smoke, pilot_calibration) if x) > 1:
-        raise SystemExit("Choose only one of --dry-run, --smoke, --pilot-calibration")
+    """CLI: modal run modal_app.py --dry-run | --smoke | --pilot-calibration | --pilot"""
+    if sum(1 for x in (dry_run, smoke, pilot_calibration, pilot) if x) > 1:
+        raise SystemExit(
+            "Choose only one of --dry-run, --smoke, --pilot-calibration, --pilot"
+        )
+    if pilot:
+        import sys
+
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+        from traces.pilot.auth import pilot_launch_decision
+        from traces.pilot.calibration import load_pilot_config_for_calibration
+
+        cfg = load_pilot_config_for_calibration(PROJECT_ROOT / "configs" / "pilot.yaml")
+        decision = pilot_launch_decision(cfg)
+        # Always refuse GPU while committed config is disabled / unauthorized.
+        if not decision.get("invoke_gpu"):
+            print(json.dumps(decision, indent=2))
+            out = PROJECT_ROOT / "results" / "pilot" / "pilot_gate_refused.json"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(json.dumps(decision, indent=2) + "\n")
+            return
+        # Authorized path exists for later review — still require explicit .remote
+        try:
+            commit = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=str(PROJECT_ROOT), text=True
+            ).strip()
+        except Exception:
+            commit = None
+        results = run_stage1_pilot_gpu.remote(authorized=True, git_sha=commit)
+        out = PROJECT_ROOT / "results" / "pilot" / "stage1_results.json"
+        out.write_text(json.dumps(results, indent=2) + "\n")
+        print(json.dumps(results, indent=2))
+        return
     if pilot_calibration:
         import sys
 

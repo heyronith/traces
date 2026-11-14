@@ -74,5 +74,8 @@ def enumerate_engine_condition_schedule(
                 f"(={n_joint_conditions}×({n_validation}+{n_held_out}))."
             ),
         },
-        "checkpoint_loads": n_seeds,
+        # Two-phase: one load per seed in discovery + one load per seed in transfer
+        "checkpoint_loads": n_seeds * 2,
+        "checkpoint_unloads": n_seeds * 2,
+        "execution_phases": ["discovery_per_seed_load_scan_unload", "transfer_per_recipient_load_eval_unload"],
     }

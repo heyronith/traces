@@ -18,9 +18,18 @@ from traces.pilot.controls import DAMAGE_MATCH_N_CANDIDATES
 from traces.pilot.schedule import enumerate_engine_condition_schedule
 from traces.pilot.transfer import SEEDS, DEFAULT_K_BUDGETS
 
-# Measured Stage 0 A10G bench (review-fix smoke)
+# Legacy Stage 0 A10G bench (retained for comparison)
 MEASURED_A10G_GEN_S_PER_PROMPT = 1.633
 MEASURED_A10G_TF_S_PER_PROMPT = 0.056
+
+# Bounded calibration (seed 42, NVIDIA A10) — new planning reference
+# TF: 40 forwards in 2.414s D+K; gen: 24 calls in 26.328s; load 12.05s
+CALIBRATION_TF_S_PER_FORWARD = 2.414 / 40.0  # ≈ 0.06035
+CALIBRATION_GEN_S_PER_CALL = 26.328 / 24.0  # ≈ 1.097
+CALIBRATION_LOAD_S = 12.053
+CALIBRATION_UNLOAD_S_ASSUMED = 5.0
+CALIBRATION_PEAK_VRAM_BYTES = 6408896512
+CALIBRATION_GPU = "A10G"
 
 
 @dataclass
@@ -51,14 +60,15 @@ def build_pilot_workload_estimate(
     n_seeds: int = 3,
     k_budgets: tuple[int, ...] = DEFAULT_K_BUDGETS,
     n_damage_candidates: int = DAMAGE_MATCH_N_CANDIDATES,
-    gen_s: float = MEASURED_A10G_GEN_S_PER_PROMPT,
-    tf_s: float = MEASURED_A10G_TF_S_PER_PROMPT,
-    load_s_per_model: float = 180.0,
-    unload_s_per_model: float = 15.0,
-    gpu: str = "A10G",
-    contingency_low: float = 1.0,
-    contingency_high: float = 2.0,
+    gen_s: float = CALIBRATION_GEN_S_PER_CALL,
+    tf_s: float = CALIBRATION_TF_S_PER_FORWARD,
+    load_s_per_model: float = CALIBRATION_LOAD_S,
+    unload_s_per_model: float = CALIBRATION_UNLOAD_S_ASSUMED,
+    gpu: str = CALIBRATION_GPU,
+    contingency_low: float = 1.25,
+    contingency_high: float = 2.5,
     conditions_per_pair_k: int = 5,
+    max_budget_usd: float | None = None,
 ) -> dict[str, Any]:
     seeds = SEEDS[:n_seeds]
     schedule = enumerate_engine_condition_schedule(
@@ -94,45 +104,56 @@ def build_pilot_workload_estimate(
     # Intact greedy baseline (optional; engine may fold into ASR intact leg)
     intact_gen_baseline = n_seeds * (n_validation + n_held_out)
 
+    # Baseline trigger/control gens before screening (≤8 validation instr ×2 tags)
+    baseline_gen = n_seeds * min(8, n_validation) * 2
+
     lines = [
         ForwardPassLine(
             "model_loads",
             schedule["checkpoint_loads"],
-            None,
+            CALIBRATION_LOAD_S,
             load_s_per_model,
-            "assumed",
-            "Cold-to-warm load seconds per seed (unmeasured assumption)",
+            "measured_calibration",
+            "Two-phase loads: discovery+transfer per seed (calibration load timing)",
         ),
         ForwardPassLine(
             "model_unloads",
-            schedule["checkpoint_loads"],
+            schedule.get("checkpoint_unloads", schedule["checkpoint_loads"]),
             None,
             unload_s_per_model,
             "assumed",
-            "Unload / cache clear between seeds (unmeasured assumption)",
+            "Unload / empty_cache between phases (assumed; not timed in calibration)",
+        ),
+        ForwardPassLine(
+            "baseline_asr_pre_screen",
+            baseline_gen,
+            CALIBRATION_GEN_S_PER_CALL,
+            gen_s,
+            "measured_calibration",
+            "Per-seed trigger+control baseline gens before component screening",
         ),
         ForwardPassLine(
             "component_screening_tf",
             screen_tf,
-            MEASURED_A10G_TF_S_PER_PROMPT,
+            CALIBRATION_TF_S_PER_FORWARD,
             tf_s,
-            "measured_stage0",
+            "measured_calibration",
             "Intact cache + per-component discovery D ablations (engine schedule)",
         ),
         ForwardPassLine(
             "damage_control_selection_kl",
             damage_kl_tf,
-            MEASURED_A10G_TF_S_PER_PROMPT,
+            CALIBRATION_TF_S_PER_FORWARD,
             tf_s,
-            "measured_stage0",
+            "measured_calibration",
             f"Validation KL intact+intervened for target + {n_damage_candidates} candidates",
         ),
         ForwardPassLine(
             "joint_topk_transfer_tf_D",
             joint_d_tf,
-            MEASURED_A10G_TF_S_PER_PROMPT,
+            CALIBRATION_TF_S_PER_FORWARD,
             tf_s,
-            "measured_stage0",
+            "measured_calibration",
             (
                 f"Joint D on val+held_out: {jt['total_joint_instruction_D_both_splits']} "
                 f"instruction scores ×2 (intact+ablated); "
@@ -142,29 +163,28 @@ def build_pilot_workload_estimate(
         ForwardPassLine(
             "joint_topk_transfer_tf_K",
             joint_k_tf,
-            MEASURED_A10G_TF_S_PER_PROMPT,
+            CALIBRATION_TF_S_PER_FORWARD,
             tf_s,
-            "measured_stage0",
+            "measured_calibration",
             "Joint K intact+intervened control forwards (val+held_out)",
         ),
         ForwardPassLine(
             "joint_topk_greedy_asr",
             joint_asr_gen,
-            MEASURED_A10G_GEN_S_PER_PROMPT,
+            CALIBRATION_GEN_S_PER_CALL,
             gen_s,
-            "measured_stage0",
+            "measured_calibration",
             "Greedy ASR intact+intervened generations (val+held_out)",
         ),
         ForwardPassLine(
             "intact_greedy_baseline_optional",
             intact_gen_baseline,
-            MEASURED_A10G_GEN_S_PER_PROMPT,
+            CALIBRATION_GEN_S_PER_CALL,
             gen_s,
-            "measured_stage0",
-            "Optional intact baseline gens (may overlap ASR intact leg; retained conservatively)",
+            "measured_calibration",
+            "Optional intact baseline gens (conservative overlap with ASR intact leg)",
         ),
     ]
-
     sec_low = sum(l.seconds_low(contingency_low) for l in lines)
     sec_high = sum(l.seconds_high(contingency_high) for l in lines)
     rerun_low, rerun_high = sec_low * 0.10, sec_high * 0.35
@@ -184,32 +204,53 @@ def build_pilot_workload_estimate(
             "usd_per_hour": r,
         }
 
-    measured_passes = sum(l.n_forward_passes for l in lines if l.source == "measured_stage0")
+    measured_passes = sum(
+        l.n_forward_passes
+        for l in lines
+        if l.source in {"measured_stage0", "measured_calibration"}
+    )
     assumed_passes = sum(l.n_forward_passes for l in lines if l.source == "assumed")
 
+    prelaunch = None
+    if max_budget_usd is not None:
+        prelaunch = {
+            "max_budget_usd": max_budget_usd,
+            "projected_usd_high": cost_high.projected_usd,
+            "within_budget": cost_high.projected_usd <= max_budget_usd,
+            "action_if_exceeded": "abort_before_gpu_launch",
+        }
+
     return {
-        "version": "2.1",
+        "version": "2.2",
         "engine_schedule": schedule,
         "reconciliation_note": (
             "Joint instruction-level D scores on both splits = "
-            f"{jt['total_joint_instruction_D_both_splits']} "
-            f"(was under-counted when held-out used only 3 primary conditions). "
+            f"{jt['total_joint_instruction_D_both_splits']}. "
+            f"Two-phase checkpoint loads = {schedule['checkpoint_loads']}. "
             f"Condition evals/split = {jt['validation_condition_evals']}."
         ),
         "measured_vs_assumed": {
-            "stage0_measured_rates": {
+            "calibration_measured_rates": {
+                "gpu": CALIBRATION_GPU,
+                "gpu_name_observed": "NVIDIA A10",
+                "load_seconds": CALIBRATION_LOAD_S,
+                "tf_s_per_forward": CALIBRATION_TF_S_PER_FORWARD,
+                "gen_s_per_call": CALIBRATION_GEN_S_PER_CALL,
+                "peak_vram_bytes": CALIBRATION_PEAK_VRAM_BYTES,
+            },
+            "stage0_measured_rates_legacy": {
                 "gpu": "A10G",
                 "greedy_s_per_prompt": MEASURED_A10G_GEN_S_PER_PROMPT,
                 "teacher_forced_s_per_prompt": MEASURED_A10G_TF_S_PER_PROMPT,
             },
-            "n_forward_passes_priced_with_measured_rate": measured_passes,
-            "n_load_unload_events_assumed": assumed_passes,
+            "n_forward_passes_priced_with_calibration_rate": measured_passes,
+            "n_events_assumed": assumed_passes,
             "note": (
-                "Seconds/pass for scoring use Stage 0 measured A10G rates. "
-                "Load/unload seconds and contingency/rerun bands are unmeasured assumptions. "
-                "Real-pilot wall time may differ once calibrated."
+                "Planning reference is the bounded seed-42 calibration on NVIDIA A10. "
+                "Unload seconds remain assumed. Contingency bands retain conservative uncertainty."
             ),
         },
+        "prelaunch_budget_check": prelaunch,
         "assumptions": {
             "n_components": n_components,
             "n_discovery": n_discovery,
@@ -260,18 +301,25 @@ def build_pilot_workload_estimate(
                 "Software estimates are NOT an enforced Modal account spending limit."
             ),
         },
-        "calibration_prepared_not_executed": {
-            "command": "modal run modal_app.py --pilot-calibration",
-            "purpose": (
-                "Bounded calibration with real hooks on one seed / few instructions "
-                "to refine full-scan cost; implemented but not authorized to run."
-            ),
-            "status": "prepared_disabled",
+        "calibration_reference": {
+            "status": "executed_once",
+            "commit": "3e9f94f46de54207ea457529ea03367ffca7cb74",
+            "report": "results/pilot/calibration_report.json",
         },
         "explicit_non_claim": (
-            "Full pilot cost is not $0.53. Screening 396×3 and damage-candidate KL dominate."
+            "Full pilot cost is not $0.53. Screening 396×3 and damage-candidate KL dominate. "
+            "Dollar estimates are software projections, not Modal account caps."
         ),
     }
+
+
+def assert_prelaunch_budget(est: dict[str, Any], *, max_budget_usd: float) -> None:
+    high = float(est["cost_range_primary_gpu"]["usd_high"])
+    if high > max_budget_usd:
+        raise RuntimeError(
+            f"Pre-launch budget check failed: projected high ${high:.2f} "
+            f"exceeds max_budget_usd=${max_budget_usd:.2f}. Abort before GPU launch."
+        )
 
 
 def write_dry_run_estimate(path: Path | str, **kwargs: Any) -> dict[str, Any]:

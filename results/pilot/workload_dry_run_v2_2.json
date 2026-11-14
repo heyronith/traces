@@ -1,0 +1,224 @@
+{
+  "version": "2.2",
+  "engine_schedule": {
+    "n_seeds": 3,
+    "directed_pairs": 6,
+    "k_budgets": [
+      5,
+      10
+    ],
+    "conditions_per_pair_k": 5,
+    "n_joint_conditions_total": 60,
+    "discovery": {
+      "d_single_ablations": 59400,
+      "intact_logprob_cache_entries": 150
+    },
+    "damage_matching_validation": {
+      "set_evals": 396,
+      "instruction_forwards_approx": 9900
+    },
+    "joint_transfer": {
+      "validation_condition_evals": 60,
+      "held_out_condition_evals_if_gate_passes": 60,
+      "validation_instruction_D": 1500,
+      "validation_instruction_K": 1500,
+      "validation_instruction_ASR": 1500,
+      "held_out_instruction_D": 1500,
+      "held_out_instruction_K": 1500,
+      "held_out_instruction_ASR": 1500,
+      "total_joint_instruction_D_both_splits": 3000,
+      "note": "v2 budget under-counted held-out joint conditions (assumed 3 primary only). Engine schedules 5 conditions \u00d7 6 pairs \u00d7 2 k on both splits when gates pass => 3000 instruction-level D scores (=60\u00d7(25+25))."
+    },
+    "checkpoint_loads": 6,
+    "checkpoint_unloads": 6,
+    "execution_phases": [
+      "discovery_per_seed_load_scan_unload",
+      "transfer_per_recipient_load_eval_unload"
+    ]
+  },
+  "reconciliation_note": "Joint instruction-level D scores on both splits = 3000. Two-phase checkpoint loads = 6. Condition evals/split = 60.",
+  "measured_vs_assumed": {
+    "calibration_measured_rates": {
+      "gpu": "A10G",
+      "gpu_name_observed": "NVIDIA A10",
+      "load_seconds": 12.053,
+      "tf_s_per_forward": 0.06035,
+      "gen_s_per_call": 1.097,
+      "peak_vram_bytes": 6408896512
+    },
+    "stage0_measured_rates_legacy": {
+      "gpu": "A10G",
+      "greedy_s_per_prompt": 1.633,
+      "teacher_forced_s_per_prompt": 0.056
+    },
+    "n_forward_passes_priced_with_calibration_rate": 97554,
+    "n_events_assumed": 6,
+    "note": "Planning reference is the bounded seed-42 calibration on NVIDIA A10. Unload seconds remain assumed. Contingency bands retain conservative uncertainty."
+  },
+  "prelaunch_budget_check": {
+    "max_budget_usd": 50.0,
+    "projected_usd_high": 12.802449515625,
+    "within_budget": true,
+    "action_if_exceeded": "abort_before_gpu_launch"
+  },
+  "assumptions": {
+    "n_components": 396,
+    "n_discovery": 50,
+    "n_validation": 25,
+    "n_held_out": 25,
+    "n_seeds": 3,
+    "directed_transfer_pairs": 6,
+    "k_budgets": [
+      5,
+      10
+    ],
+    "n_damage_candidates": 32,
+    "conditions_per_pair_k": 5,
+    "contingency_multipliers": {
+      "low": 1.25,
+      "high": 2.5
+    },
+    "rerun_fallback_fraction": {
+      "low": 0.1,
+      "high": 0.35
+    }
+  },
+  "workload_lines": [
+    {
+      "name": "model_loads",
+      "n_forward_passes": 6,
+      "seconds_per_pass_measured": 12.053,
+      "seconds_per_pass_assumed": 12.053,
+      "source": "measured_calibration",
+      "detail": "Two-phase loads: discovery+transfer per seed (calibration load timing)",
+      "seconds_low": 90.39750000000001,
+      "seconds_high": 180.79500000000002
+    },
+    {
+      "name": "model_unloads",
+      "n_forward_passes": 6,
+      "seconds_per_pass_measured": null,
+      "seconds_per_pass_assumed": 5.0,
+      "source": "assumed",
+      "detail": "Unload / empty_cache between phases (assumed; not timed in calibration)",
+      "seconds_low": 37.5,
+      "seconds_high": 75.0
+    },
+    {
+      "name": "baseline_asr_pre_screen",
+      "n_forward_passes": 48,
+      "seconds_per_pass_measured": 1.097,
+      "seconds_per_pass_assumed": 1.097,
+      "source": "measured_calibration",
+      "detail": "Per-seed trigger+control baseline gens before component screening",
+      "seconds_low": 65.82,
+      "seconds_high": 131.64
+    },
+    {
+      "name": "component_screening_tf",
+      "n_forward_passes": 59550,
+      "seconds_per_pass_measured": 0.06035,
+      "seconds_per_pass_assumed": 0.06035,
+      "source": "measured_calibration",
+      "detail": "Intact cache + per-component discovery D ablations (engine schedule)",
+      "seconds_low": 4492.303125,
+      "seconds_high": 8984.60625
+    },
+    {
+      "name": "damage_control_selection_kl",
+      "n_forward_passes": 19800,
+      "seconds_per_pass_measured": 0.06035,
+      "seconds_per_pass_assumed": 0.06035,
+      "source": "measured_calibration",
+      "detail": "Validation KL intact+intervened for target + 32 candidates",
+      "seconds_low": 1493.6625000000001,
+      "seconds_high": 2987.3250000000003
+    },
+    {
+      "name": "joint_topk_transfer_tf_D",
+      "n_forward_passes": 6000,
+      "seconds_per_pass_measured": 0.06035,
+      "seconds_per_pass_assumed": 0.06035,
+      "source": "measured_calibration",
+      "detail": "Joint D on val+held_out: 3000 instruction scores \u00d72 (intact+ablated); 60 conditions/split",
+      "seconds_low": 452.625,
+      "seconds_high": 905.25
+    },
+    {
+      "name": "joint_topk_transfer_tf_K",
+      "n_forward_passes": 6000,
+      "seconds_per_pass_measured": 0.06035,
+      "seconds_per_pass_assumed": 0.06035,
+      "source": "measured_calibration",
+      "detail": "Joint K intact+intervened control forwards (val+held_out)",
+      "seconds_low": 452.625,
+      "seconds_high": 905.25
+    },
+    {
+      "name": "joint_topk_greedy_asr",
+      "n_forward_passes": 6000,
+      "seconds_per_pass_measured": 1.097,
+      "seconds_per_pass_assumed": 1.097,
+      "source": "measured_calibration",
+      "detail": "Greedy ASR intact+intervened generations (val+held_out)",
+      "seconds_low": 8227.5,
+      "seconds_high": 16455.0
+    },
+    {
+      "name": "intact_greedy_baseline_optional",
+      "n_forward_passes": 150,
+      "seconds_per_pass_measured": 1.097,
+      "seconds_per_pass_assumed": 1.097,
+      "source": "measured_calibration",
+      "detail": "Optional intact baseline gens (conservative overlap with ASR intact leg)",
+      "seconds_low": 205.68749999999997,
+      "seconds_high": 411.37499999999994
+    }
+  ],
+  "seconds": {
+    "categories_low": 15518.120625,
+    "categories_high": 31036.24125,
+    "rerun_fallback_low": 1551.8120625000001,
+    "rerun_fallback_high": 10862.684437499998,
+    "total_low": 17069.9326875,
+    "total_high": 41898.9256875,
+    "total_low_hours": 4.741647968750001,
+    "total_high_hours": 11.63859046875
+  },
+  "cost_range_primary_gpu": {
+    "gpu": "A10G",
+    "usd_per_hour": 1.1,
+    "usd_low": 5.215812765625001,
+    "usd_high": 12.802449515625
+  },
+  "cost_range_by_gpu": {
+    "L4": {
+      "usd_low": 3.7933183750000006,
+      "usd_high": 9.310872375,
+      "usd_per_hour": 0.8
+    },
+    "A10G": {
+      "usd_low": 5.215812765625001,
+      "usd_high": 12.802449515625,
+      "usd_per_hour": 1.1
+    },
+    "T4": {
+      "usd_low": 2.84498878125,
+      "usd_high": 6.983154281249999,
+      "usd_per_hour": 0.6
+    }
+  },
+  "stopping_procedure": {
+    "preflight": "Abort if high-end projected cost exceeds authorized Stage 1 cap.",
+    "runtime_guard": "Checkpoint per seed; stop if remaining work exceeds deadline/budget.",
+    "early_stop_scientific": "If discovery-fold top-10 Jaccard < 0.3 for every seed, stop before held_out. Native validation |D| gate recorded before transfer interpretation.",
+    "no_unbounded_retries": true,
+    "dollars_not_account_limit": "Software estimates are NOT an enforced Modal account spending limit."
+  },
+  "calibration_reference": {
+    "status": "executed_once",
+    "commit": "3e9f94f46de54207ea457529ea03367ffca7cb74",
+    "report": "results/pilot/calibration_report.json"
+  },
+  "explicit_non_claim": "Full pilot cost is not $0.53. Screening 396\u00d73 and damage-candidate KL dominate. Dollar estimates are software projections, not Modal account caps."
+}

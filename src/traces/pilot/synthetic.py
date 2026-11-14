@@ -64,6 +64,28 @@ class SyntheticPilotScorer:
     def __init__(self, world: SyntheticWorld, noise: float = 0.02):
         self.world = world
         self.noise = noise
+        self._loaded: set[int] = set()
+        self.load_events: list[tuple[str, int]] = []
+
+    def ensure_seed(self, seed: int) -> None:
+        if seed not in self._loaded:
+            self._loaded.add(seed)
+            self.load_events.append(("load", seed))
+
+    def unload_seed(self, seed: int) -> None:
+        if seed in self._loaded:
+            self._loaded.discard(seed)
+            self.load_events.append(("unload", seed))
+
+    def score_baseline_behavior(
+        self, seed: int, instruction_ids: Sequence[str], split: str
+    ) -> dict[str, float]:
+        """Intact trigger fires; control false-fire near zero (synthetic sleeper)."""
+        return {
+            "trigger_asr": 1.0,
+            "control_false_fire": 0.0,
+            "n_instructions": float(len(instruction_ids)),
+        }
 
     def _overlap_strength(self, seed: int, component_ids: Sequence[str]) -> float:
         causal = self.world.causal_set(seed)
@@ -78,7 +100,6 @@ class SyntheticPilotScorer:
         base = 0.8 if component_id in self.world.causal_set(seed) else 0.02
         jitter = self.noise * (_stable_unit(f"{seed}:{component_id}:{instruction_id}:{split}") - 0.5)
         return max(0.0, base + jitter)
-
     def score_D_set(
         self, seed: int, component_ids: Sequence[str], instruction_ids: Sequence[str], split: str
     ) -> float:

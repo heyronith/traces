@@ -8,20 +8,21 @@ from traces.pilot.schedule import enumerate_engine_condition_schedule
 
 
 def test_budget_reconciled_with_engine_schedule():
-    est = build_pilot_workload_estimate(gpu="A10G")
-    assert est["version"] == "2.1"
+    est = build_pilot_workload_estimate(gpu="A10G", max_budget_usd=50.0)
+    assert est["version"] == "2.2"
     assert est["cost_range_primary_gpu"]["usd_low"] > 0.53
     assert est["cost_range_primary_gpu"]["usd_high"] > est["cost_range_primary_gpu"]["usd_low"]
     sched = est["engine_schedule"]
     joint_d = sched["joint_transfer"]["total_joint_instruction_D_both_splits"]
     # 5 conditions × 6 pairs × 2 k × (25+25) = 3000
     assert joint_d == 3000
-    assert "3000" in est["reconciliation_note"] or "3000" in str(joint_d)
+    assert sched["checkpoint_loads"] == 6  # two-phase
     names = {l["name"] for l in est["workload_lines"]}
     assert "damage_control_selection_kl" in names
     assert "joint_topk_transfer_tf_D" in names
-    assert est["calibration_prepared_not_executed"]["status"] == "prepared_disabled"
-    assert "measured_vs_assumed" in est
+    assert "calibration_measured_rates" in est["measured_vs_assumed"]
+    assert est["prelaunch_budget_check"]["within_budget"] is True
+    assert est["calibration_reference"]["status"] == "executed_once"
 
 
 def test_enumerate_schedule_matches_engine_assumptions():

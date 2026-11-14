@@ -1,35 +1,21 @@
-# Remaining Stage 1 full-pilot issues (for later execution review)
+# Stage 1 execution blockers / wiring status
 
-**Documented as of the Final Calibration Readiness Patch.**  
-These items are **not** silently fixed by changing the pre-registration.  
-They must be resolved (or explicitly accepted) before authorizing the full scientific pilot.
+**Calibration accepted** (`3e9f94f…`). Scientific pilot remains **disabled**.
 
-The next independent review may authorize **one bounded calibration** only — not the full pilot.
+## Addressed in execution-integration wiring (not launched)
 
-## 1. Native validation gate ordering
+1. **Native validation before held-out** — two-phase executor scores validation (incl. native) per recipient, evaluates the native gate, then runs held-out only if reliability **and** native gates permit.
+2. **Load/unload structure** — discovery loads each seed, scans, unloads; transfer loads each recipient once, evaluates donors+native+controls, unloads. Peak VRAM reference from calibration ≈6.0 GiB on A10.
+3. **`run_real_pilot_pipeline` is functional when authorized** — requires `enabled=true` + Stage-1 pilot token; **calibration token never unlocks**. Committed config keeps `enabled=false`, so the path still refuses in this repo state.
+4. **Alpaca overlap** — still **UNVERIFIED** when corpus inaccessible; unchanged frozen v1.
 
-**Issue:** In the current engine, recipient-native validation \(D\) is scored during the validation pass, but the native-effect gate is evaluated only after directed-pair validation work. Held-out skipping is driven solely by the discovery-fold reliability gate.
+## Still required before authorizing GPU pilot
 
-**Required for full pilot:** Native validation gate must **precede** held-out evaluation (and ideally gate whether transfer results are interpreted).
+- Independent review must enable/authorize Stage 1 explicitly.
+- Pre-launch budget check against `budget.max_usd` (default software cap $50; not an account limit).
+- Confirm target GPU memory headroom under full 396-component screening.
 
-**Not changed in this patch:** Pre-registration text and frozen protocol remain as-is; ordering fix belongs to a future execution-authorization revision.
+## Out of scope
 
-## 2. Checkpoint load / unload vs GPU memory
-
-**Issue:** Three dense-LoRA seeds are intended to load one-at-a-time, but the real pilot path has not been memory-budgeted on the target GPU with unload/`empty_cache` verified under the full screening workload.
-
-**Required for full pilot:** Confirm load/unload fits the actual GPU memory budget (including peak during joint top-k hooks).
-
-## 3. `run_real_pilot_pipeline` still unconditionally refuses
-
-**Issue:** Even if `configs/pilot.yaml` were set to `enabled: true` with a valid Stage 1 authorization token, `run_real_pilot_pipeline` / real `execution_mode` still raises after the authorization assert (session hard-stop). This is intentional for pre-execution patches but means an authorized config alone is insufficient to run the pilot without a further code-path unlock reviewed independently.
-
-## 4. Alpaca training-corpus overlap remains unverified
-
-**Issue:** CPU audit reports `UNVERIFIED_CORPUS_INACCESSIBLE` when `datasets` / corpus retrieval fails. Empty overlap lists are **not** evidence of no overlap. Frozen v1 instructions were not modified.
-
-## Out of scope for this patch
-
-- Scientific protocol, frozen dataset, checkpoint family, research direction: unchanged.
-- Full three-seed pilot execution: not authorized.
-- Calibration GPU execution: not authorized in this patch (gate remains disabled in committed config).
+- Research question remains NOT YET SELECTED.
+- No GPU pilot launch in the execution-integration task.
