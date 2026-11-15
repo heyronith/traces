@@ -30,11 +30,14 @@ BASELINE_SCIENTIFIC_TF = 824_400
 BASELINE_SCIENTIFIC_GEN = 3_600
 EXPECTED_LOADS = 11
 
-# Additional integrity / calibration forwards (Agent 1 corrections; not outcome conditions)
-# Identities 1–9 exploratory smoke: amortized as dedicated TF passes on 50-dev × 3 seeds
-# (identity suite shares many forwards with intact/hybrid; count explicit extras only)
-IDENTITY_EXTRA_TF_PER_EXPLORATORY_SEED = 50  # dedicated identity/hook-leak/repeat checks
-POSTLOAD_VERIFY_LOADS = 0  # included in model loads, not separate TF
+# Additional integrity / calibration forwards (not scientific outcome conditions)
+# Exploratory: F4 + identities/hook-leak extras (already partly in expl_extra)
+IDENTITY_EXTRA_TF_PER_EXPLORATORY_SEED = 50
+# Confirmatory: mandatory identity/hook-leak checks on every relevant model (R10/Agent1)
+# Approximate dedicated TF for identities 1–9 smoke per confirmatory checkpoint
+IDENTITY_EXTRA_TF_PER_CONFIRMATORY_MODEL = 40  # 5 l19 + 2 l1523 secondary
+N_CONFIRMATORY_MODELS = 5 + 2
+F4_ALREADY_IN_EXPL_EXTRA = True
 
 
 def build_enumerator(*, include_downstream56: bool = True) -> dict[str, Any]:
@@ -107,6 +110,21 @@ def build_enumerator(*, include_downstream56: bool = True) -> dict[str, Any]:
             "gen_passes": 2 * N_ALL,
         }
     )
+    confirmatory_identity_tf = (
+        N_CONFIRMATORY_MODELS * IDENTITY_EXTRA_TF_PER_CONFIRMATORY_MODEL
+    )
+    units.append(
+        {
+            "unit": "confirmatory_identity_integrity_extras",
+            "family": "multi",
+            "role": "integrity_checks",
+            "seed": None,
+            "n_prompts": None,
+            "tf_passes": confirmatory_identity_tf,
+            "gen_passes": 0,
+            "notes": "Mandatory identity/hook-leak TF across 5 l19 + 2 l1523 secondary",
+        }
+    )
 
     tf_total = sum(u["tf_passes"] for u in units)
     gen_total = sum(u["gen_passes"] for u in units)
@@ -157,11 +175,20 @@ def build_enumerator(*, include_downstream56: bool = True) -> dict[str, Any]:
         },
     ]
 
-    integrity_extra_tf = 3 * IDENTITY_EXTRA_TF_PER_EXPLORATORY_SEED
-    scientific_tf = tf_total - integrity_extra_tf
+    exploratory_identity_tf = 3 * IDENTITY_EXTRA_TF_PER_EXPLORATORY_SEED
+    integrity_extra_tf = exploratory_identity_tf + confirmatory_identity_tf
+    # Readiness v1 baseline (824,400) already included F4 + double-BOS exploratory extras.
+    # New integrity extras are additive beyond that baseline.
+    f4_and_dual_bos = 3 * (
+        expl_extra["f4_repeat_intact_extra_tf"]
+        + expl_extra["double_bos_intact_tf"]
+        + expl_extra["double_bos_pairs_forward_only"]
+    )
+    readiness_baseline_tf = tf_total - integrity_extra_tf
+    catalog_scientific_tf = readiness_baseline_tf
 
     return {
-        "artifact": "TRACES_Q1_recommended_workload_enumerator_v1_2",
+        "artifact": "TRACES_Q1_recommended_workload_enumerator_v1_3",
         "frozen_commit": FROZEN_SCIENTIFIC_COMMIT,
         "protocol": f"v{FROZEN_PROTOCOL_VERSION} Recommended tier",
         "include_downstream56": include_downstream56,
@@ -169,16 +196,26 @@ def build_enumerator(*, include_downstream56: bool = True) -> dict[str, Any]:
             "baseline_scientific_tf_v1": BASELINE_SCIENTIFIC_TF,
             "baseline_scientific_gen_v1": BASELINE_SCIENTIFIC_GEN,
             "expected_loads": EXPECTED_LOADS,
-            "tf_passes": tf_total,
-            "scientific_tf_passes": scientific_tf,
-            "integrity_calibration_extra_tf": integrity_extra_tf,
+            "tf_passes_total": tf_total,
+            "scientific_condition_tf": catalog_scientific_tf,
+            "integrity_tf": integrity_extra_tf,
+            "f4_double_bos_within_scientific_baseline": f4_and_dual_bos,
+            "benchmark_overhead_tf": 0,
             "gen_passes": gen_total,
             "n_loads": n_loads,
             "scientific_tf_matches_readiness_v1": (
-                include_downstream56 and scientific_tf == BASELINE_SCIENTIFIC_TF
+                include_downstream56 and catalog_scientific_tf == BASELINE_SCIENTIFIC_TF
             ),
             "gen_matches_readiness_v1": gen_total == BASELINE_SCIENTIFIC_GEN,
             "loads_match_readiness_v1": n_loads == EXPECTED_LOADS,
+            "breakdown": {
+                "scientific_and_prescribed_exploratory_extras": catalog_scientific_tf,
+                "identity_integrity_extra": integrity_extra_tf,
+                "exploratory_identity": exploratory_identity_tf,
+                "confirmatory_identity": confirmatory_identity_tf,
+                "f4_and_double_bos_inside_baseline": f4_and_dual_bos,
+                "benchmark_proposal_not_included": True,
+            },
             "primary_tf_per_prompt": primary["tf_total"],
             "primary_conditions_enumerated": n_conds,
             "secondary_tf_per_prompt": secondary_tf_pp,
@@ -203,7 +240,7 @@ def validate_against_readiness_v1() -> dict[str, Any]:
         and v["gen_matches_readiness_v1"]
         and v["loads_match_readiness_v1"]
     )
-    return {"ok": ok, "validation": v}
+    return {"ok": ok, "validation": v, "tf_passes_total": v["tf_passes_total"]}
 
 
 # Back-compat aliases for tests

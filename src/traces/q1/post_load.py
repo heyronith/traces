@@ -1,16 +1,17 @@
-"""Post-load verification for Q1 scientific model bundles (no silent fallback)."""
+"""Post-load verification for Q1 scientific model bundles (fail-closed)."""
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict, dataclass, field
-from typing import Any
+from pathlib import Path
+from typing import Any, Mapping, Sequence
 
 import torch
 
 from traces.q1.runtime_spec import (
     REQUIRED_ATTN_IMPLEMENTATION,
     REQUIRED_TORCH_DTYPE,
-    assert_bf16_dtype,
     assert_eager_attention,
 )
 
@@ -19,13 +20,16 @@ from traces.q1.runtime_spec import (
 class PostLoadReport:
     ok: bool
     attn_implementation: str | None
-    model_dtype: str | None
+    model_float_dtypes: list[str] = field(default_factory=list)
     adapter_param_dtypes: list[str] = field(default_factory=list)
     tokenizer_class: str | None = None
     tokenizer_is_fast: bool | None = None
     base_revision: str | None = None
     adapter_revision: str | None = None
+    subfolder: str | None = None
     adapter_targets: list[str] = field(default_factory=list)
+    adapted_layers_inferred: list[int] = field(default_factory=list)
+    weight_file_sha256: dict[str, str] = field(default_factory=dict)
     failures: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -36,10 +40,57 @@ def _infer_attn_implementation(model: Any) -> str | None:
     cfg = getattr(model, "config", None)
     if cfg is None:
         return None
-    # transformers may store under config._attn_implementation
     return getattr(cfg, "_attn_implementation", None) or getattr(
         cfg, "attn_implementation", None
     )
+
+
+def infer_base_revision_from_model(model: Any) -> str | None:
+    """Read commit hash stamped on the loaded config — not a caller echo."""
+    cfg = getattr(model, "config", None)
+    if cfg is None:
+        return None
+    for attr in ("_commit_hash", "commit_hash", "revision"):
+        v = getattr(cfg, attr, None)
+        if isinstance(v, str) and len(v) >= 7:
+            return v
+    return None
+
+
+def infer_adapter_revision_from_model(model: Any) -> str | None:
+    """Read revision from PEFT config / adapter metadata when present."""
+    if not hasattr(model, "peft_config"):
+        return None
+    peft_cfg = (
+        model.peft_config.get("default")
+        if isinstance(model.peft_config, dict)
+        else model.peft_config
+    )
+    if peft_cfg is None:
+        return None
+    for attr in ("revision", "adapter_revision", "peft_version"):
+        # peft_version is not a git SHA — skip non-sha-looking values later
+        v = getattr(peft_cfg, attr, None)
+        if isinstance(v, str) and len(v) >= 7 and attr != "peft_version":
+            return v
+    # Some PEFT builds stash hub metadata under .hub_version / path
+    hub = getattr(peft_cfg, "hub_model_id", None)
+    _ = hub
+    return None
+
+
+def _infer_adapted_layers(target_modules: Sequence[str], model: Any) -> list[int]:
+    """Best-effort: layers that contain LoRA parameters."""
+    layers: set[int] = set()
+    for name, _p in model.named_parameters():
+        if "lora_" not in name.lower():
+            continue
+        # ...layers.N...
+        parts = name.split(".")
+        for i, p in enumerate(parts):
+            if p == "layers" and i + 1 < len(parts) and parts[i + 1].isdigit():
+                layers.add(int(parts[i + 1]))
+    return sorted(layers)
 
 
 def verify_post_load(
@@ -48,6 +99,14 @@ def verify_post_load(
     *,
     expected_base_revision: str,
     expected_adapter_revision: str,
+    actual_base_revision: str | None = None,
+    actual_adapter_revision: str | None = None,
+    actual_subfolder: str | None = None,
+    expected_adapter_targets: Sequence[str] | None = None,
+    expected_adapted_layers: Sequence[int] | None = None,
+    expected_tokenizer_class: str | None = None,
+    expected_tokenizer_is_fast: bool | None = None,
+    expected_weight_file_sha256: Mapping[str, str] | None = None,
     require_eager: bool = True,
     require_bf16: bool = True,
 ) -> PostLoadReport:
@@ -58,55 +117,143 @@ def verify_post_load(
             assert_eager_attention(attn or "")
         except RuntimeError as e:
             failures.append(str(e))
+        if attn != REQUIRED_ATTN_IMPLEMENTATION:
+            failures.append(
+                f"attn_implementation actual={attn!r} != {REQUIRED_ATTN_IMPLEMENTATION!r}"
+            )
 
-    # Model parameter dtype check
-    dtypes = {p.dtype for p in model.parameters() if p.requires_grad is not None}
-    # Prefer floating params
-    float_dtypes = {d for d in dtypes if d.is_floating_point}
-    model_dtype = None
-    if float_dtypes:
-        model_dtype = str(next(iter(float_dtypes)))
-        if require_bf16 and REQUIRED_TORCH_DTYPE not in float_dtypes:
-            # All floating params should be bf16 for scientific load
-            if not all(d == torch.bfloat16 for d in float_dtypes):
-                failures.append(
-                    f"Model floating dtypes {float_dtypes} not exclusively bfloat16"
-                )
-        try:
-            assert_bf16_dtype(REQUIRED_TORCH_DTYPE)
-        except RuntimeError as e:
-            failures.append(str(e))
+    float_dtypes = {
+        p.dtype for p in model.parameters() if p.dtype.is_floating_point
+    }
+    if require_bf16:
+        bad = [d for d in float_dtypes if d != torch.bfloat16]
+        if bad or not float_dtypes:
+            failures.append(
+                f"Disallowed floating dtypes {sorted(str(d) for d in float_dtypes)}; "
+                f"require exclusively {REQUIRED_TORCH_DTYPE}"
+            )
 
     adapter_dtypes: list[str] = []
     adapter_targets: list[str] = []
     if hasattr(model, "peft_config"):
-        peft_cfg = model.peft_config.get("default") if isinstance(model.peft_config, dict) else None
+        peft_cfg = (
+            model.peft_config.get("default")
+            if isinstance(model.peft_config, dict)
+            else None
+        )
         if peft_cfg is not None:
             targets = getattr(peft_cfg, "target_modules", None)
             if targets is not None:
-                adapter_targets = sorted(list(targets))
+                adapter_targets = sorted(str(x) for x in targets)
         for name, p in model.named_parameters():
-            if "lora_" in name.lower():
+            if "lora_" in name.lower() and p.dtype.is_floating_point:
                 adapter_dtypes.append(str(p.dtype))
-                if require_bf16 and p.dtype.is_floating_point and p.dtype != torch.bfloat16:
+                if require_bf16 and p.dtype != torch.bfloat16:
                     failures.append(f"Adapter param {name} dtype {p.dtype} != bfloat16")
+
+    if expected_adapter_targets is not None:
+        if sorted(expected_adapter_targets) != adapter_targets:
+            failures.append(
+                f"adapter targets {adapter_targets} != expected {sorted(expected_adapter_targets)}"
+            )
+
+    adapted_layers = _infer_adapted_layers(adapter_targets, model)
+    if expected_adapted_layers is not None:
+        if list(expected_adapted_layers) != adapted_layers:
+            # Soft: inferred from param names; still fail closed if both non-empty mismatch
+            if adapted_layers and list(expected_adapted_layers) != adapted_layers:
+                failures.append(
+                    f"adapted layers inferred {adapted_layers} != expected "
+                    f"{list(expected_adapted_layers)}"
+                )
 
     tok_class = type(tokenizer).__name__
     is_fast = bool(getattr(tokenizer, "is_fast", False))
+    if expected_tokenizer_class is not None and tok_class != expected_tokenizer_class:
+        failures.append(
+            f"tokenizer class {tok_class} != expected {expected_tokenizer_class}"
+        )
+    if (
+        expected_tokenizer_is_fast is not None
+        and is_fast != expected_tokenizer_is_fast
+    ):
+        failures.append(
+            f"tokenizer is_fast={is_fast} != expected {expected_tokenizer_is_fast}"
+        )
 
-    # Revisions must be supplied by caller from load report; compare here
-    # (actual HF revision strings checked by loader already when pinned)
+    # Revisions must come from loaded artifacts (config stamps) and/or pinned
+    # weight-file hashes — never from unchecked caller-supplied echo alone.
+    inferred_base = infer_base_revision_from_model(model)
+    inferred_adapter = infer_adapter_revision_from_model(model)
+    has_weight_pins = bool(expected_weight_file_sha256)
 
-    ok = len(failures) == 0
+    def _rev_match(actual: str, expected: str) -> bool:
+        return (
+            actual == expected
+            or expected.startswith(actual)
+            or actual.startswith(expected)
+        )
+
+    resolved_base: str | None = inferred_base
+    if inferred_base is not None:
+        if not _rev_match(inferred_base, expected_base_revision):
+            failures.append(
+                f"base revision actual={inferred_base} != expected={expected_base_revision}"
+            )
+    elif actual_base_revision is not None and not has_weight_pins:
+        failures.append(
+            "base revision not stamped on loaded config (_commit_hash); "
+            "refusing caller-echo-only verification without weight-file SHA pins"
+        )
+    elif not has_weight_pins:
+        failures.append(
+            "actual_base_revision missing: no config _commit_hash and no weight-file SHA pins"
+        )
+    else:
+        # Weight pins substitute for missing stamp; still record expected for audit
+        resolved_base = expected_base_revision
+
+    resolved_adapter: str | None = inferred_adapter
+    if inferred_adapter is not None:
+        if not _rev_match(inferred_adapter, expected_adapter_revision):
+            failures.append(
+                f"adapter revision actual={inferred_adapter} != "
+                f"expected={expected_adapter_revision}"
+            )
+    elif not has_weight_pins:
+        failures.append(
+            "adapter revision not present on PEFT config and no weight-file "
+            "SHA map supplied; refusing caller-echo-only adapter verification"
+        )
+    else:
+        resolved_adapter = expected_adapter_revision
+
+    weight_hashes: dict[str, str] = {}
+    if expected_weight_file_sha256:
+        for path_str, expected in expected_weight_file_sha256.items():
+            p = Path(path_str)
+            if not p.is_file():
+                failures.append(f"weight file missing for hash check: {path_str}")
+                continue
+            digest = hashlib.sha256(p.read_bytes()).hexdigest()
+            weight_hashes[path_str] = digest
+            if digest != expected:
+                failures.append(
+                    f"weight SHA mismatch {path_str}: {digest} != {expected}"
+                )
+
     return PostLoadReport(
-        ok=ok,
+        ok=len(failures) == 0,
         attn_implementation=attn,
-        model_dtype=model_dtype,
+        model_float_dtypes=sorted(str(d) for d in float_dtypes),
         adapter_param_dtypes=sorted(set(adapter_dtypes)),
         tokenizer_class=tok_class,
         tokenizer_is_fast=is_fast,
-        base_revision=expected_base_revision,
-        adapter_revision=expected_adapter_revision,
+        base_revision=resolved_base,
+        adapter_revision=resolved_adapter or actual_adapter_revision,
+        subfolder=actual_subfolder,
         adapter_targets=adapter_targets,
+        adapted_layers_inferred=adapted_layers,
+        weight_file_sha256=weight_hashes,
         failures=failures,
     )

@@ -1,0 +1,12 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 38 items
+
+tests/test_q1_cpu_infrastructure.py .........                            [ 23%]
+tests/test_q1_audit_corrections.py .................                     [ 68%]
+tests/test_q1_reaudit_s1_r10.py ........s...                             [100%]
+
+======================== 37 passed, 1 skipped in 4.98s =========================

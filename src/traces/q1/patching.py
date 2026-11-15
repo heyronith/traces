@@ -71,32 +71,46 @@ def make_input_patch_hook(
     channel_slice: slice,
     token_positions: Sequence[int],
 ) -> Any:
-    """Forward pre-hook: replace a channel slice at selected positions from donor.
+    """Forward pre-hook (with kwargs): patch donor slice; no silent cast.
 
-    ``donor_activation`` must be shaped like the module input ``[..., seq, channels]``
-    for the current sequence (batch dim optional, matching the live forward).
+    Supports positional ``args[0]`` or keyword ``hidden_states`` (Gemma-2 style).
     """
     positions = tuple(int(t) for t in token_positions)
     donor = donor_activation
 
-    def hook(_module: nn.Module, inputs: tuple[torch.Tensor, ...]) -> tuple[torch.Tensor, ...]:
-        if not inputs:
-            return inputs
-        x = inputs[0]
-        if not torch.is_tensor(x):
-            return inputs
+    def hook(
+        _module: nn.Module,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        if "hidden_states" in kwargs and torch.is_tensor(kwargs["hidden_states"]):
+            x = kwargs["hidden_states"]
+            source = "kwargs"
+        elif args and torch.is_tensor(args[0]):
+            x = args[0]
+            source = "args"
+        else:
+            raise RuntimeError("o_proj patch: missing tensor input (args[0] or hidden_states)")
         if donor.shape != x.shape:
             raise RuntimeError(
                 f"Donor shape {tuple(donor.shape)} != live input {tuple(x.shape)}"
             )
-        if donor.device != x.device or donor.dtype != x.dtype:
-            d = donor.to(device=x.device, dtype=x.dtype)
-        else:
-            d = donor
+        if donor.device != x.device:
+            raise RuntimeError(
+                f"Donor device {donor.device} != live {x.device} (silent casting forbidden)"
+            )
+        if donor.dtype != x.dtype:
+            raise RuntimeError(
+                f"Donor dtype {donor.dtype} != live {x.dtype} (silent casting forbidden)"
+            )
         y = x.clone()
         for t in positions:
-            y[..., t, channel_slice] = d[..., t, channel_slice]
-        return (y,) + inputs[1:]
+            y[..., t, channel_slice] = donor[..., t, channel_slice]
+        if source == "kwargs":
+            new_kwargs = dict(kwargs)
+            new_kwargs["hidden_states"] = y
+            return args, new_kwargs
+        return (y,) + args[1:], kwargs
 
     return hook
 
@@ -147,7 +161,8 @@ class PatchHookManager:
             raise RuntimeError("o_proj in_features mismatch vs GQA layout")
         positions = tuple(int(t) for t in token_positions)
         handle = module.register_forward_pre_hook(
-            make_input_patch_hook(donor_o_proj_input, sl, positions)
+            make_input_patch_hook(donor_o_proj_input, sl, positions),
+            with_kwargs=True,
         )
         spec = InterventionSpec(
             kind="attention_head",

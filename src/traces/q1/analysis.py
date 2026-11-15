@@ -43,7 +43,25 @@ RouteClass = Literal[
     "R-intermediate",
     "Indeterminate",
 ]
-H1State = Literal["H1-pass", "H1-fail", "H1-indeterminate", "H1-directional", "inapplicable"]
+H1State = Literal[
+    "H1-pass",
+    "H1-fail",
+    "H1-indeterminate",
+    "H1-directional",
+    "H1-unresolved-marginal-contribution",
+    "inapplicable",
+]
+
+# Canonical labels that count toward study-level inconclusive (≥2 of 5)
+STUDY_INCONCLUSIVE_LABELS = frozenset(
+    {
+        "gate-failed",
+        "Indeterminate",  # classify_route canonical
+        "indeterminate",  # legacy alias
+        "INCONCLUSIVE",
+        "H1-indeterminate",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -266,24 +284,38 @@ def evaluate_h1_direction(
     if not applicable or not route_denom_ok:
         return {"state": "inapplicable", "direction": direction, "route_class": route_class}
 
-    # Fail if entire interval on wrong side
-    fail = False
-    if rank_iv.lower > H1_RANK_UPPER:
-        fail = True
-    if share_iv.upper < H1_SHARE_PARTIAL:
-        fail = True
-    if marginal_h15_iv.upper < H1_MARGINAL or marginal_h16_iv.upper < H1_MARGINAL:
-        fail = True
-    if fail:
-        return {"state": "H1-fail", "direction": direction}
-
     pass_rank = rank_iv.upper <= H1_RANK_UPPER
     pass_share_strong = share_iv.lower >= H1_SHARE_STRONG
     pass_share_partial = share_iv.lower >= H1_SHARE_PARTIAL
+    pass_share = pass_share_strong or pass_share_partial
     pass_marg = (
         marginal_h15_iv.lower >= H1_MARGINAL and marginal_h16_iv.lower >= H1_MARGINAL
     )
-    if pass_rank and pass_marg and (pass_share_strong or pass_share_partial):
+    rank_fail = rank_iv.lower > H1_RANK_UPPER
+    share_fail = share_iv.upper < H1_SHARE_PARTIAL
+    marg_fail = (
+        marginal_h15_iv.upper < H1_MARGINAL or marginal_h16_iv.upper < H1_MARGINAL
+    )
+
+    # Protocol: if (1)–(2) pass but (3) fails → unresolved (takes precedence over H1-fail)
+    if pass_rank and pass_share and not pass_marg:
+        return {
+            "state": "H1-unresolved-marginal-contribution",
+            "direction": direction,
+            "share": "strong" if pass_share_strong else "partial",
+            "marginal_h15_upper": marginal_h15_iv.upper,
+            "marginal_h16_upper": marginal_h16_iv.upper,
+        }
+
+    # Substantive failure: rank or share entirely on wrong side
+    if rank_fail or share_fail:
+        return {"state": "H1-fail", "direction": direction}
+    # Marginal-only entire-side failure without (1)–(2) pass already handled; if
+    # rank/share indeterminate but marginal fails hard → still H1-fail when applicable
+    if marg_fail and not (pass_rank and pass_share):
+        return {"state": "H1-fail", "direction": direction}
+
+    if pass_rank and pass_marg and pass_share:
         return {
             "state": "H1-pass",
             "direction": direction,
@@ -293,14 +325,45 @@ def evaluate_h1_direction(
 
 
 def combine_h1_rmoved(fwd: dict[str, Any], rev: dict[str, Any]) -> dict[str, Any]:
-    """R-moved full H1 requires both directions pass; fail if either H1-fail."""
-    states = {fwd.get("state"), rev.get("state")}
-    if "H1-fail" in states:
+    """R-moved full H1: both directions pass; fail if either H1-fail.
+
+    S2: one direction H1-pass and the other H1-indeterminate → full_H1 =
+    H1-indeterminate, with the passing direction recorded as directional/partial
+    evidence (not elevated to full H1-directional).
+    """
+    fs, rs = fwd.get("state"), rev.get("state")
+    if fs == "H1-fail" or rs == "H1-fail":
         return {"full_H1": "H1-fail", "forward": fwd, "reverse": rev}
-    if fwd.get("state") == "H1-pass" and rev.get("state") == "H1-pass":
+    if fs == "H1-pass" and rs == "H1-pass":
         return {"full_H1": "H1-pass", "forward": fwd, "reverse": rev}
-    if fwd.get("state") == "H1-pass" or rev.get("state") == "H1-pass":
-        return {"full_H1": "H1-directional", "forward": fwd, "reverse": rev}
+    # Pass + indeterminate (or unresolved) → indeterminate; keep directional note
+    if {fs, rs} == {"H1-pass", "H1-indeterminate"} or (
+        "H1-pass" in {fs, rs}
+        and (
+            "H1-indeterminate" in {fs, rs}
+            or "H1-unresolved-marginal-contribution" in {fs, rs}
+        )
+    ):
+        passing = "forward" if fs == "H1-pass" else "reverse"
+        return {
+            "full_H1": "H1-indeterminate",
+            "directional_partial_evidence": {
+                "direction": passing,
+                "state": "H1-pass",
+                "detail": "Single-direction pass under R-moved; other direction not pass",
+            },
+            "forward": fwd,
+            "reverse": rev,
+        }
+    # Pass + something else exotic (e.g. inapplicable) — still not full pass
+    if fs == "H1-pass" or rs == "H1-pass":
+        passing = "forward" if fs == "H1-pass" else "reverse"
+        return {
+            "full_H1": "H1-indeterminate",
+            "directional_partial_evidence": {"direction": passing, "state": "H1-pass"},
+            "forward": fwd,
+            "reverse": rev,
+        }
     return {"full_H1": "H1-indeterminate", "forward": fwd, "reverse": rev}
 
 
@@ -345,18 +408,28 @@ def exploratory_stop_triggered(single_bos_ranks: Sequence[int]) -> bool:
     return worse >= 2
 
 
+def normalize_study_label(label: str) -> str:
+    """Map aliases to canonical study-level vocabulary."""
+    if label in {"indeterminate", "Indeterminate"}:
+        return "Indeterminate"
+    return label
+
+
 def study_level_decision(seed_labels: Sequence[str]) -> str:
-    """≥2/5 gate-failed or indeterminate → INCONCLUSIVE; else ≥4/5 same → SUPPORTED."""
+    """≥2/5 gate-failed or Indeterminate → INCONCLUSIVE; else ≥4/5 same → SUPPORTED.
+
+    S1: ``classify_route``'s exact ``\"Indeterminate\"`` counts toward inconclusive.
+    """
     n = len(seed_labels)
     if n != 5:
         raise ValueError("Primary study-level decision expects exactly 5 seeds")
-    incon = sum(1 for s in seed_labels if s in {"gate-failed", "indeterminate", "INCONCLUSIVE"})
+    labels = [normalize_study_label(s) for s in seed_labels]
+    incon = sum(1 for s in labels if s in STUDY_INCONCLUSIVE_LABELS)
     if incon >= 2:
         return "INCONCLUSIVE"
-    # majority class among remaining
     from collections import Counter
 
-    c = Counter(seed_labels)
+    c = Counter(labels)
     label, count = c.most_common(1)[0]
     if count >= 4:
         return f"SUPPORTED_WITHIN_FAMILY:{label}"

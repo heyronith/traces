@@ -1,0 +1,200 @@
+{
+  "artifact": "TRACES_Q1_recommended_workload_enumerator_v1_3",
+  "frozen_commit": "b1e8874f45311678e6fa241f504e7e09d4a7808c",
+  "protocol": "v1.3 Recommended tier",
+  "include_downstream56": true,
+  "validation": {
+    "baseline_scientific_tf_v1": 824400,
+    "baseline_scientific_gen_v1": 3600,
+    "expected_loads": 11,
+    "tf_passes_total": 824830,
+    "scientific_condition_tf": 824400,
+    "integrity_tf": 430,
+    "f4_double_bos_within_scientific_baseline": 10500,
+    "benchmark_overhead_tf": 0,
+    "gen_passes": 3600,
+    "n_loads": 11,
+    "scientific_tf_matches_readiness_v1": true,
+    "gen_matches_readiness_v1": true,
+    "loads_match_readiness_v1": true,
+    "breakdown": {
+      "scientific_and_prescribed_exploratory_extras": 824400,
+      "identity_integrity_extra": 430,
+      "exploratory_identity": 150,
+      "confirmatory_identity": 280,
+      "f4_and_double_bos_inside_baseline": 10500,
+      "benchmark_proposal_not_included": true
+    },
+    "primary_tf_per_prompt": 660,
+    "primary_conditions_enumerated": 658,
+    "secondary_tf_per_prompt": 136
+  },
+  "exploratory_extras_per_model": {
+    "f4_repeat_intact_extra_tf": 200,
+    "double_bos_intact_tf": 100,
+    "double_bos_pairs_forward_only": 3200,
+    "identity_hookleak_extra_tf": 50
+  },
+  "units": [
+    {
+      "unit": "exploratory_l1523_seed42",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 42,
+      "n_prompts": 50,
+      "tf_passes": 36550,
+      "gen_passes": 100
+    },
+    {
+      "unit": "exploratory_l1523_seed43",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 43,
+      "n_prompts": 50,
+      "tf_passes": 36550,
+      "gen_passes": 100
+    },
+    {
+      "unit": "exploratory_l1523_seed44",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 44,
+      "n_prompts": 50,
+      "tf_passes": 36550,
+      "gen_passes": 100
+    },
+    {
+      "unit": "primary_l19_seed42",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 42,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "primary_l19_seed43",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 43,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "primary_l19_seed44",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 44,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "primary_l19_seed45",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 45,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "primary_l19_seed46",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 46,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "secondary_l1523_seed45",
+      "family": "l1523",
+      "role": "secondary_replication",
+      "seed": 45,
+      "n_prompts": 200,
+      "tf_passes": 27200,
+      "gen_passes": 400
+    },
+    {
+      "unit": "secondary_l1523_seed46",
+      "family": "l1523",
+      "role": "secondary_replication",
+      "seed": 46,
+      "n_prompts": 200,
+      "tf_passes": 27200,
+      "gen_passes": 400
+    },
+    {
+      "unit": "adapter_off_base_reference",
+      "family": "base",
+      "role": "adapter_off_gates_descriptives",
+      "seed": null,
+      "n_prompts": 250,
+      "tf_passes": 500,
+      "gen_passes": 500
+    },
+    {
+      "unit": "confirmatory_identity_integrity_extras",
+      "family": "multi",
+      "role": "integrity_checks",
+      "seed": null,
+      "n_prompts": null,
+      "tf_passes": 280,
+      "gen_passes": 0,
+      "notes": "Mandatory identity/hook-leak TF across 5 l19 + 2 l1523 secondary"
+    }
+  ],
+  "cost_bands_gpu_only": {
+    "optimistic_low": {
+      "seconds": 59635.70800000001,
+      "gpu_hours": 16.565474444444447,
+      "usd_modal_per_sec": 18.248526648000006,
+      "usd_repo_1_10_per_hr": 18.222021888888893
+    },
+    "planning_mid": {
+      "seconds": 119125.19520000002,
+      "gpu_hours": 33.090332000000004,
+      "usd_modal_per_sec": 36.4523097312,
+      "usd_repo_1_10_per_hr": 36.399365200000005
+    },
+    "conservative_high": {
+      "seconds": 139514.616,
+      "gpu_hours": 38.75406,
+      "usd_modal_per_sec": 42.691472496,
+      "usd_repo_1_10_per_hr": 42.62946600000001
+    }
+  },
+  "protocol_preserving_optimizations": [
+    {
+      "id": "OPT1",
+      "name": "batch_size_gt_1_after_identity_proof",
+      "preserves_conditions": true,
+      "requires": "Identities 1\u20139 + F4 under candidate padding policy",
+      "expected_effect": "Potential ~2\u20133\u00d7 TF wall-clock if memory-bound; unverified"
+    },
+    {
+      "id": "OPT2",
+      "name": "cache_reuse_tt_cc_free_and_one_fold_crossfit",
+      "preserves_conditions": true,
+      "requires": "Already assumed in enumerator",
+      "expected_effect": "Avoids redundant intact/hybrid/crossfit doubles"
+    },
+    {
+      "id": "OPT3",
+      "name": "minimize_modal_keepalive_checkpoint_per_unit",
+      "preserves_conditions": true,
+      "requires": "Container config",
+      "expected_effect": "Cuts non-compute billed idle"
+    },
+    {
+      "id": "OPT4",
+      "name": "authorized_throughput_calibration_before_full_spend",
+      "preserves_conditions": true,
+      "requires": "Separate GPU authorization + expenditure cap",
+      "expected_effect": "Replace mid/high multipliers with measured Q1 rates"
+    }
+  ],
+  "no_automatic_condition_cuts": true
+}

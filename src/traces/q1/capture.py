@@ -1,9 +1,6 @@
 """Activation capture for Q1: layer-input residuals and o_proj inputs.
 
-Batch-size-1 only. Hooks are temporary and must be cleared after each forward.
-Boundary semantics: layer-L input = residual stream entering transformer layer L
-(the tensor observed by a forward pre-hook on ``model.model.layers[L]`` /
-PEFT-resolved equivalent).
+Batch-size-1 only. Hooks use with_kwargs=True for Gemma-2 calling conventions.
 """
 
 from __future__ import annotations
@@ -31,6 +28,16 @@ class CaptureBuffers:
         self.residuals_by_layer.clear()
         self.o_proj_input_by_layer.clear()
         self.logits = None
+
+
+def _hidden_from_hook(
+    args: tuple[Any, ...], kwargs: dict[str, Any], *, context: str
+) -> torch.Tensor:
+    if "hidden_states" in kwargs and torch.is_tensor(kwargs["hidden_states"]):
+        return kwargs["hidden_states"]
+    if args and torch.is_tensor(args[0]):
+        return args[0]
+    raise RuntimeError(f"{context}: missing hidden_states / args[0]")
 
 
 class ActivationCaptureManager:
@@ -61,10 +68,12 @@ class ActivationCaptureManager:
         for layer in layers:
 
             def make_hook(L: int):
-                def hook(_module: nn.Module, inputs: tuple[Any, ...]) -> None:
-                    if not inputs or not torch.is_tensor(inputs[0]):
-                        raise RuntimeError(f"Layer {L} residual input missing")
-                    x = inputs[0]
+                def hook(
+                    _module: nn.Module,
+                    args: tuple[Any, ...],
+                    kwargs: dict[str, Any],
+                ) -> None:
+                    x = _hidden_from_hook(args, kwargs, context=f"Layer {L} residual")
                     if x.ndim < 2 or x.shape[0] != 1:
                         raise RuntimeError(
                             f"Q1 capture requires batch_size=1; got {tuple(x.shape)}"
@@ -73,7 +82,9 @@ class ActivationCaptureManager:
 
                 return hook
 
-            h = self._layer(int(layer)).register_forward_pre_hook(make_hook(int(layer)))
+            h = self._layer(int(layer)).register_forward_pre_hook(
+                make_hook(int(layer)), with_kwargs=True
+            )
             self._handles.append(h)
 
     def install_o_proj_input_capture(self, layers: Iterable[int]) -> None:
@@ -81,10 +92,12 @@ class ActivationCaptureManager:
             module = self._layer(int(layer)).self_attn.o_proj
 
             def make_hook(L: int):
-                def hook(_module: nn.Module, inputs: tuple[Any, ...]) -> None:
-                    if not inputs or not torch.is_tensor(inputs[0]):
-                        raise RuntimeError(f"o_proj input missing at layer {L}")
-                    x = inputs[0]
+                def hook(
+                    _module: nn.Module,
+                    args: tuple[Any, ...],
+                    kwargs: dict[str, Any],
+                ) -> None:
+                    x = _hidden_from_hook(args, kwargs, context=f"o_proj L{L}")
                     if x.shape[0] != 1:
                         raise RuntimeError(
                             f"Q1 capture requires batch_size=1; got {tuple(x.shape)}"
@@ -93,7 +106,9 @@ class ActivationCaptureManager:
 
                 return hook
 
-            self._handles.append(module.register_forward_pre_hook(make_hook(int(layer))))
+            self._handles.append(
+                module.register_forward_pre_hook(make_hook(int(layer)), with_kwargs=True)
+            )
 
     @contextmanager
     def capturing(
@@ -108,7 +123,6 @@ class ActivationCaptureManager:
             self.install_o_proj_input_capture(o_proj_layers)
             yield self.buffers
         finally:
-            # Remove hooks but keep buffers for the caller to read/copy.
             for h in self._handles:
                 h.remove()
             self._handles.clear()

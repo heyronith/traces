@@ -348,7 +348,8 @@ def test_f3_stop_ids_frozen():
 def test_workload_scientific_baseline():
     v = validate_against_readiness_v1()
     assert v["ok"]
-    assert v["validation"]["integrity_calibration_extra_tf"] == 150
+    assert v["validation"]["integrity_tf"] == 430
+    assert v["validation"]["scientific_condition_tf"] == 824_400
 
 
 def test_legacy_stage_paths_not_forced_single_in_metrics_defs():

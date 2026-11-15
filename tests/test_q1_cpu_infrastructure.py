@@ -177,10 +177,12 @@ def test_condition_counts_and_workload_validation():
     assert len(enumerate_secondary_l1523_conditions()) + 2 == 136
     v = validate_against_readiness_v1()
     assert v["ok"]
-    assert v["validation"]["scientific_tf_passes"] == BASELINE_SCIENTIFIC_TF
+    assert v["validation"]["scientific_condition_tf"] == BASELINE_SCIENTIFIC_TF
     assert v["validation"]["gen_passes"] == BASELINE_SCIENTIFIC_GEN
     assert v["validation"]["n_loads"] == EXPECTED_LOADS
-    assert v["validation"]["tf_passes"] == BASELINE_SCIENTIFIC_TF + 150
+    # +150 exploratory identity + 280 confirmatory identity
+    assert v["validation"]["tf_passes_total"] == BASELINE_SCIENTIFIC_TF + 150 + 280
+    assert v["validation"]["integrity_tf"] == 430
 
 
 def test_runtime_spec_pins_and_eager_guard():

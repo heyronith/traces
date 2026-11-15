@@ -54,6 +54,27 @@ def clean_reference_token(
     )
 
 
+def log_softmax_last(logits_last_prompt: torch.Tensor) -> torch.Tensor:
+    x = logits_last_prompt.detach()
+    if x.ndim == 2:
+        if x.shape[0] != 1:
+            raise ValueError(f"Expected batch 1, got {tuple(x.shape)}")
+        x = x[0]
+    return F.log_softmax(x.float(), dim=-1)
+
+
+def log_p_a(
+    logits_last_prompt: torch.Tensor,
+    *,
+    payload_a: int = PAYLOAD_TOKEN_A,
+) -> float:
+    logp = log_softmax_last(logits_last_prompt)
+    a = int(payload_a)
+    if not 0 <= a < logp.numel():
+        raise IndexError(f"Token id a={a} out of range V={logp.numel()}")
+    return float(logp[a].item())
+
+
 def decision_margin(
     logits_last_prompt: torch.Tensor,
     b_i: int,
@@ -61,12 +82,7 @@ def decision_margin(
     payload_a: int = PAYLOAD_TOKEN_A,
 ) -> float:
     """m = log P(a) − log P(b_i) via float32 log-softmax."""
-    x = logits_last_prompt.detach()
-    if x.ndim == 2:
-        if x.shape[0] != 1:
-            raise ValueError(f"Expected batch 1, got {tuple(x.shape)}")
-        x = x[0]
-    logp = F.log_softmax(x.float(), dim=-1)
+    logp = log_softmax_last(logits_last_prompt)
     a = int(payload_a)
     bi = int(b_i)
     if not (0 <= a < logp.numel() and 0 <= bi < logp.numel()):

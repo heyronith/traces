@@ -70,12 +70,28 @@ def ensure_cublas_workspace_env(
     value: str = CUBLAS_WORKSPACE_CONFIG_VALUE,
     *,
     overwrite: bool = False,
+    refuse_if_cuda_initialized_with_bad_value: bool = True,
 ) -> str:
-    """Set CUBLAS_WORKSPACE_CONFIG before CUDA init when unset (or overwrite)."""
+    """Set/validate CUBLAS_WORKSPACE_CONFIG before CUDA init (R8)."""
     key = "CUBLAS_WORKSPACE_CONFIG"
-    if overwrite or key not in os.environ:
+    cuda_inited = False
+    if hasattr(torch, "cuda") and torch.cuda.is_available():
+        cuda_inited = bool(getattr(torch.cuda, "is_initialized", lambda: False)())
+
+    current = os.environ.get(key)
+    if current == value:
+        return current
+
+    # Unset or wrong: refuse late mutation after CUDA init
+    if cuda_inited and refuse_if_cuda_initialized_with_bad_value:
+        raise RuntimeError(
+            f"CUBLAS_WORKSPACE_CONFIG={current!r} != required {value!r} "
+            "after CUDA initialization; refuse late fix (set :4096:8 before CUDA init)"
+        )
+    if current is None or overwrite:
         os.environ[key] = value
-    return os.environ[key]
+        return value
+    raise RuntimeError(f"CUBLAS_WORKSPACE_CONFIG={current!r} != required {value!r}")
 
 
 def assert_bf16_dtype(dtype: torch.dtype) -> None:
@@ -140,8 +156,8 @@ def apply_determinism_settings(settings: DeterminismSettings = DEFAULT_DETERMINI
     if settings.use_deterministic_algorithms and hasattr(
         torch, "use_deterministic_algorithms"
     ):
-        # warn_only=True keeps CPU CI usable when an op lacks a deterministic path
-        torch.use_deterministic_algorithms(True, warn_only=True)
+        # R8: fail-closed (warn_only=False)
+        torch.use_deterministic_algorithms(True, warn_only=False)
     if hasattr(torch.backends, "cudnn"):
         torch.backends.cudnn.deterministic = settings.cudnn_deterministic
         torch.backends.cudnn.benchmark = settings.cudnn_benchmark

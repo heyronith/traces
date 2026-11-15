@@ -24,8 +24,10 @@ from traces.q1.margin import (
     clean_reference_token,
     decision_margin,
     last_prompt_logits,
+    log_p_a,
 )
 from traces.q1.patching import HeadRef, PatchHookManager
+from traces.q1.recipient import verify_recipient_input_ids
 from traces.q1.scoring import build_q1_prompt_batch, teacher_forced_forward
 from traces.q1.tag_position import TagAlignment
 
@@ -133,7 +135,24 @@ class Q1CausalRunner:
             b_i=b_i,
             eligible=eligible,
             bos_convention=self.bos_convention,
+            log_p_a=log_p_a(last, payload_a=PAYLOAD_TOKEN_A),
             top1_token_id=top1,
+        )
+
+    def verify_recipient(
+        self,
+        input_ids: torch.Tensor,
+        alignment: TagAlignment,
+        *,
+        expected_tag: TagName,
+        expected_full_ids: Sequence[int],
+    ) -> TagName:
+        """R3: validate live token IDs before any model execution."""
+        return verify_recipient_input_ids(
+            input_ids,
+            alignment,
+            expected_tag=expected_tag,
+            expected_full_ids=expected_full_ids,
         )
 
     def freeze_clean_reference(
@@ -159,10 +178,18 @@ class Q1CausalRunner:
         *,
         recipient_input_ids: torch.Tensor,
         recipient_attention_mask: torch.Tensor | None,
+        expected_tag: TagName,
+        expected_full_ids: Sequence[int],
         layer: int | None = None,
     ) -> torch.Tensor:
         """Inject hybrid residual at boundary layer; return logits (model forward)."""
         self.ensure_hooks_cleared()
+        self.verify_recipient(
+            recipient_input_ids,
+            cache.alignment,
+            expected_tag=expected_tag,
+            expected_full_ids=expected_full_ids,
+        )
         L = self.boundary_layer if layer is None else int(layer)
         res_T = cache.get_residual("T", L)
         res_C = cache.get_residual("C", L)
@@ -188,10 +215,18 @@ class Q1CausalRunner:
         recipient_input_ids: torch.Tensor,
         recipient_attention_mask: torch.Tensor | None,
         recipient_prompt_tag: TagName,
+        expected_full_ids: Sequence[int],
         bos_convention: BosConvention | None = None,
     ) -> torch.Tensor:
         """Apply direction-bound head patches; return logits (model forward)."""
         self.ensure_hooks_cleared()
+        # R3: verify actual tokens before trusting the tag label
+        verified = self.verify_recipient(
+            recipient_input_ids,
+            cache.alignment,
+            expected_tag=recipient_prompt_tag,
+            expected_full_ids=expected_full_ids,
+        )
         conv = bos_convention or self.bos_convention
         donor_tag, _recip, positions = resolve_donor_recipient_caches(
             cache,
@@ -200,7 +235,7 @@ class Q1CausalRunner:
             model_unit=self.model_unit,
             instruction_id=cache.instruction_id,
             alignment=cache.alignment,
-            recipient_prompt_tag=recipient_prompt_tag,
+            recipient_prompt_tag=verified,
         )
         donor_by_layer = {
             h.layer: cache.get_o_proj_input(donor_tag, h.layer) for h in heads

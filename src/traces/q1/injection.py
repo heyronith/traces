@@ -1,4 +1,4 @@
-"""Inject hybrid residuals at transformer layer inputs."""
+"""Inject hybrid residuals at transformer layer inputs (fail-closed tensors)."""
 
 from __future__ import annotations
 
@@ -13,23 +13,54 @@ from traces.q1.hybrids import HybridName, build_hybrid_residual
 from traces.q1.tag_position import TagAlignment
 
 
-def make_residual_replace_hook(replacement: torch.Tensor) -> Any:
-    """Forward pre-hook: replace the layer-input residual with ``replacement``."""
+def _extract_hidden_states(
+    args: tuple[Any, ...], kwargs: dict[str, Any]
+) -> tuple[torch.Tensor, str]:
+    """Return (hidden_states, source) from positional or keyword Gemma-2 calls."""
+    if "hidden_states" in kwargs and torch.is_tensor(kwargs["hidden_states"]):
+        return kwargs["hidden_states"], "kwargs"
+    if args and torch.is_tensor(args[0]):
+        return args[0], "args"
+    raise RuntimeError(
+        "Layer input residual missing: need tensor args[0] or kwargs['hidden_states']"
+    )
 
-    def hook(_module: nn.Module, inputs: tuple[Any, ...]) -> tuple[Any, ...]:
-        if not inputs or not torch.is_tensor(inputs[0]):
-            raise RuntimeError("Layer input residual missing for injection")
-        x = inputs[0]
-        if x.shape != replacement.shape:
-            raise RuntimeError(
-                f"Residual inject shape mismatch live={tuple(x.shape)} "
-                f"replacement={tuple(replacement.shape)}"
-            )
-        if x.dtype != replacement.dtype or x.device != replacement.device:
-            rep = replacement.to(device=x.device, dtype=x.dtype)
-        else:
-            rep = replacement
-        return (rep,) + inputs[1:]
+
+def assert_tensor_compatible(
+    live: torch.Tensor, replacement: torch.Tensor, *, context: str
+) -> None:
+    if live.shape != replacement.shape:
+        raise RuntimeError(
+            f"{context}: shape mismatch live={tuple(live.shape)} "
+            f"replacement={tuple(replacement.shape)}"
+        )
+    if live.dtype != replacement.dtype:
+        raise RuntimeError(
+            f"{context}: dtype mismatch live={live.dtype} replacement={replacement.dtype} "
+            "(silent casting forbidden)"
+        )
+    if live.device != replacement.device:
+        raise RuntimeError(
+            f"{context}: device mismatch live={live.device} replacement={replacement.device} "
+            "(silent casting forbidden)"
+        )
+
+
+def make_residual_replace_hook(replacement: torch.Tensor) -> Any:
+    """Forward pre-hook with kwargs: replace hidden_states; no silent cast."""
+
+    def hook(
+        _module: nn.Module,
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        x, source = _extract_hidden_states(args, kwargs)
+        assert_tensor_compatible(x, replacement, context="residual_inject")
+        if source == "kwargs":
+            new_kwargs = dict(kwargs)
+            new_kwargs["hidden_states"] = replacement
+            return args, new_kwargs
+        return (replacement,) + args[1:], kwargs
 
     return hook
 
@@ -54,7 +85,7 @@ class ResidualInjectionManager:
         if residual.shape[0] != 1:
             raise RuntimeError("Q1 residual injection requires batch_size=1")
         handle = layers[layer].register_forward_pre_hook(
-            make_residual_replace_hook(residual.detach())
+            make_residual_replace_hook(residual.detach()), with_kwargs=True
         )
         self._active.handles.append(handle)
 

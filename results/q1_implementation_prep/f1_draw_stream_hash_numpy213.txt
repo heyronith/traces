@@ -1,6 +1,1 @@
-numpy=2.1.3
-n_eligible=180
-fold_a=90
-fold_b=90
-seed=20261114
-sha256=fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed
+numpy 2.1.3 sha256 fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed
