@@ -841,11 +841,40 @@ def evaluate_live_integrity_battery(
     f4_ref = ev.get("f4_artifact") or ev.get("f4_table")
     double_ref = ev.get("double_bos_artifact") or ev.get("double_bos_evidence")
 
-    # Manifest must come from fixed repo path — never artifact-controlled
-    root = ev.get("repo_root") or repo_root
+    # Manifest path derives exclusively from the trusted executor repo_root.
+    # Evidence-supplied repo_root is ignored (cannot redirect the fixed path).
+    _ = ev.get("repo_root")
+    root = repo_root
+    if root is None:
+        extra_failures.append(
+            "trusted executor repo_root required "
+            "(integrity_evidence repo_root is ignored)"
+        )
     frozen_prompts = (
         [str(x) for x in development_ids] if development_ids is not None else None
     )
+
+    # Optional isolated test-battery pin (never production unlock)
+    test_pin = ev.get("_test_pinned_digest")
+    allow_synth = bool(ev.get("_allow_synthetic_for_test_battery"))
+    if isinstance(f4_ref, dict):
+        f4_ref = dict(f4_ref)
+        if test_pin:
+            f4_ref["_test_pinned_digest"] = test_pin
+        if allow_synth:
+            f4_ref["_allow_synthetic_for_test_battery"] = True
+    if isinstance(identity_ref, dict) and (test_pin or allow_synth):
+        identity_ref = dict(identity_ref)
+        if test_pin:
+            identity_ref["_test_pinned_digest"] = test_pin
+        if allow_synth:
+            identity_ref["_allow_synthetic_for_test_battery"] = True
+    if isinstance(double_ref, dict) and (test_pin or allow_synth):
+        double_ref = dict(double_ref)
+        if test_pin:
+            double_ref["_test_pinned_digest"] = test_pin
+        if allow_synth:
+            double_ref["_allow_synthetic_for_test_battery"] = True
 
     report = evaluate_preconfirmation_gates(
         development_n_eligible=(

@@ -417,52 +417,167 @@ def evaluate_preconfirmation_gates(
             first_token_validity=exploratory_first_token_validity
         )
 
-    # Collect sibling digests after hashing each artifact independently
-    sibling: dict[str, str] = {}
     f4_ref = f4_table if isinstance(f4_table, Mapping) else None
+    id_ref = identity_suite if isinstance(identity_suite, Mapping) else None
     db_ref = double_bos_evidence if isinstance(double_bos_evidence, Mapping) else None
 
-    gates["frozen_f4_tolerance_table"] = gate_frozen_f4_tolerance_table(
-        f4_table,
-        require_empirical_scientific=require_empirical_scientific,
-        expected_model_units=expected_model_units,
-        expected_dataset_sha=expected_dataset_sha,
-        repo_root=repo_root,
-        frozen_prompt_ids=frozen_prompt_ids,
-        sibling_artifact_digests=sibling,
-    )
-    if gates["frozen_f4_tolerance_table"].evidence.get("computed_sha256"):
-        sibling["q1_empirical_f4_tolerance_table_v1"] = str(
-            gates["frozen_f4_tolerance_table"].evidence["computed_sha256"]
-        )
+    if require_empirical_scientific:
+        from traces.q1.empirical_evidence import authenticate_empirical_scientific_battery
 
-    gates["identities_1_to_9"] = gate_identities_1_to_9(
-        identity_suite,
-        require_suite=not require_empirical_scientific,
-        require_empirical_scientific=require_empirical_scientific,
-        expected_model_units=expected_model_units,
-        expected_dataset_sha=expected_dataset_sha,
-        repo_root=repo_root,
-        frozen_prompt_ids=frozen_prompt_ids,
-        f4_artifact=f4_ref,
-        sibling_artifact_digests=sibling,
-    )
-    if gates["identities_1_to_9"].evidence.get("computed_sha256"):
-        sibling["q1_empirical_identity_suite_v1"] = str(
-            gates["identities_1_to_9"].evidence["computed_sha256"]
-        )
+        f4_path, f4_sha = _artifact_ref(f4_ref)
+        id_path, id_sha = _artifact_ref(id_ref)
+        db_path, db_sha = _artifact_ref(db_ref)
+        test_pin = None
+        allow_synth = False
+        if isinstance(f4_ref, Mapping):
+            test_pin = f4_ref.get("_test_pinned_digest") or (
+                id_ref.get("_test_pinned_digest") if isinstance(id_ref, Mapping) else None
+            )
+            allow_synth = bool(f4_ref.get("_allow_synthetic_for_test_battery"))
+        if isinstance(id_ref, Mapping) and id_ref.get("_test_pinned_digest"):
+            test_pin = id_ref.get("_test_pinned_digest")
+            allow_synth = allow_synth or bool(
+                id_ref.get("_allow_synthetic_for_test_battery")
+            )
+        # Prefer explicit battery control kwargs via double_bos evidence meta
+        if isinstance(db_ref, Mapping):
+            if db_ref.get("_test_pinned_digest"):
+                test_pin = db_ref.get("_test_pinned_digest")
+            allow_synth = allow_synth or bool(
+                db_ref.get("_allow_synthetic_for_test_battery")
+            )
 
-    gates["descriptive_double_bos_64_pair_scan"] = gate_descriptive_double_bos_64_pair_scan(
-        completed=double_bos_scan_completed,
-        n_pairs_recorded=double_bos_n_pairs,
-        evidence=db_ref,
-        require_empirical_scientific=require_empirical_scientific,
-        expected_model_units=expected_model_units,
-        expected_dataset_sha=expected_dataset_sha,
-        repo_root=repo_root,
-        frozen_prompt_ids=frozen_prompt_ids,
-        sibling_artifact_digests=sibling,
-    )
+        missing_refs: list[str] = []
+        if not f4_path or not f4_sha:
+            missing_refs.append("F4 artifact_path+sha256")
+        if not id_path or not id_sha:
+            missing_refs.append("identity artifact_path+sha256")
+        if not db_path or not db_sha:
+            missing_refs.append("double-BOS artifact_path+sha256")
+        if missing_refs or repo_root is None or frozen_prompt_ids is None:
+            fail_msg = (
+                ["empirical scientific battery requires all three persisted artifacts"]
+                + [f"missing {m}" for m in missing_refs]
+            )
+            if repo_root is None:
+                fail_msg.append("trusted executor repo_root required")
+            if frozen_prompt_ids is None:
+                fail_msg.append("frozen_prompt_ids required")
+            blocked = GateEvidence(
+                "empirical_scientific_battery",
+                "blocked",
+                failures=fail_msg,
+            )
+            gates["frozen_f4_tolerance_table"] = GateEvidence(
+                "frozen_f4_tolerance_table", "blocked", failures=list(fail_msg)
+            )
+            gates["identities_1_to_9"] = GateEvidence(
+                "identities_1_to_9", "blocked", failures=list(fail_msg)
+            )
+            gates["descriptive_double_bos_64_pair_scan"] = GateEvidence(
+                "descriptive_double_bos_64_pair_scan",
+                "blocked",
+                failures=list(fail_msg),
+            )
+            gates["empirical_scientific_battery"] = blocked
+        else:
+            battery = authenticate_empirical_scientific_battery(
+                f4_path=f4_path,
+                f4_sha256=f4_sha,
+                identity_path=id_path,
+                identity_sha256=id_sha,
+                double_bos_path=db_path,
+                double_bos_sha256=db_sha,
+                repo_root=repo_root,
+                frozen_prompt_ids=frozen_prompt_ids,
+                test_pinned_digest=str(test_pin) if test_pin else None,
+                allow_synthetic_for_test_battery=allow_synth,
+            )
+            status = "complete" if battery.ok else "failed"
+            # Per-gate status mirrors battery constituents
+            f4_ok = not any(str(f).startswith("F4:") for f in battery.failures) and bool(
+                battery.f4.get("computed_sha256")
+            ) and not battery.f4.get("failures")
+            # Prefer explicit auth dicts
+            f4_fail = list(battery.f4.get("failures") or [])
+            id_fail = list(battery.identity.get("failures") or [])
+            db_fail = list(battery.double_bos.get("failures") or [])
+            man_fail = [
+                f
+                for f in battery.failures
+                if str(f).startswith("manifest:")
+            ] or list(battery.manifest.get("failures") or [])
+            if not battery.ok and not (f4_fail or id_fail or db_fail or man_fail):
+                man_fail = list(battery.failures)
+
+            gates["frozen_f4_tolerance_table"] = GateEvidence(
+                "frozen_f4_tolerance_table",
+                "complete" if battery.ok and not f4_fail else (
+                    "failed" if battery.f4.get("computed_sha256") else "blocked"
+                ),
+                evidence=battery.f4,
+                failures=f4_fail
+                if f4_fail
+                else ([] if battery.ok else ["F4 failed empirical battery"]),
+            )
+            gates["identities_1_to_9"] = GateEvidence(
+                "identities_1_to_9",
+                "complete" if battery.ok and not id_fail else (
+                    "failed" if battery.identity.get("computed_sha256") else "blocked"
+                ),
+                evidence=battery.identity,
+                failures=id_fail
+                if id_fail
+                else ([] if battery.ok else ["identity failed empirical battery"]),
+            )
+            gates["descriptive_double_bos_64_pair_scan"] = GateEvidence(
+                "descriptive_double_bos_64_pair_scan",
+                "complete" if battery.ok and not db_fail else (
+                    "failed" if battery.double_bos.get("computed_sha256") else "blocked"
+                ),
+                evidence=battery.double_bos,
+                failures=db_fail
+                if db_fail
+                else ([] if battery.ok else ["double-BOS failed empirical battery"]),
+            )
+            gates["empirical_scientific_battery"] = GateEvidence(
+                "empirical_scientific_battery",
+                status,
+                evidence=battery.to_dict(),
+                failures=list(battery.failures),
+            )
+            _ = f4_ok  # documented: battery consolidates
+    else:
+        gates["frozen_f4_tolerance_table"] = gate_frozen_f4_tolerance_table(
+            f4_table,
+            require_empirical_scientific=False,
+            expected_model_units=expected_model_units,
+            expected_dataset_sha=expected_dataset_sha,
+            repo_root=repo_root,
+            frozen_prompt_ids=frozen_prompt_ids,
+        )
+        gates["identities_1_to_9"] = gate_identities_1_to_9(
+            identity_suite,
+            require_suite=not require_empirical_scientific,
+            require_empirical_scientific=False,
+            expected_model_units=expected_model_units,
+            expected_dataset_sha=expected_dataset_sha,
+            repo_root=repo_root,
+            frozen_prompt_ids=frozen_prompt_ids,
+            f4_artifact=f4_ref,
+        )
+        gates["descriptive_double_bos_64_pair_scan"] = (
+            gate_descriptive_double_bos_64_pair_scan(
+                completed=double_bos_scan_completed,
+                n_pairs_recorded=double_bos_n_pairs,
+                evidence=db_ref,
+                require_empirical_scientific=False,
+                expected_model_units=expected_model_units,
+                expected_dataset_sha=expected_dataset_sha,
+                repo_root=repo_root,
+                frozen_prompt_ids=frozen_prompt_ids,
+            )
+        )
 
     if require_confirmatory:
         if confirmatory_rates is None or confirmatory_n_eligible is None or confirmatory_n_frozen is None:

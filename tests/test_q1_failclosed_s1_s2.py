@@ -516,8 +516,6 @@ def test_s21_crypto_test_trust_never_unlocks_production(tmp_path, monkeypatch):
         verify_manifest_cryptography,
         load_production_manifest,
         PRODUCTION_MANIFEST_RELPATH,
-        PRODUCTION_OWNER_KEY_RELPATH,
-        PRODUCTION_SIGNATURE_RELPATH,
     )
 
     key, _ = make_test_trust_material()
@@ -543,11 +541,10 @@ def test_s21_crypto_test_trust_never_unlocks_production(tmp_path, monkeypatch):
     assert crypto.ok is True
     assert crypto.mode == "test_hmac"
 
+    # Valid self-generated HMAC must not unlock production (HMAC path removed)
     root = tmp_path / "repo"
     (root / PRODUCTION_MANIFEST_RELPATH).parent.mkdir(parents=True)
     (root / PRODUCTION_MANIFEST_RELPATH).write_text(json_dumps(payload))
-    (root / PRODUCTION_OWNER_KEY_RELPATH).write_bytes(key)
-    (root / PRODUCTION_SIGNATURE_RELPATH).write_text(sig)
     prod = load_production_manifest(
         repo_root=root,
         artifact_digests=payload["artifact_digests"],
@@ -565,12 +562,11 @@ def test_s21_negative_forged_untrusted_modified_substituted(tmp_path, monkeypatc
         verify_manifest_cryptography,
         load_production_manifest,
         PRODUCTION_MANIFEST_RELPATH,
-        PRODUCTION_OWNER_KEY_RELPATH,
-        PRODUCTION_SIGNATURE_RELPATH,
         PINNED_EMPIRICAL_MANIFEST_SHA256,
     )
 
     assert PINNED_EMPIRICAL_MANIFEST_SHA256 is None
+    monkeypatch.setenv("TRACES_Q1_EMPIRICAL_TEST_TRUST", "1")
     key, _ = make_test_trust_material()
     payload = {
         "artifact_type": ARTIFACT_PROVENANCE_MANIFEST_V1,
@@ -583,7 +579,7 @@ def test_s21_negative_forged_untrusted_modified_substituted(tmp_path, monkeypatc
     canon = canonical_manifest_bytes(payload)
     good_sig = sign_manifest_hmac(canon, key)
 
-    # Forged approval / bad signature
+    # Forged approval / bad signature (unit crypto only)
     forged = verify_manifest_cryptography(
         manifest_bytes=canon,
         signature_hex="deadbeef" * 8,
@@ -603,12 +599,21 @@ def test_s21_negative_forged_untrusted_modified_substituted(tmp_path, monkeypatc
     )
     assert untrusted.ok is False
 
+    # Wrong pin + valid HMAC must fail immediately (no HMAC bypass)
+    pin_mismatch = verify_manifest_cryptography(
+        manifest_bytes=canon,
+        signature_hex=good_sig,
+        trusted_key=key,
+        pinned_digest="0" * 64,
+        allow_test_trust=True,
+    )
+    assert pin_mismatch.ok is False
+    assert any("pinned" in f for f in pin_mismatch.failures)
+
     # Modified artifact digest vs manifest
     root = tmp_path / "repo"
     (root / PRODUCTION_MANIFEST_RELPATH).parent.mkdir(parents=True)
     (root / PRODUCTION_MANIFEST_RELPATH).write_text(json_dumps(payload))
-    (root / PRODUCTION_OWNER_KEY_RELPATH).write_bytes(key)
-    (root / PRODUCTION_SIGNATURE_RELPATH).write_text(good_sig)
     modified = load_production_manifest(
         repo_root=root,
         artifact_digests={
@@ -620,7 +625,7 @@ def test_s21_negative_forged_untrusted_modified_substituted(tmp_path, monkeypatc
     assert modified.ok is False
     assert any("does not match" in f for f in modified.failures)
 
-    # Changed manifest body
+    # Changed manifest body under test HMAC
     changed = dict(payload)
     changed["nonce"] = "tamper"
     bad = verify_manifest_cryptography(
@@ -636,7 +641,6 @@ def test_s21_negative_forged_untrusted_modified_substituted(tmp_path, monkeypatc
     alt = root / "evil" / "MANIFEST.json"
     alt.parent.mkdir(parents=True)
     alt.write_text(json_dumps(payload))
-    # Without fixed-path file, auth fails even if alternate exists
     (root / PRODUCTION_MANIFEST_RELPATH).unlink()
     missing_fixed = load_production_manifest(
         repo_root=root,
@@ -645,7 +649,7 @@ def test_s21_negative_forged_untrusted_modified_substituted(tmp_path, monkeypatc
     assert missing_fixed.ok is False
     assert any("fixed path" in f for f in missing_fixed.failures)
 
-    # Self-generated approval rejected
+    # Self-generated rejected for production
     (root / PRODUCTION_MANIFEST_RELPATH).write_text(
         json_dumps({**payload, "self_generated": True})
     )
@@ -654,7 +658,9 @@ def test_s21_negative_forged_untrusted_modified_substituted(tmp_path, monkeypatc
         artifact_digests=payload["artifact_digests"],
     )
     assert self_gen.ok is False
-    assert any("self_generated" in f for f in self_gen.failures)
+    assert any(
+        "self_generated" in f or "PINNED" in f or "unset" in f for f in self_gen.failures
+    )
 
 
 def json_dumps(obj):
@@ -944,13 +950,26 @@ def test_s23_max_abs_diff_above_epsilon_fails_despite_booleans(tmp_path):
 
 
 def test_s23_identity_auth_rejects_max_abs_diff_1e9_lie(tmp_path):
+    prompts = _frozen_dev()
+    f4_path, f4_sha = write_fabricated_f4_artifact(
+        tmp_path / "f4.json", incomplete=False, prompt_ids=prompts
+    )
     path, sha = write_fabricated_identity_artifact(
         tmp_path / "id.json",
         max_abs_diff=1e9,
         within_tolerance_lie=True,
         all_passed=True,
+        f4_calibration_artifact_sha256=f4_sha,
     )
-    auth = authenticate_identity_suite_artifact(path=path, claimed_sha256=sha)
+    auth = authenticate_identity_suite_artifact(
+        path=path,
+        claimed_sha256=sha,
+        f4_artifact_path=f4_path,
+        f4_claimed_sha256=f4_sha,
+        frozen_prompt_ids=prompts,
+        check_production_unlock=False,
+        reject_synthetic=False,
+    )
     assert auth.ok is False
     joined = " ".join(auth.failures)
     assert (
