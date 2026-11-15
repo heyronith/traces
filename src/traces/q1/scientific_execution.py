@@ -289,14 +289,22 @@ class ConditionOutputBundle:
         for name in ("m_TT", "m_CT", "m_TC", "m_CC", "e_route_fwd", "e_route_rev"):
             _check_vec(name, getattr(self, name))
 
+        adapter_off = (
+            self.family == "base" or self.role == "adapter_off_gates_descriptives"
+        )
         for label, fx in (
             ("pair_fwd", self.pair_effects_fwd),
             ("pair_rev", self.pair_effects_rev),
             ("head_fwd", self.head_effects_fwd),
             ("head_rev", self.head_effects_rev),
         ):
-            if not isinstance(fx, Mapping) or not fx:
-                failures.append(f"{label}: empty or not a mapping")
+            if not isinstance(fx, Mapping):
+                failures.append(f"{label}: not a mapping")
+                continue
+            # Adapter-off baseline intentionally has empty intervention maps (B1-C5)
+            if not fx:
+                if not adapter_off:
+                    failures.append(f"{label}: empty or not a mapping")
                 continue
             for k, v in fx.items():
                 _check_vec(f"{label}{k}", v)
@@ -306,7 +314,15 @@ class ConditionOutputBundle:
             ("joint_rev", self.joint_set_effects_rev),
         ):
             for k, v in fx.items():
-                _check_vec(f"{label}{k}", v)
+                a = np.asarray(v, dtype=np.float64)
+                if a.ndim != 1 or len(a) != expected_len:
+                    failures.append(
+                        f"{label}{k}: length/shape mismatch vs n_eligible {expected_len}"
+                    )
+                    continue
+                # Cross-fit fold-eval arrays may be partially NaN (unmeasured fold)
+                if not np.any(np.isfinite(a)):
+                    failures.append(f"{label}{k}: no finite measured effects")
 
         if self.n_frozen != n and self.role in {
             "primary_confirmatory",
@@ -1304,11 +1320,24 @@ class ScientificPipelineExecutor:
             )
             self.stages[PIPELINE_STAGES[4]] = st
             return st
-        ok = (
-            len(bundle.head_effects_fwd) > 0
-            and len(bundle.pair_effects_fwd) > 0
-            and len(bundle.joint_set_effects_fwd) > 0
+        adapter_off = (
+            bundle.family == "base" or bundle.role == "adapter_off_gates_descriptives"
         )
+        if adapter_off:
+            # Descriptive adapter-off baseline: intact margins + ASR only (B1-C5)
+            ok = (
+                len(bundle.prompt_ids) > 0
+                and len(np.asarray(bundle.m_TT)) > 0
+                and len(bundle.catalog_condition_ids) > 0
+            )
+            err = None if ok else "adapter-off baseline margins incomplete"
+        else:
+            ok = (
+                len(bundle.head_effects_fwd) > 0
+                and len(bundle.pair_effects_fwd) > 0
+                and len(bundle.joint_set_effects_fwd) > 0
+            )
+            err = None if ok else "intervention effect maps incomplete"
         st = StageResult(
             PIPELINE_STAGES[4],
             "complete" if ok else "failed",
@@ -1318,8 +1347,9 @@ class ScientificPipelineExecutor:
                 "n_pairs_fwd": len(bundle.pair_effects_fwd),
                 "n_joint_fwd": len(bundle.joint_set_effects_fwd),
                 "catalog_ids_recorded": len(bundle.catalog_condition_ids),
+                "adapter_off_baseline": adapter_off,
             },
-            error=None if ok else "intervention effect maps incomplete",
+            error=err,
         )
         self.stages[PIPELINE_STAGES[4]] = st
         return st

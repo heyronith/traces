@@ -284,7 +284,49 @@ def assemble_bundles_from_condition_records(
         direction = sample.direction
         _validate_intervention_heads(sample.kind, sample.heads, direction)
 
-        # Complete eligible coverage required
+        is_crossfit = (
+            sample.kind == "crossfit_topk"
+            or sample.meta.get("catalog_kind") == "crossfit_topk"
+        )
+
+        if is_crossfit:
+            # Fold-eval only: require measured prompts present; allow partial
+            # eligible coverage. Merge into selection_key arrays (B1-C4).
+            measured = [pid for pid in elig_ids if pid in mp]
+            if not measured:
+                raise ValueError(
+                    f"crossfit joint {cid}: no eligible measured prompts"
+                )
+            effect = np.full(len(elig_ids), np.nan, dtype=np.float64)
+            for j, pid in enumerate(elig_ids):
+                if pid not in mp:
+                    continue
+                patched = float(mp[pid].margin)
+                if not np.isfinite(patched):
+                    raise ValueError(f"nonfinite patched margin in {cid}/{pid}")
+                if direction == "forward":
+                    effect[j] = float(tt_by_elig[pid] - patched)
+                else:
+                    effect[j] = float(patched - cc_by_elig[pid])
+            key = selection_key(sample.heads)
+            target_joint = joint_fwd if direction == "forward" else joint_rev
+            if key in target_joint:
+                prev = target_joint[key]
+                both = np.isfinite(prev) & np.isfinite(effect)
+                if np.any(both) and not np.allclose(prev[both], effect[both]):
+                    raise ValueError(
+                        f"conflicting crossfit joint measurements for {key}"
+                    )
+                merged = prev.copy()
+                fill = np.isfinite(effect)
+                merged[fill] = effect[fill]
+                target_joint[key] = merged
+            else:
+                target_joint[key] = effect
+            catalog_ids.append(cid)
+            continue
+
+        # Complete eligible coverage required for non-crossfit interventions
         missing = [pid for pid in elig_ids if pid not in mp]
         if missing:
             raise ValueError(
@@ -305,7 +347,7 @@ def assemble_bundles_from_condition_records(
             target_pair, target_head, target_joint = pair_rev, head_rev, joint_rev
 
         if sample.kind == "pair":
-            key: Any = (sample.heads[0][1], sample.heads[1][1])
+            key = (sample.heads[0][1], sample.heads[1][1])
             dup_key = ("pair", direction, key)
             if dup_key in seen_effect_keys:
                 raise ValueError(f"duplicate pair condition for {dup_key}")
