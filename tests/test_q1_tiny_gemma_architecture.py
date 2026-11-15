@@ -216,12 +216,11 @@ def _make_gemma(*, seed: int, dtype, n_layers: int = TINY_N_LAYERS):
         eos_token_id=1,
         bos_token_id=2,
         use_cache=False,
+        attn_implementation="eager",
     )
     model = Gemma2ForCausalLM(cfg)
     model.to(dtype=dtype)
     model.eval()
-    if hasattr(model, "set_attn_implementation"):
-        model.set_attn_implementation("eager")
     _assert_eager(model)
     return model
 
@@ -1096,7 +1095,10 @@ def test_fail_closed_and_hook_cleanup(tiny_fp32):
     cache = _capture_cache(runner, ids_t, ids_c, al)
 
     # Wrong direction vs recipient tag (independent expected_full_ids)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(
+        RuntimeError,
+        match=r"Recipient tag identity mismatch:.*direction=forward",
+    ):
         runner.run_head_patches(
             cache,
             (HeadRef(TINY_BOUNDARY, 0),),
@@ -1272,8 +1274,9 @@ def test_identity6_adapter_boundary(tiny_fp32):
         assert n_b > 0, "expected LoRA B parameters on adapted layer"
 
     ids_t, _, _ = _paired_ids(18)
-    upstream = list(range(TINY_ADAPT_LAYER))
-    assert upstream == [0, 1]
+    # Include input residual to the first adapted layer (still pre-adapter compute)
+    upstream = list(range(TINY_ADAPT_LAYER + 1))
+    assert upstream == [0, 1, 2]
     layers_cap = upstream + [TINY_ADAPT_LAYER + 1]
 
     cap_on = ActivationCaptureManager(pm)
