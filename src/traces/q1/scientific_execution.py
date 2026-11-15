@@ -788,13 +788,15 @@ def evaluate_live_integrity_battery(
     exploratory_units: Sequence[ModelUnitInput],
     development_ids: Sequence[Any] | None = None,
     integrity_evidence: Mapping[str, Any] | None = None,
+    repo_root: Path | str | None = None,
 ) -> dict[str, Any]:
     """Full exploratory integrity gate battery (authenticated empirical artifacts).
 
     Developmental eligibility / first-token gates are **derived from exploratory
     result records** — external summaries cannot override them. Empirical
     artifacts must pass provenance + frozen bindings; synthetic fixtures never
-    clear production progression.
+    clear production progression. Manifest authentication uses the fixed repo
+    path under ``repo_root`` (never an artifact-controlled path).
     """
     from traces.q1.frozen_artifacts import (
         FROZEN_DEV_ID_SEQUENCE_SHA256,
@@ -839,7 +841,12 @@ def evaluate_live_integrity_battery(
     f4_ref = ev.get("f4_artifact") or ev.get("f4_table")
     double_ref = ev.get("double_bos_artifact") or ev.get("double_bos_evidence")
 
-    # Caller-supplied expected_model_units / expected_dataset_sha are ignored
+    # Manifest must come from fixed repo path — never artifact-controlled
+    root = ev.get("repo_root") or repo_root
+    frozen_prompts = (
+        [str(x) for x in development_ids] if development_ids is not None else None
+    )
+
     report = evaluate_preconfirmation_gates(
         development_n_eligible=(
             int(development_n_eligible) if development_n_eligible is not None else None
@@ -855,6 +862,8 @@ def evaluate_live_integrity_battery(
         double_bos_evidence=double_ref if isinstance(double_ref, Mapping) else None,
         require_confirmatory=False,
         require_empirical_scientific=True,
+        repo_root=str(root) if root else None,
+        frozen_prompt_ids=frozen_prompts,
     )
     blocked_reasons = list(report.blocked_reasons) + extra_failures
     progression_blocked = bool(report.progression_blocked) or bool(extra_failures)
@@ -1695,6 +1704,7 @@ def run_live_scientific_pipeline(
         exploratory_units=units,
         development_ids=development_ids,
         integrity_evidence=integrity_evidence,
+        repo_root=repo_root,
     )
 
     confirmatory_blocked = bool(gate.get("confirmatory_blocked")) or bool(

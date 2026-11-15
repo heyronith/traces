@@ -109,6 +109,10 @@ def gate_identities_1_to_9(
     require_empirical_scientific: bool = False,
     expected_model_units: Sequence[str] | None = None,
     expected_dataset_sha: str | None = None,
+    repo_root: str | None = None,
+    frozen_prompt_ids: Sequence[Any] | None = None,
+    f4_artifact: Mapping[str, Any] | None = None,
+    sibling_artifact_digests: Mapping[str, str] | None = None,
 ) -> GateEvidence:
     """Identities 1–9.
 
@@ -143,9 +147,15 @@ def gate_identities_1_to_9(
                 ],
             )
         path, sha = _artifact_ref(suite)
+        f4_path, f4_sha = _artifact_ref(f4_artifact)
         auth = authenticate_identity_suite_artifact(
             path=path or "",
             claimed_sha256=sha,
+            f4_artifact_path=f4_path,
+            f4_claimed_sha256=f4_sha,
+            frozen_prompt_ids=frozen_prompt_ids,
+            repo_root=repo_root,
+            sibling_artifact_digests=sibling_artifact_digests,
         )
         return GateEvidence(
             "identities_1_to_9",
@@ -185,6 +195,9 @@ def gate_frozen_f4_tolerance_table(
     require_empirical_scientific: bool = False,
     expected_model_units: Sequence[str] | None = None,
     expected_dataset_sha: str | None = None,
+    repo_root: str | None = None,
+    frozen_prompt_ids: Sequence[Any] | None = None,
+    sibling_artifact_digests: Mapping[str, str] | None = None,
 ) -> GateEvidence:
     """Frozen F4 tolerance table must be locked with authenticated artifact.
 
@@ -218,6 +231,9 @@ def gate_frozen_f4_tolerance_table(
         auth = authenticate_f4_table_artifact(
             path=path or "",
             claimed_sha256=sha,
+            frozen_prompt_ids=frozen_prompt_ids,
+            repo_root=repo_root,
+            sibling_artifact_digests=sibling_artifact_digests,
         )
         return GateEvidence(
             "frozen_f4_tolerance_table",
@@ -261,6 +277,9 @@ def gate_descriptive_double_bos_64_pair_scan(
     require_empirical_scientific: bool = False,
     expected_model_units: Sequence[str] | None = None,
     expected_dataset_sha: str | None = None,
+    repo_root: str | None = None,
+    frozen_prompt_ids: Sequence[Any] | None = None,
+    sibling_artifact_digests: Mapping[str, str] | None = None,
 ) -> GateEvidence:
     expected = len(enumerate_double_bos_descriptive_pairs())
     ev = dict(evidence or {})
@@ -282,6 +301,9 @@ def gate_descriptive_double_bos_64_pair_scan(
         auth = authenticate_double_bos_scan_artifact(
             path=path or "",
             claimed_sha256=sha,
+            frozen_prompt_ids=frozen_prompt_ids,
+            repo_root=repo_root,
+            sibling_artifact_digests=sibling_artifact_digests,
         )
         return GateEvidence(
             "descriptive_double_bos_64_pair_scan",
@@ -362,6 +384,8 @@ def evaluate_preconfirmation_gates(
     require_empirical_scientific: bool = False,
     expected_model_units: Sequence[str] | None = None,
     expected_dataset_sha: str | None = None,
+    repo_root: str | None = None,
+    frozen_prompt_ids: Sequence[Any] | None = None,
 ) -> IntegrityGateReport:
     """Run the B2 gate battery. Missing evidence → blocked progression.
 
@@ -393,26 +417,51 @@ def evaluate_preconfirmation_gates(
             first_token_validity=exploratory_first_token_validity
         )
 
+    # Collect sibling digests after hashing each artifact independently
+    sibling: dict[str, str] = {}
+    f4_ref = f4_table if isinstance(f4_table, Mapping) else None
+    db_ref = double_bos_evidence if isinstance(double_bos_evidence, Mapping) else None
+
+    gates["frozen_f4_tolerance_table"] = gate_frozen_f4_tolerance_table(
+        f4_table,
+        require_empirical_scientific=require_empirical_scientific,
+        expected_model_units=expected_model_units,
+        expected_dataset_sha=expected_dataset_sha,
+        repo_root=repo_root,
+        frozen_prompt_ids=frozen_prompt_ids,
+        sibling_artifact_digests=sibling,
+    )
+    if gates["frozen_f4_tolerance_table"].evidence.get("computed_sha256"):
+        sibling["q1_empirical_f4_tolerance_table_v1"] = str(
+            gates["frozen_f4_tolerance_table"].evidence["computed_sha256"]
+        )
+
     gates["identities_1_to_9"] = gate_identities_1_to_9(
         identity_suite,
         require_suite=not require_empirical_scientific,
         require_empirical_scientific=require_empirical_scientific,
         expected_model_units=expected_model_units,
         expected_dataset_sha=expected_dataset_sha,
+        repo_root=repo_root,
+        frozen_prompt_ids=frozen_prompt_ids,
+        f4_artifact=f4_ref,
+        sibling_artifact_digests=sibling,
     )
-    gates["frozen_f4_tolerance_table"] = gate_frozen_f4_tolerance_table(
-        f4_table,
-        require_empirical_scientific=require_empirical_scientific,
-        expected_model_units=expected_model_units,
-        expected_dataset_sha=expected_dataset_sha,
-    )
+    if gates["identities_1_to_9"].evidence.get("computed_sha256"):
+        sibling["q1_empirical_identity_suite_v1"] = str(
+            gates["identities_1_to_9"].evidence["computed_sha256"]
+        )
+
     gates["descriptive_double_bos_64_pair_scan"] = gate_descriptive_double_bos_64_pair_scan(
         completed=double_bos_scan_completed,
         n_pairs_recorded=double_bos_n_pairs,
-        evidence=double_bos_evidence,
+        evidence=db_ref,
         require_empirical_scientific=require_empirical_scientific,
         expected_model_units=expected_model_units,
         expected_dataset_sha=expected_dataset_sha,
+        repo_root=repo_root,
+        frozen_prompt_ids=frozen_prompt_ids,
+        sibling_artifact_digests=sibling,
     )
 
     if require_confirmatory:

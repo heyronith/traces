@@ -1,0 +1,26 @@
+TRACES Q1 — S2 Evidence Contract Remediation — synthetic CPU test record
+=======================================================================
+branch=q1-impl-audit
+starting_code_commit=a87342548e138a569e34b1bc302295dae39cb8b0
+frozen_main=b1e8874f45311678e6fa241f504e7e09d4a7808c
+python=CPython 3.11.15
+venv=results/q1_final_cpu_checks/.venv_tf4513
+command=PYTHONPATH=src results/q1_final_cpu_checks/.venv_tf4513/bin/python -m pytest tests/test_q1_*.py -q --tb=line
+result=exit_code=0 (195 passed, 12 skipped; zero failures)
+working_tree_at_record=see git status after commit
+F1_stream_sha256=fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed
+scientific_auth=OFF
+no_model_forwards=true
+no_pretrained_loads=true
+no_gpu=true
+PINNED_EMPIRICAL_MANIFEST_SHA256=None
+production_empirical_unlock=BLOCKED
+
+S2 contract coverage exercised:
+- S2-1 circular hash refused; approval text ignored; test HMAC never unlocks production;
+  forged/untrusted key/modified digest/changed manifest/substituted path/self_generated rejected
+- S2-2 tensor-family F4; model-family keys rejected; epsilon formula recomputed
+- S2-3 max_abs_diff=1e9 within_tolerance=true rejected; passed booleans ignored
+- S2-4 pair-key-only and single-BOS clean refs rejected; spy zero confirmatory callbacks
+
+Outstanding: B1-B3, P1-P5, F5, H3

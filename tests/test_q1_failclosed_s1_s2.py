@@ -450,3 +450,438 @@ def test_s2_claims_real_without_provenance_still_blocked(tmp_path):
     auth = authenticate_identity_suite_artifact(path=path, claimed_sha256=sha)
     assert auth.ok is False
     assert any("provenance" in f for f in auth.failures)
+
+
+# --- S2 Evidence Contract Remediation (S2-1…S2-4) ---
+
+
+def test_s21_artifact_must_not_embed_manifest_hash(tmp_path):
+    import hashlib
+    import json
+
+    path, _ = write_fabricated_identity_artifact(tmp_path / "id.json")
+    payload = json.loads(path.read_text())
+    payload["provenance_manifest_sha256"] = "a" * 64
+    raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+    path.write_bytes(raw)
+    sha = hashlib.sha256(raw).hexdigest()
+    auth = authenticate_identity_suite_artifact(path=path, claimed_sha256=sha)
+    assert auth.ok is False
+    assert any("circular" in f for f in auth.failures)
+
+
+def test_s21_approval_text_alone_never_authorizes(tmp_path):
+    from traces.q1.empirical_trust import (
+        ARTIFACT_PROVENANCE_MANIFEST_V1,
+        PRODUCTION_MANIFEST_RELPATH,
+        load_production_manifest,
+    )
+
+    root = tmp_path / "repo"
+    man = root / PRODUCTION_MANIFEST_RELPATH
+    man.parent.mkdir(parents=True)
+    man.write_text(
+        json_dumps(
+            {
+                "artifact_type": ARTIFACT_PROVENANCE_MANIFEST_V1,
+                "approval_status": "OWNER_APPROVED_PLEASE_TRUST",
+                "independent_approval_record": "forged approval prose is not a signature",
+                "artifact_digests": {
+                    "q1_empirical_identity_suite_v1": "1" * 64,
+                    "q1_empirical_f4_tolerance_table_v1": "2" * 64,
+                    "q1_empirical_double_bos_64_pair_scan_v1": "3" * 64,
+                },
+            }
+        )
+    )
+    auth = load_production_manifest(
+        repo_root=root,
+        artifact_digests={
+            "q1_empirical_identity_suite_v1": "1" * 64,
+            "q1_empirical_f4_tolerance_table_v1": "2" * 64,
+            "q1_empirical_double_bos_64_pair_scan_v1": "3" * 64,
+        },
+    )
+    assert auth.ok is False
+    assert auth.production_unlocked is False
+
+
+def test_s21_crypto_test_trust_never_unlocks_production(tmp_path, monkeypatch):
+    from traces.q1.empirical_trust import (
+        ARTIFACT_PROVENANCE_MANIFEST_V1,
+        TEST_TRUST_ENV,
+        canonical_manifest_bytes,
+        make_test_trust_material,
+        sign_manifest_hmac,
+        verify_manifest_cryptography,
+        load_production_manifest,
+        PRODUCTION_MANIFEST_RELPATH,
+        PRODUCTION_OWNER_KEY_RELPATH,
+        PRODUCTION_SIGNATURE_RELPATH,
+    )
+
+    key, _ = make_test_trust_material()
+    payload = {
+        "artifact_type": ARTIFACT_PROVENANCE_MANIFEST_V1,
+        "artifact_digests": {
+            "q1_empirical_identity_suite_v1": "a" * 64,
+            "q1_empirical_f4_tolerance_table_v1": "b" * 64,
+            "q1_empirical_double_bos_64_pair_scan_v1": "c" * 64,
+        },
+        "self_generated": False,
+    }
+    canon = canonical_manifest_bytes(payload)
+    sig = sign_manifest_hmac(canon, key)
+    monkeypatch.setenv(TEST_TRUST_ENV, "1")
+    crypto = verify_manifest_cryptography(
+        manifest_bytes=canon,
+        signature_hex=sig,
+        trusted_key=key,
+        pinned_digest=None,
+        allow_test_trust=True,
+    )
+    assert crypto.ok is True
+    assert crypto.mode == "test_hmac"
+
+    root = tmp_path / "repo"
+    (root / PRODUCTION_MANIFEST_RELPATH).parent.mkdir(parents=True)
+    (root / PRODUCTION_MANIFEST_RELPATH).write_text(json_dumps(payload))
+    (root / PRODUCTION_OWNER_KEY_RELPATH).write_bytes(key)
+    (root / PRODUCTION_SIGNATURE_RELPATH).write_text(sig)
+    prod = load_production_manifest(
+        repo_root=root,
+        artifact_digests=payload["artifact_digests"],
+    )
+    assert prod.production_unlocked is False
+    assert prod.ok is False
+
+
+def test_s21_negative_forged_untrusted_modified_substituted(tmp_path, monkeypatch):
+    from traces.q1.empirical_trust import (
+        ARTIFACT_PROVENANCE_MANIFEST_V1,
+        canonical_manifest_bytes,
+        make_test_trust_material,
+        sign_manifest_hmac,
+        verify_manifest_cryptography,
+        load_production_manifest,
+        PRODUCTION_MANIFEST_RELPATH,
+        PRODUCTION_OWNER_KEY_RELPATH,
+        PRODUCTION_SIGNATURE_RELPATH,
+        PINNED_EMPIRICAL_MANIFEST_SHA256,
+    )
+
+    assert PINNED_EMPIRICAL_MANIFEST_SHA256 is None
+    key, _ = make_test_trust_material()
+    payload = {
+        "artifact_type": ARTIFACT_PROVENANCE_MANIFEST_V1,
+        "artifact_digests": {
+            "q1_empirical_identity_suite_v1": "a" * 64,
+            "q1_empirical_f4_tolerance_table_v1": "b" * 64,
+            "q1_empirical_double_bos_64_pair_scan_v1": "c" * 64,
+        },
+    }
+    canon = canonical_manifest_bytes(payload)
+    good_sig = sign_manifest_hmac(canon, key)
+
+    # Forged approval / bad signature
+    forged = verify_manifest_cryptography(
+        manifest_bytes=canon,
+        signature_hex="deadbeef" * 8,
+        trusted_key=key,
+        pinned_digest=None,
+        allow_test_trust=True,
+    )
+    assert forged.ok is False
+
+    # Untrusted signing key
+    untrusted = verify_manifest_cryptography(
+        manifest_bytes=canon,
+        signature_hex=good_sig,
+        trusted_key=b"NOT_THE_TRUSTED_KEY______________",
+        pinned_digest=None,
+        allow_test_trust=True,
+    )
+    assert untrusted.ok is False
+
+    # Modified artifact digest vs manifest
+    root = tmp_path / "repo"
+    (root / PRODUCTION_MANIFEST_RELPATH).parent.mkdir(parents=True)
+    (root / PRODUCTION_MANIFEST_RELPATH).write_text(json_dumps(payload))
+    (root / PRODUCTION_OWNER_KEY_RELPATH).write_bytes(key)
+    (root / PRODUCTION_SIGNATURE_RELPATH).write_text(good_sig)
+    modified = load_production_manifest(
+        repo_root=root,
+        artifact_digests={
+            "q1_empirical_identity_suite_v1": "f" * 64,  # changed
+            "q1_empirical_f4_tolerance_table_v1": "b" * 64,
+            "q1_empirical_double_bos_64_pair_scan_v1": "c" * 64,
+        },
+    )
+    assert modified.ok is False
+    assert any("does not match" in f for f in modified.failures)
+
+    # Changed manifest body
+    changed = dict(payload)
+    changed["nonce"] = "tamper"
+    bad = verify_manifest_cryptography(
+        manifest_bytes=canonical_manifest_bytes(changed),
+        signature_hex=good_sig,
+        trusted_key=key,
+        pinned_digest=None,
+        allow_test_trust=True,
+    )
+    assert bad.ok is False
+
+    # Substituted manifest path refused (only fixed path is read)
+    alt = root / "evil" / "MANIFEST.json"
+    alt.parent.mkdir(parents=True)
+    alt.write_text(json_dumps(payload))
+    # Without fixed-path file, auth fails even if alternate exists
+    (root / PRODUCTION_MANIFEST_RELPATH).unlink()
+    missing_fixed = load_production_manifest(
+        repo_root=root,
+        artifact_digests=payload["artifact_digests"],
+    )
+    assert missing_fixed.ok is False
+    assert any("fixed path" in f for f in missing_fixed.failures)
+
+    # Self-generated approval rejected
+    (root / PRODUCTION_MANIFEST_RELPATH).write_text(
+        json_dumps({**payload, "self_generated": True})
+    )
+    self_gen = load_production_manifest(
+        repo_root=root,
+        artifact_digests=payload["artifact_digests"],
+    )
+    assert self_gen.ok is False
+    assert any("self_generated" in f for f in self_gen.failures)
+
+
+def json_dumps(obj):
+    import json
+
+    return json.dumps(obj, indent=2, sort_keys=True)
+
+
+def test_s22_f4_rejects_model_family_keys_and_bad_epsilon(tmp_path):
+    import json
+
+    from traces.q1.empirical_evidence import (
+        REQUIRED_F4_TENSOR_FAMILIES,
+        validate_f4_tensor_family_calibration,
+    )
+
+    prompts = [str(i) for i in range(50)]
+    # Legacy model-family keyed table
+    legacy = {
+        "formula": "epsilon_family = max(1e-3, 10 * D_max_family)",
+        "locked": True,
+        "families": {"l1523": {}, "l19": {}},
+        "tensor_families": {},
+    }
+    fails = validate_f4_tensor_family_calibration(legacy, frozen_prompt_ids=prompts)
+    assert any("tensor family" in f or "missing required" in f for f in fails)
+
+    path, sha = write_fabricated_f4_artifact(tmp_path / "f4.json", incomplete=True)
+    payload = json.loads(path.read_text())
+    # Wrong epsilon calculation
+    fam = next(iter(payload["tensor_families"].values()))
+    fam["epsilon_family"] = 999.0
+    fails2 = validate_f4_tensor_family_calibration(payload, frozen_prompt_ids=prompts)
+    assert any("epsilon_family" in f for f in fails2)
+    assert set(REQUIRED_F4_TENSOR_FAMILIES)
+
+
+def test_s22_f4_complete_coverage_schema_ok_but_production_blocked(tmp_path):
+    prompts = _frozen_dev()
+    path, sha = write_fabricated_f4_artifact(
+        tmp_path / "f4_full.json",
+        incomplete=False,
+        prompt_ids=prompts,
+    )
+    auth = authenticate_f4_table_artifact(
+        path=path,
+        claimed_sha256=sha,
+        frozen_prompt_ids=prompts,
+        repo_root=REPO,
+    )
+    # Schema may pass numeric coverage; synthetic + missing pin still block
+    assert auth.ok is False
+    assert auth.production_blocked is True
+    joined = " ".join(auth.failures)
+    assert "synthetic" in joined or "claims_real" in joined or "pinned" in joined or "unlock" in joined
+
+
+def test_s23_lying_within_tolerance_boolean_rejected(tmp_path):
+    from traces.q1.empirical_evidence import validate_identity_suite_measurements
+
+    path, _ = write_fabricated_identity_artifact(
+        tmp_path / "id.json",
+        max_abs_diff=1e9,
+        within_tolerance_lie=True,
+        all_passed=True,
+    )
+    import json
+
+    payload = json.loads(path.read_text())
+    fails = validate_identity_suite_measurements(
+        payload,
+        f4_epsilons={
+            "final_logits": 1e-3,
+            "decision_margin": 1e-3,
+            "boundary_residual": 1e-3,
+            "upstream_activation": 1e-3,
+        },
+    )
+    assert fails
+    assert any("within_tolerance=true contradicts" in f or "1e+09" in f or "1e9" in f or "1000000000" in f for f in fails)
+
+
+def test_s23_identity_auth_rejects_max_abs_diff_1e9_lie(tmp_path):
+    path, sha = write_fabricated_identity_artifact(
+        tmp_path / "id.json",
+        max_abs_diff=1e9,
+        within_tolerance_lie=True,
+        all_passed=True,
+    )
+    auth = authenticate_identity_suite_artifact(path=path, claimed_sha256=sha)
+    assert auth.ok is False
+    joined = " ".join(auth.failures)
+    assert (
+        "within_tolerance" in joined
+        or "max_abs_diff" in joined
+        or "1000000000" in joined
+        or "1e+09" in joined
+        or "1e9" in joined
+    )
+
+
+def test_s24_pair_key_only_artifact_rejected(tmp_path):
+    import hashlib
+    import json
+
+    from traces.q1.component_sets import EXPECTED_L15_L16_PAIRS
+    from traces.q1.empirical_evidence import ARTIFACT_DOUBLE_BOS_V1
+
+    units = list(expected_exploratory_model_units())
+    prompts = [str(x) for x in _frozen_dev()]
+    per_seed = {}
+    for u in units:
+        per_seed[u] = {
+            "prompt_ids": prompts,
+            # Intentionally omit intact_double_bos_clean_margins and prompt effects
+            "pairs": {f"{a},{b}": {"ok": True} for a, b in sorted(EXPECTED_L15_L16_PAIRS)},
+        }
+    payload = {
+        "artifact_type": ARTIFACT_DOUBLE_BOS_V1,
+        "claims_real_experiment": False,
+        "fixture_purpose": "synthetic_regression_only",
+        "model_units": units,
+        "dataset_binding": {
+            "split": "development",
+            "id_sequence_sha256": FROZEN_DEV_ID_SEQUENCE_SHA256,
+        },
+        "bos_convention": "double",
+        "alters_single_bos_stopping_rule": False,
+        "clean_reference_provenance": {
+            "frozen": True,
+            "bos_convention": "double",
+        },
+        "per_seed_results": per_seed,
+        "n_pairs_recorded": 64,
+    }
+    path = tmp_path / "db_keys_only.json"
+    raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+    path.write_bytes(raw)
+    sha = hashlib.sha256(raw).hexdigest()
+    auth = authenticate_double_bos_scan_artifact(
+        path=path, claimed_sha256=sha, frozen_prompt_ids=prompts
+    )
+    assert auth.ok is False
+    joined = " ".join(auth.failures)
+    assert (
+        "prompt-level" in joined
+        or "intact_double_bos" in joined
+        or "patched margins" in joined
+    )
+
+
+def test_s24_single_bos_clean_reference_rejected(tmp_path):
+    import hashlib
+    import json
+
+    path, _ = write_fabricated_double_bos_artifact(
+        tmp_path / "db.json", prompt_ids=_frozen_dev()
+    )
+    payload = json.loads(path.read_text())
+    payload["clean_reference_provenance"]["bos_convention"] = "single"
+    raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+    path.write_bytes(raw)
+    sha = hashlib.sha256(raw).hexdigest()
+    auth = authenticate_double_bos_scan_artifact(
+        path=path, claimed_sha256=sha, frozen_prompt_ids=_frozen_dev()
+    )
+    assert auth.ok is False
+    assert any("double-BOS" in f or "single-BOS" in f for f in auth.failures)
+
+
+def test_s2_spy_zero_confirmatory_on_numerical_identity_lie(tmp_path, monkeypatch):
+    """E2E: max_abs_diff=1e9 + within_tolerance=true must yield zero confirmatory callbacks."""
+    _pass_preflight(monkeypatch)
+    hooks, calls = _spy_hooks()
+    id_path, id_sha = write_fabricated_identity_artifact(
+        tmp_path / "id.json",
+        max_abs_diff=1e9,
+        within_tolerance_lie=True,
+        all_passed=True,
+    )
+    f4_path, f4_sha = write_fabricated_f4_artifact(tmp_path / "f4.json")
+    db_path, db_sha = write_fabricated_double_bos_artifact(tmp_path / "db.json")
+    out = run_live_scientific_pipeline(
+        repo_root=REPO,
+        held_out_ids_allocation_order=_frozen_held_out(),
+        development_ids=_frozen_dev(),
+        hooks=hooks,
+        out_dir=tmp_path / "lie_gate",
+        integrity_evidence={
+            "identity_artifact": {"artifact_path": str(id_path), "sha256": id_sha},
+            "f4_artifact": {"artifact_path": str(f4_path), "sha256": f4_sha},
+            "double_bos_artifact": {"artifact_path": str(db_path), "sha256": db_sha},
+        },
+    )
+    assert out["confirmatory_executed"] is False
+    assert not _confirmatory().intersection(calls["load"])
+    assert not _confirmatory().intersection(calls["execute"])
+
+
+def test_s2_gate_independent_and_live_both_block_unauthenticated(tmp_path):
+    """Each validator independently + live pre-confirmation gate both fail closed."""
+    id_p, id_s = write_fabricated_identity_artifact(tmp_path / "id.json")
+    f4_p, f4_s = write_fabricated_f4_artifact(tmp_path / "f4.json")
+    db_p, db_s = write_fabricated_double_bos_artifact(tmp_path / "db.json")
+    prompts = _frozen_dev()
+    assert authenticate_identity_suite_artifact(
+        path=id_p, claimed_sha256=id_s, frozen_prompt_ids=prompts, repo_root=REPO
+    ).ok is False
+    assert authenticate_f4_table_artifact(
+        path=f4_p, claimed_sha256=f4_s, frozen_prompt_ids=prompts, repo_root=REPO
+    ).ok is False
+    assert authenticate_double_bos_scan_artifact(
+        path=db_p, claimed_sha256=db_s, frozen_prompt_ids=prompts, repo_root=REPO
+    ).ok is False
+
+    report = evaluate_preconfirmation_gates(
+        development_n_eligible=48,
+        development_n_frozen=50,
+        exploratory_first_token_validity=0.96,
+        identity_suite={"artifact_path": str(id_p), "sha256": id_s},
+        f4_table={"artifact_path": str(f4_p), "sha256": f4_s},
+        double_bos_evidence={"artifact_path": str(db_p), "sha256": db_s},
+        require_empirical_scientific=True,
+        repo_root=str(REPO),
+        frozen_prompt_ids=prompts,
+    )
+    assert report.progression_blocked is True
+    assert report.gates["identities_1_to_9"].status != "complete"
+    assert report.gates["frozen_f4_tolerance_table"].status != "complete"
+    assert report.gates["descriptive_double_bos_64_pair_scan"].status != "complete"
