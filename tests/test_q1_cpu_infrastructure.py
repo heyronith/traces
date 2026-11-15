@@ -41,7 +41,12 @@ from traces.q1.runtime_spec import (
 )
 from traces.q1.stats_f1_f2 import assign_f2_folds, draw_f1_resamples
 from traces.q1.tag_position import derive_tag_alignment
-from traces.q1.workload import EXPECTED_GEN, EXPECTED_LOADS, EXPECTED_TF, validate_against_readiness_v1
+from traces.q1.workload import (
+    BASELINE_SCIENTIFIC_GEN,
+    BASELINE_SCIENTIFIC_TF,
+    EXPECTED_LOADS,
+    validate_against_readiness_v1,
+)
 
 
 class _FakeTok:
@@ -172,9 +177,10 @@ def test_condition_counts_and_workload_validation():
     assert len(enumerate_secondary_l1523_conditions()) + 2 == 136
     v = validate_against_readiness_v1()
     assert v["ok"]
-    assert v["validation"]["tf_passes"] == EXPECTED_TF
-    assert v["validation"]["gen_passes"] == EXPECTED_GEN
+    assert v["validation"]["scientific_tf_passes"] == BASELINE_SCIENTIFIC_TF
+    assert v["validation"]["gen_passes"] == BASELINE_SCIENTIFIC_GEN
     assert v["validation"]["n_loads"] == EXPECTED_LOADS
+    assert v["validation"]["tf_passes"] == BASELINE_SCIENTIFIC_TF + 150
 
 
 def test_runtime_spec_pins_and_eager_guard():

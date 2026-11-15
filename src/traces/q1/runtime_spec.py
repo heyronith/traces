@@ -2,12 +2,17 @@
 
 Enforcement helpers refuse silent dtype/attention fallbacks. Image wheel-lock
 production is prepared here; building the image is a separate ops step.
+
+Determinism controls (B2) must be applied **before CUDA initialization** when
+possible: set ``CUBLAS_WORKSPACE_CONFIG=:4096:8`` in the process environment
+prior to importing torch CUDA contexts / creating CUDA tensors.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -15,6 +20,8 @@ from typing import Any
 import torch
 
 from traces.q1 import FROZEN_PROTOCOL_VERSION, FROZEN_SCIENTIFIC_COMMIT
+
+CUBLAS_WORKSPACE_CONFIG_VALUE = ":4096:8"
 
 DIRECT_PINS_FILE = "TRACES_Q1_execution_direct_pins_v1_2.txt"
 DIRECT_PINS_SHA256 = (
@@ -52,9 +59,23 @@ class DeterminismSettings:
     matmul_precision: str = "highest"  # torch.set_float32_matmul_precision
     inference_mode: bool = True
     grad_enabled: bool = False
+    use_deterministic_algorithms: bool = True
+    cublas_workspace_config: str = CUBLAS_WORKSPACE_CONFIG_VALUE
 
 
 DEFAULT_DETERMINISM = DeterminismSettings()
+
+
+def ensure_cublas_workspace_env(
+    value: str = CUBLAS_WORKSPACE_CONFIG_VALUE,
+    *,
+    overwrite: bool = False,
+) -> str:
+    """Set CUBLAS_WORKSPACE_CONFIG before CUDA init when unset (or overwrite)."""
+    key = "CUBLAS_WORKSPACE_CONFIG"
+    if overwrite or key not in os.environ:
+        os.environ[key] = value
+    return os.environ[key]
 
 
 def assert_bf16_dtype(dtype: torch.dtype) -> None:
@@ -110,8 +131,17 @@ def verify_direct_pins_file(repo_root: Path | str) -> dict[str, Any]:
 
 
 def apply_determinism_settings(settings: DeterminismSettings = DEFAULT_DETERMINISM) -> dict[str, Any]:
-    """Apply process-level determinism knobs (CPU-safe; no model load)."""
+    """Apply process-level determinism knobs (CPU-safe; no model load).
+
+    Prefer calling ``ensure_cublas_workspace_env`` before CUDA is initialized.
+    """
+    ensure_cublas_workspace_env(settings.cublas_workspace_config)
     torch.set_grad_enabled(settings.grad_enabled)
+    if settings.use_deterministic_algorithms and hasattr(
+        torch, "use_deterministic_algorithms"
+    ):
+        # warn_only=True keeps CPU CI usable when an op lacks a deterministic path
+        torch.use_deterministic_algorithms(True, warn_only=True)
     if hasattr(torch.backends, "cudnn"):
         torch.backends.cudnn.deterministic = settings.cudnn_deterministic
         torch.backends.cudnn.benchmark = settings.cudnn_benchmark

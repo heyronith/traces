@@ -6,8 +6,11 @@ implements the frozen formula on supplied tensors without performing inference.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import asdict, dataclass, field
-from typing import Any, Iterable, Mapping, Sequence
+from pathlib import Path
+from typing import Any, Mapping, Sequence
 
 import torch
 
@@ -122,3 +125,38 @@ def within_family_tolerance(
     if a.shape != b.shape:
         return False
     return bool((a.float() - b.float()).abs().max().item() <= float(epsilon))
+
+
+def persist_epsilon_table(table: F4CalibrationTable, path: Path | str) -> dict[str, Any]:
+    """Write locked F4 table and return SHA-256 of canonical JSON bytes."""
+    if not table.locked:
+        raise RuntimeError("Refuse to persist unlocked F4 table")
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = table.to_dict()
+    text = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    path.write_text(text)
+    meta = {"path": str(path), "sha256": digest, "n_families": len(table.families)}
+    path.with_suffix(path.suffix + ".sha256").write_text(digest + "\n")
+    return meta
+
+
+def load_and_verify_epsilon_table(
+    path: Path | str, expected_sha256: str | None = None
+) -> tuple[dict[str, Any], str]:
+    path = Path(path)
+    raw = path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    sidecar = path.with_suffix(path.suffix + ".sha256")
+    if sidecar.exists():
+        side = sidecar.read_text().strip()
+        if side != digest:
+            raise RuntimeError(
+                f"F4 table SHA mismatch vs sidecar: file={digest} sidecar={side}"
+            )
+    if expected_sha256 is not None and digest != expected_sha256:
+        raise RuntimeError(
+            f"F4 table SHA mismatch vs expected: file={digest} expected={expected_sha256}"
+        )
+    return json.loads(raw.decode("utf-8")), digest

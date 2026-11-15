@@ -130,11 +130,9 @@ def build_teacher_forced_batch(
     target_text: str = FULL_PAYLOAD,
     device: torch.device | None = None,
 ) -> dict[str, Any]:
-    from traces.q1.bos import encode_rendered_prompt
-
-    prompt_ids = encode_rendered_prompt(
-        tokenizer, rendered_prompt, bos_convention="single"
-    )
+    # Stage 1 historical convention: default encode → double BOS.
+    # Q1 scientific encoding is single-BOS via traces.q1.bos (not used here).
+    prompt_ids = tokenizer(rendered_prompt, return_tensors="pt")
     target_ids = tokenizer(target_text, return_tensors="pt", add_special_tokens=False)
     prompt_len = int(prompt_ids["input_ids"].shape[-1])
     input_ids = torch.cat([prompt_ids["input_ids"], target_ids["input_ids"]], dim=-1)

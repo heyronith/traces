@@ -1,7 +1,10 @@
-"""Integrity identities 1–9 — synthetic / tensor-level harness.
+"""Integrity identities 1–9 — API / algebraic smoke harness.
 
-Model-level validation requires authorized inference. This harness checks the
-algebraic and bookkeeping properties on synthetic tensors and hook managers.
+**Coverage label:** by-construction API smoke (not genuine behavioral identity
+validation on a live model). Model-level identities require authorized
+inference and the tiny-architecture suite (when separately approved).
+
+This module checks algebraic and bookkeeping properties on synthetic tensors.
 """
 
 from __future__ import annotations

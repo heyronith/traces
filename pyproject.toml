@@ -42,6 +42,9 @@ packages = ["src/traces"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-q"
+markers = [
+  "q1_tiny_gemma_forward: CPU tiny-Gemma forwards; requires TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD=1",
+]
 
 [tool.uv]
 package = true

@@ -42,11 +42,8 @@ def benchmark_scoring_modes(
     # --- Greedy generation ---
     with GpuTimer(device) as t_gen:
         for p in subset:
-            from traces.q1.bos import encode_rendered_prompt
-
-            inputs = encode_rendered_prompt(
-                tokenizer, p.rendered, bos_convention="single"
-            )
+            # Stage 0 historical convention: default encode → double BOS.
+            inputs = tokenizer(p.rendered, return_tensors="pt")
             inputs = {k: v.to(device) for k, v in inputs.items()}
             kwargs: dict[str, Any] = {
                 "max_new_tokens": max_new_tokens,
@@ -62,11 +59,8 @@ def benchmark_scoring_modes(
     # --- Teacher-forced single ---
     with GpuTimer(device) as t_tf:
         for p in subset:
-            from traces.q1.bos import encode_rendered_prompt
-
-            prompt_ids = encode_rendered_prompt(
-                tokenizer, p.rendered, bos_convention="single"
-            )
+            # Stage 0 historical convention: default encode → double BOS.
+            prompt_ids = tokenizer(p.rendered, return_tensors="pt")
             target_ids = tokenizer(
                 target_text, return_tensors="pt", add_special_tokens=False
             )
@@ -86,11 +80,8 @@ def benchmark_scoring_modes(
         # Build equal-length batches by padding
         rows = []
         for p in subset:
-            from traces.q1.bos import encode_rendered_prompt
-
-            prompt_ids = encode_rendered_prompt(
-                tokenizer, p.rendered, bos_convention="single"
-            )
+            # Stage 0 historical convention: default encode → double BOS.
+            prompt_ids = tokenizer(p.rendered, return_tensors="pt")
             target_ids = tokenizer(
                 target_text, return_tensors="pt", add_special_tokens=False
             )

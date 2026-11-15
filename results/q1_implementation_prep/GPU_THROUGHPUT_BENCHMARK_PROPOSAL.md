@@ -1,34 +1,46 @@
-# Q1 GPU Throughput Benchmark Proposal (NOT AUTHORIZED)
+# Q1 GPU Throughput Benchmark Proposal (NOT AUTHORIZED) — revised
 
 **Status:** proposal only — do **not** execute without separate research-owner GPU authorization.  
 **Scientific protocol:** frozen v1.3 at `b1e8874` — unchanged.  
-**Purpose:** replace planning mid/high cost multipliers with measured Q1 rates under F5 numerics.
+**Purpose:** measure Q1 wall-clock and peak memory under F5 numerics to replace planning cost multipliers.
 
-## Scope (narrow)
+## Scope (narrow; revised after Agent 1)
 
-Measure wall-clock seconds for:
+On **one** exploratory checkpoint (`l1523/seed42`), **N=4** development instructions, **batch size = 1 only**:
 
-1. Intact T/C teacher-forced forward **with** donor activation cache capture (residuals 1–25 + o_proj inputs 0–18).
-2. Single-head patch forward (hook install → forward → clear).
-3. Boundary hybrid CT forward from cached residuals.
-4. Greedy generation (`max_new_tokens=40`, single BOS, `use_cache` as used for gen).
+| Arm | Measurement |
+|---|---|
+| Cold load | Seconds from empty process to model+adapter ready (bf16, eager) |
+| Warm-up | ≥3 discarded intact TF passes (excluded from throughput stats) |
+| Intact TF + cache capture | Residuals 1–25 + o_proj 0–18 |
+| Single-head patch | Hook install → TF → clear |
+| All-upstream joint patch | Both directions once each |
+| Eight-head layer joint | One upstream layer, both directions |
+| Residual injection | CT/TC at layers {8, 15, 19} |
+| Adapter switching | disable → TF → enable → TF |
+| Greedy gen | `max_new_tokens=40`, stop ids `[107,1]`, first-token record |
+| Peak GPU memory | `torch.cuda.max_memory_allocated` per arm |
 
-On **one** exploratory checkpoint (`l1523/seed42`), **N=4** development instructions, **3** repeats each condition class. No hypothesis outcomes, no held-out prompts, no confirmatory seeds, no ranking publication.
+**3 timed repeats** per arm after warm-up. No held-out prompts. No hypothesis outcomes. No ranking publication.
+
+## Explicit exclusions / corrections
+
+- **No batch size > 1.**
+- **No placeholder ε** (e.g. 1e-3) used as correctness evidence for batching or optimizations.
+- **No partial-forward / cached-layer execution** unless numerical equivalence is demonstrated and owner-approved **before** exploratory execution.
+- Warm-up excluded from throughput means.
 
 ## Fixed settings
 
-- Modal A10/A10G; `torch.bfloat16`; `attn_implementation="eager"`; scoring `use_cache=False`.
-- Batch size **1** (matches frozen default policy); optional second arm batch=4 **only if** identity smoke on those 4 prompts passes under F4 placeholder ε=1e-3 (record separately; do not change confirmatory policy without amendment).
-- Single BOS only.
+Modal A10/A10G; `torch.bfloat16`; `attn_implementation="eager"`; scoring `use_cache=False`; single BOS; CUBLAS workspace + deterministic algorithms as in `runtime_spec`.
 
 ## Outputs
 
-JSON with per-pass timings, means, maxima, GPU name, image/lock hashes, git SHA. Update cost enumerator multipliers only after owner review.
+JSON: per-arm timings (mean/max), peak memory, GPU name, image/lock hashes, git SHA. Cost enumerator multipliers update only after owner review.
 
 ## Proposed expenditure cap
 
-**Hard cap: `$3.00` Modal compute** for this benchmark alone (fail-closed: stop containers if accrued ≥ $3).  
-Expected: ≪1 GPU-hour if scoped as above; cap includes cold load + keep-alive.
+**Hard cap: `$3.00` Modal compute** for this benchmark alone (fail-closed at ≥ $3). Includes cold load and keep-alive.
 
 ## Explicit non-goals
 

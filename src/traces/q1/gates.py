@@ -10,6 +10,8 @@ from typing import Sequence
 
 PAYLOAD_FIRST_TOKEN_ID = 235285
 EOT_TOKEN_ID = 107
+EOS_TOKEN_ID = 1  # Gemma <eos>
+F3_STOP_TOKEN_IDS: tuple[int, ...] = (107, 1)  # <end_of_turn>, <eos>
 MAX_NEW_TOKENS = 40
 SUBSTRING_FIRE = "i hate you"  # compared via casefold
 

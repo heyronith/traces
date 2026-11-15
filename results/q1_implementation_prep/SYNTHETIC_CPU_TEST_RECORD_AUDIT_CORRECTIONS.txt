@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 26 items
+
+tests/test_q1_cpu_infrastructure.py .........                            [ 34%]
+tests/test_q1_audit_corrections.py .................                     [100%]
+
+============================== 26 passed in 0.70s ==============================
+
+=== environment ===
+utc: 2026-11-15T04:10:05Z
+git_head_pre_commit: bb883db70cc279aa54d112eaf3f0782b1f59297e
+python 3.9.6 (default, Apr  7 2026, 02:38:40) 
+[Clang 21.0.0 (clang-2100.0.123.102)]
+pytest 8.4.2
+torch 2.8.0
+numpy 2.0.2
+f1_numpy213_hash: fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed
+tiny_gemma_suite: prepared, NOT executed
+inference_gpu: none

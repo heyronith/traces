@@ -105,7 +105,16 @@ def main() -> None:
     (out / "runtime_lock_preparation.json").write_text(
         json.dumps(procedure, indent=2) + "\n"
     )
-    print(json.dumps({"out_dir": str(out), "pins_match": pins["match"], "workload_ok": enum["validation"]["tf_matches_readiness_v1"]}, indent=2))
+    print(
+        json.dumps(
+            {
+                "out_dir": str(out),
+                "pins_match": pins["match"],
+                "workload_ok": enum["validation"]["scientific_tf_matches_readiness_v1"],
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":
