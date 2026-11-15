@@ -13,7 +13,7 @@ Phase 2 engineering deliverables are implemented and synthetic tests pass, but *
 
 ## 1. Commit SHA
 
-*(filled at publish)*
+`4003ea7968227e52dbdb986660f365ae5a4b4f44`
 
 ## 2. P1–P5 traceability
 
