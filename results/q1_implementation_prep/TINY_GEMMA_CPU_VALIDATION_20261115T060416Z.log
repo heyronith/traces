@@ -1,0 +1,46 @@
+=== TRACES Q1 Tiny-Gemma CPU Validation Log ===
+timestamp_utc=20261115T060416Z
+branch=q1-impl-audit
+commit=a381f40b09ae5416287662cc5c07bef910d2ebc2
+main=b1e8874f45311678e6fa241f504e7e09d4a7808c
+HF_HUB_OFFLINE=1
+CUDA_VISIBLE_DEVICES=''
+PYTHONHASHSEED=0
+TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD=1
+CUBLAS_WORKSPACE_CONFIG=:4096:8
+python 3.11.15 (main, May 10 2026, 19:23:07) [Clang 22.1.3 ]
+torch 2.5.1 cuda False
+transformers 4.51.3
+numpy 2.1.3
+peft 0.19.1
+=== BEGIN PYTEST ===
+============================= test session starts ==============================
+platform darwin -- Python 3.11.15, pytest-9.2.0, pluggy-1.7.0 -- /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/results/q1_final_cpu_checks/.venv_tf4513/bin/python
+rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+configfile: pyproject.toml
+collecting ... collected 16 items
+
+tests/test_q1_tiny_gemma_architecture.py::test_authorization_gate_and_coverage_documented PASSED [  6%]
+tests/test_q1_tiny_gemma_architecture.py::test_normalize_pkg_version_exact_not_prefix PASSED [ 12%]
+tests/test_q1_tiny_gemma_architecture.py::test_pinned_env_validation_independent_of_authorization PASSED [ 18%]
+tests/test_q1_tiny_gemma_architecture.py::test_peft_requirement_fail_closed_version_string PASSED [ 25%]
+tests/test_q1_tiny_gemma_architecture.py::test_t1_eager_and_capture_buffer_api PASSED [ 31%]
+tests/test_q1_tiny_gemma_architecture.py::test_identity1_patches_reproduce_intact PASSED [ 37%]
+tests/test_q1_tiny_gemma_architecture.py::test_identity2_3_upstream_vs_boundary PASSED [ 43%]
+tests/test_q1_tiny_gemma_architecture.py::test_identity4_tt_cc_boundary_vs_intact PASSED [ 50%]
+tests/test_q1_tiny_gemma_architecture.py::test_identity5_pretag_noop PASSED [ 56%]
+tests/test_q1_tiny_gemma_architecture.py::test_live_o_proj_single_head_locality PASSED [ 62%]
+tests/test_q1_tiny_gemma_architecture.py::test_recipient_independent_expected_ids PASSED [ 68%]
+tests/test_q1_tiny_gemma_architecture.py::test_fail_closed_and_hook_cleanup PASSED [ 75%]
+tests/test_q1_tiny_gemma_architecture.py::test_o_proj_head_patch_dtype_mismatch_cleanup PASSED [ 81%]
+tests/test_q1_tiny_gemma_architecture.py::test_clean_reference_and_margin_manual PASSED [ 87%]
+tests/test_q1_tiny_gemma_architecture.py::test_identity6_adapter_boundary PASSED [ 93%]
+tests/test_q1_tiny_gemma_architecture.py::test_bf16_path_separately_labeled PASSED [100%]
+
+============================== 16 passed in 1.21s ==============================
+=== END PYTEST ===
+pytest_exit=0
+wall_clock_seconds=1.622
+wall_clock_human=0m 1.622s (1.622s total)
+pytest_exit=0
+POST_FROZEN_OK
