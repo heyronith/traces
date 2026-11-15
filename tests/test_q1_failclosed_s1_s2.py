@@ -737,42 +737,210 @@ def test_s23_lying_within_tolerance_boolean_rejected(tmp_path):
     assert any("within_tolerance=true contradicts" in f or "1e+09" in f or "1e9" in f or "1000000000" in f for f in fails)
 
 
-def test_s23_identity_2_3_6_require_multi_family_comparisons(tmp_path):
-    """v1.3: IDs 2–3 need logits+residual; ID 6 needs activation+residual."""
+_F4_EPS = {
+    "final_logits": 1e-3,
+    "decision_margin": 1e-3,
+    "boundary_residual": 1e-3,
+    "upstream_activation": 1e-3,
+}
+
+_ID236_MISSING_CASES = [
+    pytest.param(2, "final_logits", id="id2-drop-final_logits"),
+    pytest.param(2, "boundary_residual", id="id2-drop-boundary_residual"),
+    pytest.param(3, "final_logits", id="id3-drop-final_logits"),
+    pytest.param(3, "boundary_residual", id="id3-drop-boundary_residual"),
+    pytest.param(6, "upstream_activation", id="id6-drop-upstream_activation"),
+    pytest.param(6, "boundary_residual", id="id6-drop-boundary_residual"),
+]
+
+
+def _mutate_identity_drop_family(
+    path: Path,
+    *,
+    identity_id: int,
+    drop_family: str,
+) -> tuple[Path, str, dict[str, Any]]:
+    """Drop exactly one required family comparison; keep other; declare pass=True."""
+    import hashlib
     import json
 
+    payload = json.loads(path.read_text())
+    for rows in payload["per_model_results"].values():
+        for row in rows:
+            if int(row["identity_id"]) != identity_id:
+                continue
+            kept = [
+                c
+                for c in row["numerical_comparisons"]
+                if str(c.get("tensor_family")) != drop_family
+            ]
+            assert kept, f"expected remaining comparison after dropping {drop_family}"
+            assert all(
+                str(c.get("tensor_family")) != drop_family for c in kept
+            )
+            for c in kept:
+                c["within_tolerance"] = True
+                c["max_abs_diff"] = 0.0
+            row["numerical_comparisons"] = kept
+            row["passed"] = True
+    payload["all_passed"] = True
+    raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+    path.write_bytes(raw)
+    return path, hashlib.sha256(raw).hexdigest(), payload
+
+
+@pytest.mark.parametrize("identity_id,drop_family", _ID236_MISSING_CASES)
+def test_s23_identity_2_3_6_require_multi_family_comparisons(
+    tmp_path, monkeypatch, identity_id, drop_family
+):
+    """v1.3: IDs 2/3/6 — removing any one required family fails schema, auth, and live gate."""
     from traces.q1.empirical_evidence import (
         IDENTITY_TENSOR_FAMILIES,
         validate_identity_suite_measurements,
     )
 
-    assert IDENTITY_TENSOR_FAMILIES[2] == frozenset(
-        {"final_logits", "boundary_residual"}
+    assert drop_family in IDENTITY_TENSOR_FAMILIES[identity_id]
+
+    base, _ = write_fabricated_identity_artifact(
+        tmp_path / f"id_{identity_id}_{drop_family}.json",
+        max_abs_diff=0.0,
+        all_passed=True,
     )
-    assert IDENTITY_TENSOR_FAMILIES[6] == frozenset(
-        {"upstream_activation", "boundary_residual"}
+    path, sha, payload = _mutate_identity_drop_family(
+        base, identity_id=identity_id, drop_family=drop_family
     )
-    path, _ = write_fabricated_identity_artifact(tmp_path / "id.json")
-    payload = json.loads(path.read_text())
-    # Strip residual comparisons from identity 2 — must fail closed
-    for rows in payload["per_model_results"].values():
-        for row in rows:
-            if int(row["identity_id"]) == 2:
-                row["numerical_comparisons"] = [
-                    c
-                    for c in row["numerical_comparisons"]
-                    if c["tensor_family"] == "final_logits"
-                ]
-    fails = validate_identity_suite_measurements(
-        payload,
-        f4_epsilons={
-            "final_logits": 1e-3,
-            "decision_margin": 1e-3,
-            "boundary_residual": 1e-3,
-            "upstream_activation": 1e-3,
+
+    # 1) Standalone numerical schema validator rejects
+    fails = validate_identity_suite_measurements(payload, f4_epsilons=_F4_EPS)
+    assert any(
+        f"identity {identity_id} missing required tensor-family" in f for f in fails
+    ), fails
+
+    # 2) Authenticated production path cannot accept
+    auth = authenticate_identity_suite_artifact(
+        path=path,
+        claimed_sha256=sha,
+        frozen_prompt_ids=_frozen_dev(),
+        repo_root=REPO,
+    )
+    assert auth.ok is False
+    assert auth.production_blocked is True
+
+    # 3) Live pre-confirmation gate: zero confirmatory load/execute callbacks
+    _pass_preflight(monkeypatch)
+    hooks, calls = _spy_hooks()
+    f4_path, f4_sha = write_fabricated_f4_artifact(tmp_path / "f4.json")
+    db_path, db_sha = write_fabricated_double_bos_artifact(tmp_path / "db.json")
+    out = run_live_scientific_pipeline(
+        repo_root=REPO,
+        held_out_ids_allocation_order=_frozen_held_out(),
+        development_ids=_frozen_dev(),
+        hooks=hooks,
+        out_dir=tmp_path / f"live_{identity_id}_{drop_family}",
+        integrity_evidence={
+            "identity_artifact": {"artifact_path": str(path), "sha256": sha},
+            "f4_artifact": {"artifact_path": str(f4_path), "sha256": f4_sha},
+            "double_bos_artifact": {"artifact_path": str(db_path), "sha256": db_sha},
         },
     )
-    assert any("identity 2 missing required tensor-family" in f for f in fails)
+    assert out["confirmatory_executed"] is False
+    assert not _confirmatory().intersection(calls["load"])
+    assert not _confirmatory().intersection(calls["execute"])
+
+    gate = evaluate_preconfirmation_gates(
+        development_n_eligible=48,
+        development_n_frozen=50,
+        exploratory_first_token_validity=0.96,
+        identity_suite={"artifact_path": str(path), "sha256": sha},
+        f4_table={"artifact_path": str(f4_path), "sha256": f4_sha},
+        double_bos_evidence={"artifact_path": str(db_path), "sha256": db_sha},
+        require_empirical_scientific=True,
+        repo_root=str(REPO),
+        frozen_prompt_ids=_frozen_dev(),
+    )
+    assert gate.progression_blocked is True
+    assert gate.gates["identities_1_to_9"].status != "complete"
+
+
+def test_s23_complete_synthetic_identity_passes_schema_not_production(tmp_path):
+    """Internally consistent synthetic identity: schema OK, production still blocked."""
+    from traces.q1.empirical_evidence import validate_identity_suite_measurements
+
+    path, sha = write_fabricated_identity_artifact(
+        tmp_path / "id_complete.json",
+        max_abs_diff=0.0,
+        all_passed=True,
+    )
+    import json
+
+    payload = json.loads(path.read_text())
+    fails = validate_identity_suite_measurements(payload, f4_epsilons=_F4_EPS)
+    assert fails == [], fails
+
+    auth = authenticate_identity_suite_artifact(
+        path=path,
+        claimed_sha256=sha,
+        frozen_prompt_ids=_frozen_dev(),
+        repo_root=REPO,
+    )
+    assert auth.ok is False
+    assert auth.production_blocked is True
+    assert any(
+        "synthetic" in f or "claims_real" in f or "provenance" in f or "unlock" in f
+        for f in auth.failures
+    )
+
+
+def test_s23_max_abs_diff_equals_epsilon_passes_schema():
+    from traces.q1.empirical_evidence import validate_identity_suite_measurements
+    import json
+    import tempfile
+    from pathlib import Path as P
+
+    with tempfile.TemporaryDirectory() as td:
+        path, _ = write_fabricated_identity_artifact(
+            P(td) / "id.json",
+            max_abs_diff=1e-3,  # exactly == locked epsilon
+            all_passed=True,
+        )
+        payload = json.loads(path.read_text())
+        fails = validate_identity_suite_measurements(payload, f4_epsilons=_F4_EPS)
+        assert fails == [], fails
+
+
+def test_s23_max_abs_diff_above_epsilon_fails_despite_booleans(tmp_path):
+    import hashlib
+    import json
+
+    from traces.q1.empirical_evidence import validate_identity_suite_measurements
+
+    path, _ = write_fabricated_identity_artifact(
+        tmp_path / "id.json",
+        max_abs_diff=1.1e-3,
+        within_tolerance_lie=True,
+        all_passed=True,
+    )
+    payload = json.loads(path.read_text())
+    # Force declared booleans true while measurement exceeds epsilon
+    for rows in payload["per_model_results"].values():
+        for row in rows:
+            row["passed"] = True
+            for c in row.get("numerical_comparisons") or []:
+                c["within_tolerance"] = True
+                c["max_abs_diff"] = 1.1e-3
+    fails = validate_identity_suite_measurements(payload, f4_epsilons=_F4_EPS)
+    assert fails
+    assert any(
+        "within_tolerance=true contradicts" in f or "fails max_abs_diff" in f
+        for f in fails
+    )
+    raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+    path.write_bytes(raw)
+    sha = hashlib.sha256(raw).hexdigest()
+    auth = authenticate_identity_suite_artifact(
+        path=path, claimed_sha256=sha, repo_root=REPO, frozen_prompt_ids=_frozen_dev()
+    )
+    assert auth.ok is False
 
 
 def test_s23_identity_auth_rejects_max_abs_diff_1e9_lie(tmp_path):
@@ -792,6 +960,39 @@ def test_s23_identity_auth_rejects_max_abs_diff_1e9_lie(tmp_path):
         or "1e+09" in joined
         or "1e9" in joined
     )
+
+
+def test_s23_duplicate_identity_id_rejected(tmp_path):
+    import json
+
+    from traces.q1.empirical_evidence import validate_identity_suite_measurements
+
+    path, _ = write_fabricated_identity_artifact(tmp_path / "id.json")
+    payload = json.loads(path.read_text())
+    for rows in payload["per_model_results"].values():
+        rows.append(dict(rows[0]))  # duplicate identity_id
+        break
+    fails = validate_identity_suite_measurements(payload, f4_epsilons=_F4_EPS)
+    assert any("duplicate identity_id" in f for f in fails)
+
+
+def test_s24_alters_single_bos_stopping_rule_rejected(tmp_path):
+    import hashlib
+    import json
+
+    path, _ = write_fabricated_double_bos_artifact(
+        tmp_path / "db.json", prompt_ids=_frozen_dev()
+    )
+    payload = json.loads(path.read_text())
+    payload["alters_single_bos_stopping_rule"] = True
+    raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+    path.write_bytes(raw)
+    sha = hashlib.sha256(raw).hexdigest()
+    auth = authenticate_double_bos_scan_artifact(
+        path=path, claimed_sha256=sha, frozen_prompt_ids=_frozen_dev()
+    )
+    assert auth.ok is False
+    assert any("stopping rule" in f for f in auth.failures)
 
 
 def test_s24_pair_key_only_artifact_rejected(tmp_path):
