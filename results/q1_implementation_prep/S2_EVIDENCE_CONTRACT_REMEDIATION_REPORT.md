@@ -2,6 +2,8 @@
 
 **Branch:** `q1-impl-audit`  
 **Starting code commit:** `a87342548e138a569e34b1bc302295dae39cb8b0`  
+**Code commit:** `5c5833a36a37cf84c05b4e1d0072641ed0844fc6`  
+**Git tree SHA:** `b4d200587de06c5a8000a8782852796dc1a79708`  
 **Frozen main:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`  
 **Protocol:** v1.3  
 **Scientific auth:** OFF (default)  
