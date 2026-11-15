@@ -9,6 +9,8 @@ peft=0.19.1
 cwd: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
 branch: q1-impl-audit
 HEAD_before: 745d7c295a6d7a93098583fa6dc5d3d9356974e3
+code_commit: 2a27cfa21bb424e9bafae84b7deeddc73f86bc9a
+tree_sha: cfdc763a247aa22313f9af64da30c33ac3a55ff9
 
 === pytest ===
 ........................................................................ [ 40%]

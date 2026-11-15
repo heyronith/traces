@@ -2,6 +2,8 @@
 
 **Branch:** `q1-impl-audit`  
 **Starting HEAD:** `745d7c295a6d7a93098583fa6dc5d3d9356974e3`  
+**Code commit:** `2a27cfa21bb424e9bafae84b7deeddc73f86bc9a`  
+**Git tree SHA:** `cfdc763a247aa22313f9af64da30c33ac3a55ff9`  
 **Protocol:** v1.3  
 **Scientific auth:** OFF (default)  
 **This task is not authorization for scientific execution.**
