@@ -337,12 +337,25 @@ def test_r10_driver_e2e_exact_keys():
     assert "route_class" in d["route"]
     assert "full_H1" in d["h1"] or "forward" in d["h1"]
     assert "crossfit" in d
+    expl = []
+    for s in (42, 43, 44):
+        eu = _make_unit(40, seed=s)
+        eu.role = "exploratory_dev"
+        eu.family = "l1523"
+        eu.model_unit = f"exploratory_l1523_seed{s}"
+        expl.append(eu)
+    primaries = []
+    for s in (42, 43, 44, 45, 46):
+        pu = _make_unit(40, seed=s)
+        pu.model_unit = f"primary_l19_seed{s}"
+        primaries.append(pu)
     study = run_study(
-        [unit, unit, unit, unit, unit],
+        expl + primaries,
         held_out,
         exploratory_single_bos_ranks=[1, 2, 3],
     )
     assert study["exploratory_stop"]["triggered"] is False
+    assert study["exploratory_stop"]["confirmatory_blocked"] is False
     assert study["study_level"] is not None
 
 

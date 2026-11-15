@@ -306,11 +306,20 @@ def test_driver_h2_evaluates_heads_and_pairs():
 
 
 def test_study_five_seed_top2_actual_sets():
-    units = [_make_unit(40, seed=s, with_joints=True) for s in range(5)]
-    held = units[0].prompt_ids + [f"h{i}" for i in range(160)]
+    expl = []
+    for s in (42, 43, 44):
+        eu = _make_unit(40, seed=s, with_joints=True)
+        eu.role = "exploratory_dev"
+        eu.family = "l1523"
+        eu.model_unit = f"exploratory_l1523_seed{s}"
+        expl.append(eu)
+    units = expl + [_make_unit(40, seed=s, with_joints=True) for s in (42, 43, 44, 45, 46)]
+    for u, s in zip(units[3:], (42, 43, 44, 45, 46)):
+        u.model_unit = f"primary_l19_seed{s}"
+    held = units[3].prompt_ids + [f"h{i}" for i in range(160)]
     out = run_study(units, held, exploratory_single_bos_ranks=[1, 2, 3])
+    assert out["exploratory_stop"]["confirmatory_blocked"] is False
     assert len(out["h3_top2_by_seed"]) == 5
-    # Conserved dominant heads from _make_unit
     for _uid, pair in out["h3_top2_by_seed"].items():
         assert (15, 6) in [tuple(x) if isinstance(x, list) else x for x in pair] or len(pair) == 2
 
@@ -340,23 +349,34 @@ def test_tiny_auth_does_not_unlock_scientific(monkeypatch):
 def test_live_pipeline_refuses_without_auth(monkeypatch):
     monkeypatch.delenv(SCI_AUTH_ENV, raising=False)
     with pytest.raises(PermissionError):
+        from traces.q1.scientific_execution import LiveForwardHooks
+
         run_live_scientific_pipeline(
             repo_root=REPO,
             held_out_ids_allocation_order=[f"p{i}" for i in range(200)],
-            hooks=SimpleNamespace(
-                load_model_unit=lambda: None,
-                capture_donors=lambda m: None,
-                run_boundary_conditions=lambda m, d: None,
-                run_interventions=lambda m, d: None,
-            ),
+            hooks=LiveForwardHooks(),
             out_dir=REPO / "results/q1_implementation_prep/_tmp_live",
         )
 
 
 def test_analysis_only_without_auth_ok(tmp_path):
+    # Confirmatory alone is blocked without exploratory seeds+ranks (D4)
+    expl = []
+    for s in (42, 43, 44):
+        u = _make_unit(40, seed=s, with_joints=True)
+        u.role = "exploratory_dev"
+        u.family = "l1523"
+        u.model_unit = f"exploratory_l1523_seed{s}"
+        expl.append(u)
     unit = _make_unit(40, seed=5, with_joints=True)
     held = unit.prompt_ids + [f"h{i}" for i in range(160)]
-    out = run_analysis_only([unit], held, out_dir=tmp_path, require_auth=False)
+    out = run_analysis_only(
+        expl + [unit],
+        held,
+        out_dir=tmp_path,
+        require_auth=False,
+        exploratory_single_bos_ranks=[1, 2, 3],
+    )
     assert "per_unit" in out
     assert Path(out["persisted_path"]).is_file()
 

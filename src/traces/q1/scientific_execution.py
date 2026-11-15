@@ -22,6 +22,7 @@ from traces.q1 import FROZEN_PROTOCOL_VERSION, FROZEN_SCIENTIFIC_COMMIT
 from traces.q1.conditions import enumerate_primary_l19_conditions
 from traces.q1.driver import ModelUnitInput, dump_driver_result, run_study
 from traces.q1.recording import ConditionRecord, ResultSink
+from traces.q1.frozen_artifacts import verify_frozen_artifacts
 from traces.q1.runtime_lock import claim_production_lock_exists, load_lock_document
 from traces.q1.runtime_spec import (
     DEFAULT_BATCHING,
@@ -86,20 +87,51 @@ def require_scientific_authorization() -> None:
         )
 
 
+# Exact owner-approved status line (substring "APPROVED" alone is insufficient —
+# "NOT APPROVED" must not authorize).
+F5_APPROVED_STATUS_EXACT = "F5_STATUS=OWNER_APPROVED"
+
+
 def f5_approval_state(*, repo_root: Path | str | None = None) -> dict[str, Any]:
-    """F5 remains pending unless explicit owner approval marker is present."""
+    """F5 remains pending unless exact owner-approved status with provenance.
+
+    Mere marker existence or the substring ``APPROVED`` (e.g. ``NOT APPROVED``)
+    does **not** authorize F5.
+    """
     env = os.environ.get(F5_APPROVAL_ENV)
-    marker = None
+    marker_text = None
+    marker_path = None
     if repo_root is not None:
-        p = Path(repo_root) / "results/q1_implementation_prep/F5_OWNER_APPROVAL.marker"
-        if p.is_file():
-            marker = p.read_text().strip()
-    approved = env == "1" and marker is not None and "APPROVED" in marker
+        marker_path = (
+            Path(repo_root) / "results/q1_implementation_prep/F5_OWNER_APPROVAL.marker"
+        )
+        if marker_path.is_file():
+            marker_text = marker_path.read_text()
+
+    status_line = None
+    signer = None
+    if marker_text is not None:
+        for line in marker_text.splitlines():
+            line = line.strip()
+            if line.startswith("F5_STATUS="):
+                status_line = line
+            if line.startswith("OWNER_SIGNER="):
+                signer = line.split("=", 1)[1].strip() or None
+
+    approved = (
+        env == "1"
+        and status_line == F5_APPROVED_STATUS_EXACT
+        and signer is not None
+        and len(signer) >= 2
+    )
     return {
         "approved": approved,
         "pending": not approved,
         "env": env,
-        "marker_present": marker is not None,
+        "marker_present": marker_text is not None,
+        "status_line": status_line,
+        "signer_present": signer is not None,
+        "required_status": F5_APPROVED_STATUS_EXACT,
         "note": "F5 awaits explicit research-owner approval",
     }
 
@@ -153,16 +185,94 @@ class ConditionOutputBundle:
     )
     bos_convention: str = "single"
     catalog_condition_ids: list[str] = field(default_factory=list)
+    # Prompt IDs in frozen allocation order corresponding to eligible-only arrays
+    eligible_prompt_ids: list[str] | None = None
+
+    def validate(self) -> list[str]:
+        """Strict consistency checks; empty list means OK."""
+        failures: list[str] = []
+        if self.bos_convention != "single":
+            failures.append("scientific path requires single BOS")
+        n = len(self.prompt_ids)
+        if n < 1:
+            failures.append("empty prompt_ids")
+        if len(set(self.prompt_ids)) != n:
+            failures.append("duplicate prompt_ids")
+        mask = np.asarray(self.eligible_mask, dtype=bool)
+        if mask.ndim != 1 or len(mask) != n:
+            failures.append(
+                f"eligible_mask length {len(mask) if mask.ndim == 1 else mask.shape} "
+                f"!= n_prompts {n}"
+            )
+            return failures
+        n_elig = int(mask.sum())
+        if n_elig < 1:
+            failures.append("no eligible prompts")
+        # Deterministic eligible ordering: mask order must match prompt_ids order
+        elig_ids_from_mask = [pid for pid, m in zip(self.prompt_ids, mask) if m]
+        if self.eligible_prompt_ids is not None:
+            if list(self.eligible_prompt_ids) != elig_ids_from_mask:
+                failures.append(
+                    "eligible_prompt_ids ordering mismatch vs mask over prompt_ids"
+                )
+        expected_len = n_elig  # eligible-only arrays required
+
+        def _check_vec(name: str, arr: Any) -> None:
+            a = np.asarray(arr, dtype=np.float64)
+            if a.ndim != 1:
+                failures.append(f"{name}: expected 1-d")
+                return
+            if len(a) == n and n != n_elig:
+                failures.append(
+                    f"{name}: full-denominator length {n} supplied where "
+                    f"eligible-only length {n_elig} is required"
+                )
+                return
+            if len(a) != expected_len:
+                failures.append(
+                    f"{name}: length {len(a)} != n_eligible {expected_len}"
+                )
+            if len(a) and not np.all(np.isfinite(a)):
+                failures.append(f"{name}: nonfinite values")
+
+        for name in ("m_TT", "m_CT", "m_TC", "m_CC", "e_route_fwd", "e_route_rev"):
+            _check_vec(name, getattr(self, name))
+
+        for label, fx in (
+            ("pair_fwd", self.pair_effects_fwd),
+            ("pair_rev", self.pair_effects_rev),
+            ("head_fwd", self.head_effects_fwd),
+            ("head_rev", self.head_effects_rev),
+        ):
+            if not isinstance(fx, Mapping) or not fx:
+                failures.append(f"{label}: empty or not a mapping")
+                continue
+            for k, v in fx.items():
+                _check_vec(f"{label}{k}", v)
+
+        for label, fx in (
+            ("joint_fwd", self.joint_set_effects_fwd),
+            ("joint_rev", self.joint_set_effects_rev),
+        ):
+            for k, v in fx.items():
+                _check_vec(f"{label}{k}", v)
+
+        if self.n_frozen != n and self.role in {
+            "primary_confirmatory",
+            "secondary_replication",
+            "exploratory_dev",
+        }:
+            # n_frozen is the split denominator; must match prompt catalog size
+            if self.n_frozen < n:
+                failures.append(f"n_frozen {self.n_frozen} < n_prompts {n}")
+        return failures
 
     def to_model_unit_input(self) -> ModelUnitInput:
-        if self.bos_convention != "single":
-            raise ValueError("scientific path requires single BOS")
-        n = len(self.prompt_ids)
-        for name in ("m_TT", "m_CT", "m_TC", "m_CC", "e_route_fwd", "e_route_rev"):
-            arr = getattr(self, name)
-            if len(arr) != int(self.eligible_mask.sum()) and len(arr) != n:
-                # margins are over eligible prompts in driver convention
-                pass
+        failures = self.validate()
+        if failures:
+            raise ValueError(
+                "ConditionOutputBundle validation failed: " + "; ".join(failures)
+            )
         return ModelUnitInput(
             model_unit=self.model_unit,
             family=self.family,
@@ -206,10 +316,15 @@ def run_scientific_preflight(
     *,
     held_out_ids: Sequence[str] | None = None,
     production_lock_path: Path | str | None = None,
+    production_wheel_dir: Path | str | None = None,
     require_sci_auth: bool = True,
     expected_weight_manifest: Mapping[str, str] | None = None,
 ) -> PreflightReport:
-    """Fail closed before any model callback."""
+    """Fail closed before any model callback.
+
+    Frozen artifacts are compared to immutable expected SHA baselines (not
+    merely recomputed). Production lock claims require on-disk wheel rehashing.
+    """
     root = Path(repo_root)
     failures: list[str] = []
     checks: dict[str, Any] = {}
@@ -221,39 +336,23 @@ def run_scientific_preflight(
 
     pins = verify_direct_pins_file(root)
     checks["direct_pins"] = pins
-    if not pins.get("match"):
-        failures.append("direct pins SHA mismatch")
+    if not pins.get("match") or pins.get("sha256") != DIRECT_PINS_SHA256:
+        failures.append("direct pins SHA mismatch vs frozen baseline")
 
-    # Frozen scientific file hashes vs module constant commit (working tree)
-    sci_files = [
-        "TRACES_Q1_preregistration_REVISED_REVIEW_DRAFT_v1_3.md",
-        "TRACES_Q1_execution_direct_pins_v1_2.txt",
-        "TRACES_Q1_SCIENTIFIC_FREEZE_RECORD.md",
-    ]
-    frozen_ok = True
-    file_hashes = {}
-    import hashlib
-
-    for f in sci_files:
-        p = root / f
-        if not p.is_file():
-            frozen_ok = False
-            failures.append(f"missing frozen file {f}")
-            continue
-        file_hashes[f] = hashlib.sha256(p.read_bytes()).hexdigest()
-    checks["frozen_files"] = file_hashes
-    checks["frozen_commit_constant"] = FROZEN_SCIENTIFIC_COMMIT
-    if pins.get("sha256") != DIRECT_PINS_SHA256:
-        frozen_ok = False
-    checks["frozen_ok"] = frozen_ok
+    frozen = verify_frozen_artifacts(root)
+    checks["frozen_artifacts"] = frozen
+    if not frozen["ok"]:
+        failures.extend(frozen["failures"])
 
     enum = build_enumerator(include_downstream56=True)
-    checks["workload"] = enum.get("validation", {})
-    if not enum.get("validation", {}).get("scientific_tf_matches_readiness_v1", False):
-        # key name from workload — fall back to total check
-        val = enum.get("validation", {})
-        if val.get("scientific_condition_tf") != 824_400:
-            failures.append("workload scientific TF != 824400")
+    val = enum.get("validation", {})
+    checks["workload"] = val
+    if val.get("scientific_condition_tf") != 824_400:
+        failures.append(
+            f"workload scientific TF {val.get('scientific_condition_tf')} != 824400"
+        )
+    if val.get("gen_passes") != 3_600:
+        failures.append(f"workload gen_passes {val.get('gen_passes')} != 3600")
 
     catalog = enumerate_primary_l19_conditions(include_downstream56=True)
     checks["catalog"] = {
@@ -262,7 +361,7 @@ def run_scientific_preflight(
         "sample_ids": [c.condition_id for c in catalog[:3]],
     }
     if len(catalog) < 100:
-        failures.append("primary catalog unexpectedly small")
+        failures.append("primary catalog unexpectedly small / invalid")
 
     f5 = f5_approval_state(repo_root=root)
     checks["f5"] = f5
@@ -270,17 +369,34 @@ def run_scientific_preflight(
         failures.append("F5 owner approval pending")
 
     lock_ok = False
-    if production_lock_path is not None and Path(production_lock_path).is_file():
+    if (
+        production_lock_path is not None
+        and Path(production_lock_path).is_file()
+        and production_wheel_dir is not None
+        and Path(production_wheel_dir).is_dir()
+    ):
         doc = load_lock_document(production_lock_path)
-        lock_ok = claim_production_lock_exists(doc, wheel_dir=None, require_rehash=False)
+        # Production policy: always rehash wheels; never trust flags alone
+        lock_ok = claim_production_lock_exists(
+            doc,
+            wheel_dir=production_wheel_dir,
+            require_rehash=True,
+            pins_file=root / "TRACES_Q1_execution_direct_pins_v1_2.txt",
+        )
         checks["production_lock"] = {
             "path": str(production_lock_path),
+            "wheel_dir": str(production_wheel_dir),
             "claim": lock_ok,
         }
     else:
-        checks["production_lock"] = {"path": None, "claim": False}
+        checks["production_lock"] = {
+            "path": production_lock_path,
+            "wheel_dir": production_wheel_dir,
+            "claim": False,
+            "reason": "lock path and wheel_dir both required for production claim",
+        }
     if not lock_ok:
-        failures.append("production runtime lock not validated")
+        failures.append("production runtime lock not validated (blocked)")
 
     if expected_weight_manifest is None or not expected_weight_manifest:
         failures.append("checkpoint provenance weight SHA manifest missing")
@@ -355,16 +471,135 @@ def verify_held_out_allocation(
 
 
 @dataclass
-class LiveForwardHooks:
-    """Typed hooks for authorized live execution via Q1CausalRunner.
+class UnitSpec:
+    """Frozen role/seed identity for multi-unit live execution."""
 
-    Each hook must return structured evidence; None / bare True is rejected.
+    model_unit: str
+    family: str
+    role: str
+    seed: int | None
+
+
+def expected_frozen_unit_specs() -> list[UnitSpec]:
+    """Exploratory 42–44, primary 42–46, secondary 45–46, adapter-off."""
+    from traces.q1.frozen_artifacts import (
+        REQUIRED_EXPLORATORY_SEEDS,
+        REQUIRED_PRIMARY_SEEDS,
+        REQUIRED_SECONDARY_SEEDS,
+    )
+
+    specs: list[UnitSpec] = []
+    for s in REQUIRED_EXPLORATORY_SEEDS:
+        specs.append(
+            UnitSpec(
+                model_unit=f"exploratory_l1523_seed{s}",
+                family="l1523",
+                role="exploratory_dev",
+                seed=s,
+            )
+        )
+    for s in REQUIRED_PRIMARY_SEEDS:
+        specs.append(
+            UnitSpec(
+                model_unit=f"primary_l19_seed{s}",
+                family="l19",
+                role="primary_confirmatory",
+                seed=s,
+            )
+        )
+    for s in REQUIRED_SECONDARY_SEEDS:
+        specs.append(
+            UnitSpec(
+                model_unit=f"secondary_l1523_seed{s}",
+                family="l1523",
+                role="secondary_replication",
+                seed=s,
+            )
+        )
+    specs.append(
+        UnitSpec(
+            model_unit="adapter_off_base_reference",
+            family="base",
+            role="adapter_off_gates_descriptives",
+            seed=None,
+        )
+    )
+    return specs
+
+
+@dataclass
+class LiveForwardHooks:
+    """Typed Q1CausalRunner adapters for authorized live execution.
+
+    ``execute_unit`` must build/use ``Q1CausalRunner`` and return both boundary
+    and intervention ``ConditionOutputBundle`` objects for that unit.
     """
 
-    load_model_unit: Callable[[], Mapping[str, Any]] | None = None
-    capture_donors: Callable[[Any], Mapping[str, Any]] | None = None
-    run_boundary_conditions: Callable[[Any, Any], ConditionOutputBundle | Mapping[str, Any]] | None = None
-    run_interventions: Callable[[Any, Any], ConditionOutputBundle] | None = None
+    load_model_for_unit: Callable[[UnitSpec], Mapping[str, Any]] | None = None
+    capture_donors_for_unit: Callable[[UnitSpec, Any], Mapping[str, Any]] | None = None
+    execute_unit: Callable[
+        [UnitSpec, Any, Any], tuple[ConditionOutputBundle, ConditionOutputBundle]
+    ] | None = None
+
+
+def reconcile_boundary_intervention(
+    boundary: ConditionOutputBundle,
+    intervention: ConditionOutputBundle,
+) -> ConditionOutputBundle:
+    """Merge TT/CT/TC/CC margins from boundary into intervention head/pair maps.
+
+    Rejects inconsistent prompt IDs, masks, routes, or model_unit identity.
+    """
+    failures: list[str] = []
+    if boundary.model_unit != intervention.model_unit:
+        failures.append("model_unit mismatch between boundary and intervention")
+    if boundary.prompt_ids != intervention.prompt_ids:
+        failures.append("prompt_ids mismatch between boundary and intervention")
+    if not np.array_equal(
+        np.asarray(boundary.eligible_mask), np.asarray(intervention.eligible_mask)
+    ):
+        failures.append("eligible_mask mismatch")
+    if boundary.role != intervention.role or boundary.family != intervention.family:
+        failures.append("role/family mismatch")
+    # Boundary must carry margins; intervention must carry head/pair/joint maps
+    for name in ("m_TT", "m_CT", "m_TC", "m_CC"):
+        if not np.allclose(
+            np.asarray(getattr(boundary, name), dtype=np.float64),
+            np.asarray(getattr(intervention, name), dtype=np.float64),
+            equal_nan=True,
+        ):
+            failures.append(f"{name} disagree between boundary and intervention")
+    if failures:
+        raise ValueError(
+            "boundary/intervention reconcile failed: " + "; ".join(failures)
+        )
+    # Prefer intervention maps with boundary-validated margins
+    return ConditionOutputBundle(
+        model_unit=intervention.model_unit,
+        family=intervention.family,
+        role=intervention.role,
+        prompt_ids=list(intervention.prompt_ids),
+        m_TT=np.asarray(boundary.m_TT),
+        m_CT=np.asarray(boundary.m_CT),
+        m_TC=np.asarray(boundary.m_TC),
+        m_CC=np.asarray(boundary.m_CC),
+        eligible_mask=np.asarray(boundary.eligible_mask, dtype=bool),
+        trigger_asr=intervention.trigger_asr,
+        clean_false_fire=intervention.clean_false_fire,
+        first_token_validity=intervention.first_token_validity,
+        n_frozen=intervention.n_frozen,
+        pair_effects_fwd=dict(intervention.pair_effects_fwd),
+        pair_effects_rev=dict(intervention.pair_effects_rev),
+        head_effects_fwd=dict(intervention.head_effects_fwd),
+        head_effects_rev=dict(intervention.head_effects_rev),
+        e_route_fwd=np.asarray(boundary.e_route_fwd),
+        e_route_rev=np.asarray(boundary.e_route_rev),
+        joint_set_effects_fwd=dict(intervention.joint_set_effects_fwd),
+        joint_set_effects_rev=dict(intervention.joint_set_effects_rev),
+        bos_convention=intervention.bos_convention,
+        catalog_condition_ids=list(intervention.catalog_condition_ids),
+        eligible_prompt_ids=intervention.eligible_prompt_ids,
+    )
 
 
 def _require_mapping_evidence(obj: Any, *, stage: str, required_keys: Sequence[str]) -> dict[str, Any]:
@@ -713,89 +948,161 @@ def run_live_scientific_pipeline(
     hooks: LiveForwardHooks,
     out_dir: Path | str,
     production_lock_path: Path | str | None = None,
+    production_wheel_dir: Path | str | None = None,
     expected_weight_manifest: Mapping[str, str] | None = None,
+    exploratory_ranks: Sequence[int] | None = None,
+    development_ids: Sequence[str] | None = None,
+    unit_specs: Sequence[UnitSpec] | None = None,
 ) -> dict[str, Any]:
-    """Full live path — refuses unless sci auth + preflight pass.
+    """Multi-unit live path via Q1CausalRunner adapters — auth + preflight required.
 
-    Phase 2 / audit corrections keep this unauthorized by default.
+    Aggregates exploratory (3) + primary (5) + secondary (2) + adapter-off.
+    Boundary and intervention bundles are reconciled per unit. Completeness of
+    the eight-stage path is **not** claimed until these checks pass.
+    Default: unauthorized (env gate OFF).
     """
     require_scientific_authorization()
     pre = run_scientific_preflight(
         repo_root,
         held_out_ids=held_out_ids_allocation_order,
         production_lock_path=production_lock_path,
+        production_wheel_dir=production_wheel_dir,
         expected_weight_manifest=expected_weight_manifest,
         require_sci_auth=True,
     )
     pre.raise_if_failed()
 
     if not all(
-        [
-            hooks.load_model_unit,
-            hooks.capture_donors,
-            hooks.run_boundary_conditions,
-            hooks.run_interventions,
-        ]
+        [hooks.load_model_for_unit, hooks.capture_donors_for_unit, hooks.execute_unit]
     ):
-        raise RuntimeError("Live pipeline requires all LiveForwardHooks callables")
+        raise RuntimeError(
+            "Live pipeline requires load_model_for_unit, capture_donors_for_unit, "
+            "and execute_unit (Q1CausalRunner adapters)"
+        )
+
+    specs = list(unit_specs) if unit_specs is not None else expected_frozen_unit_specs()
+    expected = expected_frozen_unit_specs()
+    if [s.model_unit for s in specs] != [s.model_unit for s in expected]:
+        raise RuntimeError(
+            "incomplete or incorrect unit set: require frozen exploratory/primary/"
+            "secondary/adapter-off identities"
+        )
 
     ex = ScientificPipelineExecutor(repo_root, out_dir)
     ex.stage1_catalog_and_bos(
-        held_out_ids=held_out_ids_allocation_order
+        held_out_ids=held_out_ids_allocation_order,
+        development_ids=development_ids,
     ).require_complete()
 
-    model_bundle = hooks.load_model_unit()  # type: ignore[misc]
-    prov = _require_mapping_evidence(
-        model_bundle if isinstance(model_bundle, Mapping) else {"raw": model_bundle},
-        stage="load",
-        required_keys=(
-            "base_revision",
-            "adapter_revision",
-            "weight_file_sha256",
-            "attn_implementation",
-            "torch_dtype",
-            "model",
+    units: list[ModelUnitInput] = []
+    per_unit_records: list[dict[str, Any]] = []
+    first_prov: dict[str, Any] | None = None
+    donor_ok = False
+
+    for spec in specs:
+        loaded = hooks.load_model_for_unit(spec)  # type: ignore[misc]
+        if not isinstance(loaded, Mapping) or "model" not in loaded:
+            raise RuntimeError(
+                f"{spec.model_unit}: load_model_for_unit must return mapping with model"
+            )
+        prov = _require_mapping_evidence(
+            loaded,
+            stage=f"load:{spec.model_unit}",
+            required_keys=(
+                "base_revision",
+                "adapter_revision",
+                "weight_file_sha256",
+                "attn_implementation",
+                "torch_dtype",
+                "model",
+            ),
         )
-        if isinstance(model_bundle, Mapping)
-        else ("raw",),
-    )
-    if "model" not in prov and not isinstance(model_bundle, Mapping):
-        raise RuntimeError("load_model_unit must return mapping with model+provenance")
-    ex.stage2_provenance(prov).require_complete()
+        if first_prov is None:
+            first_prov = prov
+            ex.stage2_provenance(prov).require_complete()
 
-    donors = hooks.capture_donors(prov.get("model", model_bundle))  # type: ignore[misc]
-    donor_ev = _require_mapping_evidence(
-        donors,
-        stage="donors",
-        required_keys=("n_donor_caches", "clean_references_frozen", "instruction_ids"),
-    )
-    ex.stage3_donors(donor_ev).require_complete()
+        donors = hooks.capture_donors_for_unit(spec, prov["model"])  # type: ignore[misc]
+        donor_ev = _require_mapping_evidence(
+            donors,
+            stage=f"donors:{spec.model_unit}",
+            required_keys=(
+                "n_donor_caches",
+                "clean_references_frozen",
+                "instruction_ids",
+            ),
+        )
+        if not donor_ok:
+            ex.stage3_donors(donor_ev).require_complete()
+            donor_ok = True
 
-    boundaries = hooks.run_boundary_conditions(prov.get("model"), donors)  # type: ignore[misc]
-    if isinstance(boundaries, ConditionOutputBundle):
-        ex.stage4_boundaries(boundaries).require_complete()
-        partial = boundaries
-    else:
-        raise RuntimeError(
-            "run_boundary_conditions must return ConditionOutputBundle"
+        pair = hooks.execute_unit(spec, prov["model"], donors)  # type: ignore[misc]
+        if (
+            not isinstance(pair, tuple)
+            or len(pair) != 2
+            or not isinstance(pair[0], ConditionOutputBundle)
+            or not isinstance(pair[1], ConditionOutputBundle)
+        ):
+            raise RuntimeError(
+                f"{spec.model_unit}: execute_unit must return "
+                "(boundary_bundle, intervention_bundle)"
+            )
+        boundary, intervention = pair
+        if boundary.model_unit != spec.model_unit or intervention.model_unit != spec.model_unit:
+            raise RuntimeError(
+                f"{spec.model_unit}: bundle model_unit does not match UnitSpec"
+            )
+        merged = reconcile_boundary_intervention(boundary, intervention)
+        if not merged.catalog_condition_ids:
+            raise RuntimeError(
+                f"{spec.model_unit}: missing catalog condition records on bundle"
+            )
+        ex.stage4_boundaries(merged)
+        ex.stage5_interventions(merged).require_complete()
+        st6, unit = ex.stage6_assemble(merged)
+        st6.require_complete()
+        assert unit is not None
+        units.append(unit)
+        per_unit_records.append(
+            {
+                "model_unit": spec.model_unit,
+                "role": spec.role,
+                "n_catalog_conditions": len(merged.catalog_condition_ids),
+            }
         )
 
-    interventions = hooks.run_interventions(prov.get("model"), donors)  # type: ignore[misc]
-    if not isinstance(interventions, ConditionOutputBundle):
-        raise RuntimeError("run_interventions must return ConditionOutputBundle")
-    # Merge margin fields from boundaries if interventions focuses on heads
-    ex.stage5_interventions(interventions).require_complete()
-    st6, unit = ex.stage6_assemble(interventions)
-    st6.require_complete()
-    assert unit is not None
-    st7, analysis = ex.stage7_analyze([unit], held_out_ids_allocation_order)
+    # Mark stage4 complete after all units (last boundary evidence retained)
+    if ex.stages[PIPELINE_STAGES[3]].status != "complete":
+        ex.stages[PIPELINE_STAGES[3]] = StageResult(
+            PIPELINE_STAGES[3],
+            "complete",
+            evidence={"n_units": len(units), "per_unit": per_unit_records},
+        )
+
+    if len(units) != len(expected):
+        raise RuntimeError("incomplete unit aggregation")
+
+    st7, analysis = ex.stage7_analyze(
+        units,
+        held_out_ids_allocation_order,
+        exploratory_ranks=exploratory_ranks,
+        development_ids=development_ids,
+    )
     st7.require_complete()
     assert analysis is not None
     ex.stage8_persist(analysis).require_complete()
+
+    pipeline_ready = all(s.status == "complete" for s in ex.stages.values())
     return {
         "stages": {k: asdict(v) for k, v in ex.stages.items()},
         "analysis": analysis,
         "preflight": asdict(pre),
+        "n_units": len(units),
+        "per_unit": per_unit_records,
+        "eight_stage_ready": pipeline_ready,
+        "note": (
+            "eight_stage_ready reflects enforceable checks for this authorized run; "
+            "default scientific execution remains disabled without auth/preflight"
+        ),
     }
 
 

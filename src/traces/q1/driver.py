@@ -300,10 +300,35 @@ def run_model_unit_analysis(
     h1_rev = _h1_dir(
         "reverse", unit.pair_effects_rev, unit.head_effects_rev, unit.e_route_rev, denom_rev["ok"]
     )
-    if route["route_class"] == "R-moved":
+    route_class = route["route_class"]
+    # Direction-specific full H1 (D5): R-and→forward; R-or→reverse; R-moved→both
+    if route_class == "R-moved":
         h1 = combine_h1_rmoved(h1_fwd, h1_rev)
+        applicable_directions = ("forward", "reverse")
+    elif route_class == "R-and":
+        h1 = {
+            "forward": h1_fwd,
+            "reverse": h1_rev,
+            "full_H1": h1_fwd.get("state"),
+            "applicable_direction": "forward",
+        }
+        applicable_directions = ("forward",)
+    elif route_class == "R-or":
+        h1 = {
+            "forward": h1_fwd,
+            "reverse": h1_rev,
+            "full_H1": h1_rev.get("state"),
+            "applicable_direction": "reverse",
+        }
+        applicable_directions = ("reverse",)
     else:
-        h1 = {"forward": h1_fwd, "reverse": h1_rev, "full_H1": h1_fwd.get("state")}
+        h1 = {
+            "forward": h1_fwd,
+            "reverse": h1_rev,
+            "full_H1": "inapplicable",
+            "reason": f"route_class {route_class} does not support H1/H2/H3 labels",
+        }
+        applicable_directions = ()
 
     # F2 folds preserve allocation-order membership
     folds = assign_f2_folds(list(held_out_ids_allocation_order))
@@ -320,7 +345,7 @@ def run_model_unit_analysis(
         fold_a_elig=fold_a_elig,
         fold_b_elig=fold_b_elig,
         draws=draws,
-        denom_ok=bool(denom_fwd["ok"]),
+        denom_ok=bool(denom_fwd["ok"]) and "forward" in applicable_directions,
     )
     crossfit_rev = _run_crossfit_direction(
         direction="reverse",
@@ -330,13 +355,43 @@ def run_model_unit_analysis(
         fold_a_elig=fold_a_elig,
         fold_b_elig=fold_b_elig,
         draws=draws,
-        denom_ok=bool(denom_rev["ok"]),
+        denom_ok=bool(denom_rev["ok"]) and "reverse" in applicable_directions,
     )
+    # Primary k* from applicable direction(s) only
+    if applicable_directions == ("forward",):
+        k_star_sel = crossfit_fwd.get("k_star")
+    elif applicable_directions == ("reverse",):
+        k_star_sel = crossfit_rev.get("k_star")
+    elif applicable_directions == ("forward", "reverse"):
+        # R-moved: both required; prefer agreement, else undetermined
+        kf, kr = crossfit_fwd.get("k_star") or {}, crossfit_rev.get("k_star") or {}
+        if kf and kr and kf.get("k_star_le_2") == kr.get("k_star_le_2") and kf.get(
+            "k_star_gt_10"
+        ) == kr.get("k_star_gt_10"):
+            k_star_sel = kf
+        else:
+            k_star_sel = {
+                "k_star_le_2": False,
+                "k_star_gt_10": False,
+                "undetermined_concentration": True,
+                "definitive_refused": True,
+                "reason": "R-moved directional k* disagreement or incomplete",
+                "forward": kf,
+                "reverse": kr,
+            }
+    else:
+        k_star_sel = {
+            "k_star_le_2": False,
+            "k_star_gt_10": False,
+            "undetermined_concentration": True,
+            "definitive_refused": True,
+            "reason": "route class inapplicable for k*",
+        }
     crossfit: dict[str, Any] = {
         "forward": crossfit_fwd,
         "reverse": crossfit_rev,
-        # Prefer forward for primary k* when available
-        "k_star": crossfit_fwd.get("k_star") or crossfit_rev.get("k_star"),
+        "applicable_directions": list(applicable_directions),
+        "k_star": k_star_sel,
     }
 
     # H2: both directions with appropriate route-denom gates; exact 152+64 identities
@@ -392,9 +447,20 @@ def run_model_unit_analysis(
     h2_rev = _h2_for_direction(
         denom_rev, unit.head_effects_rev, unit.pair_effects_rev, unit.e_route_rev, "reverse"
     )
-    # Primary H2 support uses forward when applicable; both recorded
-    all_upper_below = bool(h2_fwd.get("all_upper_below"))
-    h2_meta = {"forward": h2_fwd, "reverse": h2_rev}
+    # H2 only on applicable directions with denom gates
+    if applicable_directions == ("forward",):
+        all_upper_below = bool(h2_fwd.get("all_upper_below"))
+    elif applicable_directions == ("reverse",):
+        all_upper_below = bool(h2_rev.get("all_upper_below"))
+    elif applicable_directions == ("forward", "reverse"):
+        all_upper_below = bool(h2_fwd.get("all_upper_below") and h2_rev.get("all_upper_below"))
+    else:
+        all_upper_below = False
+    h2_meta = {
+        "forward": h2_fwd,
+        "reverse": h2_rev,
+        "applicable_directions": list(applicable_directions),
+    }
 
     # H3: only with validated five-seed map; partial maps cannot support H3a/H3b
     if top2_by_seed is None:
@@ -593,28 +659,70 @@ def run_study(
         else:
             unknown.append({"model_unit": u.model_unit, "role": u.role, "error": "unknown_role"})
 
-    # --- Exploratory phase ---
+    # --- Exploratory phase (D4): require exact l1523 seeds 42–44 + 3 ranks ---
+    from traces.q1.frozen_artifacts import REQUIRED_EXPLORATORY_SEEDS
+
     exploratory_results = [_analyze_exploratory_unit(u) for u in by_role[EXPLORATORY_ROLE]]
-    if exploratory_single_bos_ranks is None and by_role[EXPLORATORY_ROLE]:
+    expl_units = by_role[EXPLORATORY_ROLE]
+    expl_seeds: list[int] = []
+    expl_seed_failures: list[str] = []
+    for u in expl_units:
+        # model_unit like exploratory_l1523_seed42 or exploratory_dev/seed42
+        seed = None
+        for part in str(u.model_unit).replace("-", "_").split("_"):
+            if part.startswith("seed") and part[4:].isdigit():
+                seed = int(part[4:])
+                break
+        if seed is None and u.model_unit[-2:].isdigit():
+            seed = int(u.model_unit[-2:])
+        if seed is None:
+            expl_seed_failures.append(f"cannot parse seed from {u.model_unit}")
+        else:
+            expl_seeds.append(seed)
+        if u.family != "l1523":
+            expl_seed_failures.append(f"{u.model_unit}: family {u.family} != l1523")
+
+    required_seeds = list(REQUIRED_EXPLORATORY_SEEDS)
+    seeds_ok = (
+        sorted(expl_seeds) == required_seeds
+        and len(expl_seeds) == 3
+        and len(set(expl_seeds)) == 3
+        and not expl_seed_failures
+    )
+
+    ranks = exploratory_single_bos_ranks
+    ranks_ok = (
+        ranks is not None
+        and len(list(ranks)) == 3
+        and all(isinstance(r, (int, np.integer)) for r in ranks)
+        and all(int(r) >= 1 for r in ranks)
+    )
+
+    if not seeds_ok or not ranks_ok:
         stop = {
             "triggered": False,
-            "ranks": None,
-            "reason": "exploratory ranks not supplied; confirmatory blocked",
+            "ranks": list(ranks) if ranks is not None else None,
+            "exploratory_seeds": expl_seeds,
+            "required_seeds": required_seeds,
+            "reason": (
+                "exploratory prerequisites incomplete: require exact l1523 seeds "
+                f"{required_seeds} and three provenance-verified single-BOS ranks; "
+                f"seeds_ok={seeds_ok} ranks_ok={ranks_ok}; "
+                + "; ".join(expl_seed_failures)
+            ),
             "confirmatory_blocked": True,
-        }
-    elif exploratory_single_bos_ranks is not None:
-        triggered = exploratory_stop_triggered(exploratory_single_bos_ranks)
-        stop = {
-            "triggered": triggered,
-            "ranks": list(exploratory_single_bos_ranks),
-            "confirmatory_blocked": triggered,
+            # Never fabricate default ranks
+            "fabricated_ranks": False,
         }
     else:
+        triggered = exploratory_stop_triggered(list(ranks))  # type: ignore[arg-type]
         stop = {
-            "triggered": False,
-            "ranks": None,
-            "confirmatory_blocked": False,
-            "reason": "no exploratory units and no ranks",
+            "triggered": triggered,
+            "ranks": [int(r) for r in ranks],  # type: ignore[union-attr]
+            "exploratory_seeds": expl_seeds,
+            "required_seeds": required_seeds,
+            "confirmatory_blocked": triggered,
+            "criterion": ">=2 of 3 ranks worse than 10",
         }
 
     per_unit: list[dict[str, Any]] = list(exploratory_results)

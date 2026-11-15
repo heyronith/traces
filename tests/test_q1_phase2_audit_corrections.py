@@ -186,10 +186,13 @@ def _tiny_unit(role: str, seed: int, n: int = 20) -> ModelUnitInput:
 
 
 def test_exploratory_stop_blocks_confirmatory():
-    units = [
-        _tiny_unit(EXPLORATORY_ROLE, 42, 50),
-        _tiny_unit(PRIMARY_ROLE, 42, 40),
-    ]
+    units = []
+    for s in (42, 43, 44):
+        u = _tiny_unit(EXPLORATORY_ROLE, s, 50)
+        u.family = "l1523"
+        u.model_unit = f"exploratory_l1523_seed{s}"
+        units.append(u)
+    units.append(_tiny_unit(PRIMARY_ROLE, 42, 40))
     held = [f"h{i}" for i in range(200)]
     out = run_study(units, held, exploratory_single_bos_ranks=[11, 12, 1])
     assert out["exploratory_stop"]["triggered"] is True
@@ -199,14 +202,22 @@ def test_exploratory_stop_blocks_confirmatory():
 
 
 def test_study_runs_all_roles_when_stop_clear():
+    def _u(role, seed, n=40, family=None):
+        u = _tiny_unit(role, seed, n)
+        # Force frozen exploratory naming/family for D4
+        if role == EXPLORATORY_ROLE:
+            u.family = "l1523"
+            u.model_unit = f"exploratory_l1523_seed{seed}"
+        elif family:
+            u.family = family
+        return u
+
     units = (
-        [_tiny_unit(EXPLORATORY_ROLE, s, 50) for s in (42, 43, 44)]
-        + [_tiny_unit(PRIMARY_ROLE, s, 40) for s in (42, 43, 44, 45, 46)]
-        + [_tiny_unit(SECONDARY_ROLE, s, 40) for s in (45, 46)]
-        + [_tiny_unit(ADAPTER_OFF_ROLE, 0, 40)]
+        [_u(EXPLORATORY_ROLE, s, 50) for s in (42, 43, 44)]
+        + [_u(PRIMARY_ROLE, s, 40, family="l19") for s in (42, 43, 44, 45, 46)]
+        + [_u(SECONDARY_ROLE, s, 40, family="l1523") for s in (45, 46)]
+        + [_u(ADAPTER_OFF_ROLE, 0, 40, family="base")]
     )
-    held = [f"h{i}" for i in range(200)]
-    # Align held-out with primary prompt ids loosely
     held = units[3].prompt_ids + [f"x{i}" for i in range(160)]
     out = run_study(units, held, exploratory_single_bos_ranks=[1, 2, 3])
     assert out["exploratory_stop"]["confirmatory_blocked"] is False
@@ -246,13 +257,14 @@ def test_typed_pipeline_assembles_model_unit(tmp_path):
         joint_set_effects_fwd={((15, 6),): u.head_effects_fwd[(15, 6)]},
         joint_set_effects_rev={((15, 6),): u.head_effects_rev[(15, 6)]},
         catalog_condition_ids=["single_head|forward"],
+        eligible_prompt_ids=list(u.prompt_ids),
     )
     provenance = {
         "base_revision": PINNED_BASE_REVISION,
         "adapter_revision": PINNED_ADAPTER_REVISION,
         "weight_file_sha256": {
-            "base_model.safetensors": "a" * 64,
-            "adapter_model.safetensors": "b" * 64,
+            "base:/resolved/base_model.safetensors": "a" * 64,
+            "adapter:/resolved/adapter_model.safetensors": "b" * 64,
         },
         "attn_implementation": "eager",
         "torch_dtype": "torch.bfloat16",
@@ -295,15 +307,12 @@ def test_live_still_disabled(monkeypatch):
     monkeypatch.delenv(SCI_AUTH_ENV, raising=False)
     assert scientific_auth_status().authorized is False
     with pytest.raises(PermissionError):
+        from traces.q1.scientific_execution import LiveForwardHooks
+
         run_live_scientific_pipeline(
             repo_root=REPO,
             held_out_ids_allocation_order=[f"p{i}" for i in range(200)],
-            hooks=SimpleNamespace(
-                load_model_unit=lambda: None,
-                capture_donors=lambda m: None,
-                run_boundary_conditions=lambda m, d: None,
-                run_interventions=lambda m, d: None,
-            ),
+            hooks=LiveForwardHooks(),
             out_dir=REPO / "results/q1_implementation_prep/_tmp",
         )
 
@@ -432,8 +441,8 @@ def test_loader_policy_requires_targets_layers():
         base_revision=PINNED_BASE_REVISION,
         adapter_revision=PINNED_ADAPTER_REVISION,
         expected_weight_file_sha256={
-            "base_model.safetensors": "a" * 64,
-            "adapter_model.safetensors": "b" * 64,
+            "base:/x/base_model.safetensors": "a" * 64,
+            "adapter:/x/adapter_model.safetensors": "b" * 64,
         },
         expected_adapter_targets=None,
         expected_adapted_layers=None,

@@ -322,33 +322,103 @@ def validate_weight_manifest_roles(
     *,
     resolved_base_files: Sequence[str] | None = None,
     resolved_adapter_files: Sequence[str] | None = None,
+    require_resolved_inventories: bool = False,
 ) -> list[str]:
-    """Manifest must cover resolved base/adapter weight files — not arbitrary paths."""
+    """Manifest must cover **actual resolved** base/adapter weight files.
+
+    Rejects arbitrary caller-selected paths whose names merely contain
+    ``base``/``adapter``. Prefer exact resolved inventories; otherwise require
+    explicit role-tagged keys ``base:<abspath>`` and ``adapter:<abspath>``.
+    """
     failures: list[str] = []
     if not expected_weight_file_sha256:
         return ["weight SHA manifest missing"]
     paths = set(expected_weight_file_sha256.keys())
-    if resolved_base_files is not None:
+
+    if require_resolved_inventories and (
+        resolved_base_files is None or resolved_adapter_files is None
+    ):
+        failures.append(
+            "resolved base and adapter weight-file inventories required "
+            "(refuse unbound caller-selected manifests)"
+        )
+        return failures
+
+    if resolved_base_files is not None and resolved_adapter_files is not None:
         for f in resolved_base_files:
-            if f not in paths:
+            if f not in paths and f"base:{f}" not in paths:
                 failures.append(f"manifest missing resolved base weight file: {f}")
-    if resolved_adapter_files is not None:
         for f in resolved_adapter_files:
-            if f not in paths:
+            if f not in paths and f"adapter:{f}" not in paths:
                 failures.append(f"manifest missing resolved adapter weight file: {f}")
-    if resolved_base_files is None and resolved_adapter_files is None:
-        # Require role-tagged keys or recognizable names
-        joined = " ".join(paths).lower()
-        if "base" not in joined and "model.safetensors" not in joined:
+        # Reject extra unbound caller files that are not in resolved inventories
+        allowed = set(resolved_base_files) | set(resolved_adapter_files)
+        allowed |= {f"base:{f}" for f in resolved_base_files}
+        allowed |= {f"adapter:{f}" for f in resolved_adapter_files}
+        extras = paths - allowed
+        if extras:
             failures.append(
-                "manifest lacks identifiable base weight entries "
-                "(require resolved file list or base-tagged paths)"
+                f"manifest contains unbound caller-selected files: {sorted(extras)[:5]}"
             )
-        if "adapter" not in joined and "adapter_model" not in joined:
-            failures.append(
-                "manifest lacks identifiable adapter weight entries"
-            )
+        return failures
+
+    # No resolved inventories: require explicit role tags (not substring heuristics)
+    base_keys = [k for k in paths if k.startswith("base:")]
+    adapter_keys = [k for k in paths if k.startswith("adapter:")]
+    if not base_keys:
+        failures.append(
+            "manifest requires explicit base:<path> keys when resolved "
+            "inventories are unavailable (substring 'base' is insufficient)"
+        )
+    if not adapter_keys:
+        failures.append(
+            "manifest requires explicit adapter:<path> keys when resolved "
+            "inventories are unavailable"
+        )
     return failures
+
+
+def resolve_weight_files_from_model(model: Any) -> dict[str, list[str]]:
+    """Best-effort local paths for base and adapter weight files actually loaded."""
+    base_files: list[str] = []
+    adapter_files: list[str] = []
+    # Base: transformers name_or_path / _name_or_path
+    cfg = getattr(model, "config", None)
+    base_root = getattr(cfg, "_name_or_path", None) or getattr(model, "name_or_path", None)
+    if isinstance(base_root, str) and Path(base_root).is_dir():
+        for pat in ("*.safetensors", "*.bin"):
+            base_files.extend(str(p) for p in Path(base_root).glob(pat) if p.is_file())
+    # Adapter: PEFT peft_config path
+    peft_cfg = None
+    if hasattr(model, "peft_config"):
+        peft_cfg = (
+            model.peft_config.get("default")
+            if isinstance(model.peft_config, dict)
+            else model.peft_config
+        )
+    adapter_root = None
+    if peft_cfg is not None:
+        adapter_root = getattr(peft_cfg, "base_model_name_or_path", None)
+        # PEFT stores adapter path variously
+        for attr in ("adapter_path", "peft_path", "_name_or_path"):
+            v = getattr(peft_cfg, attr, None)
+            if isinstance(v, str) and Path(v).exists():
+                adapter_root = v
+                break
+    # Also check active adapters directory via peft helper
+    if hasattr(model, "peft_config") and peft_cfg is not None:
+        hub = getattr(peft_cfg, "revision", None)
+        _ = hub
+    if isinstance(adapter_root, str) and Path(adapter_root).is_dir():
+        for name in ("adapter_model.safetensors", "adapter_model.bin", "adapter_model.pt"):
+            p = Path(adapter_root) / name
+            if p.is_file():
+                adapter_files.append(str(p))
+        if not adapter_files:
+            adapter_files.extend(
+                str(p) for p in Path(adapter_root).glob("adapter_model.*") if p.is_file()
+            )
+    return {"base": sorted(set(base_files)), "adapter": sorted(set(adapter_files))}
 
 
 def refuse_caller_revision_echo_as_proof(

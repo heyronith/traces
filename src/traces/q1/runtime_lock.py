@@ -3,6 +3,7 @@
 Production lock must be generated from the **actual intended scientific image**.
 This module supports synthetic local fixtures for procedure verification only.
 Do **not** claim a production image lock exists until generated from that image.
+Synthetic fixture validation must never substitute for production verification.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from traces.q1 import FROZEN_PROTOCOL_VERSION, FROZEN_SCIENTIFIC_COMMIT
+from traces.q1.frozen_artifacts import parse_direct_pin_requirements
 from traces.q1.runtime_spec import DIRECT_PINS_FILE, DIRECT_PINS_SHA256, verify_direct_pins_file
 
 LOCK_SCHEMA_VERSION = "1.0"
@@ -77,7 +79,6 @@ def collect_platform_info() -> dict[str, Any]:
 
 
 def collect_cuda_info() -> dict[str, Any]:
-    """Best-effort CUDA metadata; never initializes GPU work."""
     info: dict[str, Any] = {
         "torch_cuda_available": False,
         "torch_version": None,
@@ -93,13 +94,12 @@ def collect_cuda_info() -> dict[str, Any]:
         info["cuda_version"] = getattr(torch.version, "cuda", None)
         if info["torch_cuda_available"]:
             info["device_count"] = int(torch.cuda.device_count())
-    except Exception as e:  # noqa: BLE001 — lock prep must not crash
+    except Exception as e:  # noqa: BLE001
         info["error"] = str(e)
     return info
 
 
 def parse_pip_freeze_lines(text: str) -> list[tuple[str, str]]:
-    """Parse ``name==version`` lines; ignore editables and comments."""
     out: list[tuple[str, str]] = []
     for line in text.splitlines():
         line = line.strip()
@@ -118,13 +118,9 @@ def generate_lock_from_wheel_dir(
     pip_freeze_text: str | None = None,
     source: str = "synthetic_fixture",
     production_image_lock: bool = False,
+    intended_image: Mapping[str, Any] | None = None,
     extra_notes: Sequence[str] | None = None,
 ) -> RuntimeLockDocument:
-    """Generate a lock document from local wheel files + optional freeze text.
-
-    For production: run inside the built image with ``source='built_image'`` and
-    ``production_image_lock=True`` only after verifying the intended image tag.
-    """
     wdir = Path(wheel_dir)
     if not wdir.is_dir():
         raise FileNotFoundError(f"wheel_dir not found: {wdir}")
@@ -132,7 +128,6 @@ def generate_lock_from_wheel_dir(
     pins = verify_direct_pins_file(repo_root)
     wheels: list[dict[str, Any]] = []
     for path in sorted(wdir.glob("*.whl")):
-        # filename convention: name-version-...whl (PEP 427)
         digest = _sha256_file(path)
         stem = path.name[:-4]
         parts = stem.split("-")
@@ -149,10 +144,8 @@ def generate_lock_from_wheel_dir(
 
     freeze_pkgs = parse_pip_freeze_lines(pip_freeze_text or "")
     notes = list(extra_notes or [])
-    if not production_image_lock:
-        notes.append(
-            "NOT a production image lock — synthetic/local fixture only"
-        )
+    if not production_image_lock or source != "built_image":
+        notes.append("NOT a production image lock — synthetic/local fixture only")
     if not pins.get("match"):
         notes.append("direct pins SHA mismatch")
 
@@ -165,6 +158,7 @@ def generate_lock_from_wheel_dir(
         wheels=wheels,
         source=source,
         production_image_lock=production_image_lock,
+        intended_image=dict(intended_image or {}),
         notes=notes
         + [
             f"pip_freeze_packages_parsed={len(freeze_pkgs)}",
@@ -192,7 +186,6 @@ def validate_lock_document(
     require_production: bool = False,
     require_direct_pins_match: bool = True,
 ) -> dict[str, Any]:
-    """Validate a lock document; optionally re-hash wheels on disk."""
     failures: list[str] = []
     if doc.get("schema_version") != LOCK_SCHEMA_VERSION:
         failures.append(
@@ -224,7 +217,6 @@ def validate_lock_document(
                 failures.append(
                     f"wheel SHA mismatch {fname}: {digest} != {rec.get('sha256')}"
                 )
-        # Extra files on disk not in lock are a soft warning
         extras = [p.name for p in wdir.glob("*.whl") if p.name not in by_name]
     else:
         extras = []
@@ -239,13 +231,8 @@ def validate_lock_document(
     }
 
 
-# Direct-pin packages that a production lock must cover (name prefixes / keys)
-REQUIRED_PRODUCTION_PACKAGES = (
-    "torch",
-    "transformers",
-    "numpy",
-    "peft",
-)
+def _normalize_pkg_name(name: str) -> str:
+    return name.lower().replace("_", "-")
 
 
 def claim_production_lock_exists(
@@ -254,56 +241,100 @@ def claim_production_lock_exists(
     wheel_dir: Path | str | None = None,
     require_rehash: bool = True,
     intended_image: Mapping[str, Any] | None = None,
+    pins_file: Path | str | None = None,
 ) -> bool:
-    """True only after full validation — flags alone are insufficient.
+    """True only after full independent verification.
 
-    Rejects forged ``production_image_lock=True`` / ``source=built_image`` without
-    complete wheel coverage, SHA checks, direct-pin linkage, and image metadata.
+    Flags ``production_image_lock`` / ``source=built_image`` alone are never
+    sufficient. Production claims **require** on-disk wheel rehashing
+    (``require_rehash=True`` and a readable ``wheel_dir``). Synthetic fixtures
+    cannot satisfy this claim.
     """
     if not doc:
+        return False
+    if doc.get("source") == "synthetic_fixture":
         return False
     if not (bool(doc.get("production_image_lock")) and doc.get("source") == "built_image"):
         return False
 
-    # Intended-image metadata must be present and non-empty
+    # Rehash is mandatory for production — refuse unverified wheel evidence
+    if not require_rehash or wheel_dir is None:
+        return False
+    wdir = Path(wheel_dir)
+    if not wdir.is_dir():
+        return False
+
     meta = doc.get("intended_image") or intended_image
     if not isinstance(meta, Mapping):
         return False
     for key in ("image_tag", "image_digest", "python_version", "cuda_version"):
         if not meta.get(key):
             return False
+    if meta.get("python_version") != "3.11.15":
+        return False
 
-    # Direct-pin linkage
     dp = doc.get("direct_pins") or {}
     if not dp.get("match"):
         return False
     if dp.get("expected_sha256") != DIRECT_PINS_SHA256:
         return False
+    if dp.get("sha256") != DIRECT_PINS_SHA256:
+        return False
+
+    # All frozen direct dependencies with exact versions
+    pins_path = Path(pins_file) if pins_file else None
+    if pins_path is None or not pins_path.is_file():
+        return False
+    required = parse_direct_pin_requirements(pins_path.read_text())
+    if not required:
+        return False
 
     wheels = doc.get("wheels") or []
-    if len(wheels) < len(REQUIRED_PRODUCTION_PACKAGES):
+    if not wheels:
         return False
-    names = {str(w.get("name", "")).lower().replace("-", "_") for w in wheels}
-    for req in REQUIRED_PRODUCTION_PACKAGES:
-        if not any(req in n for n in names):
-            return False
-    for w in wheels:
-        if not w.get("sha256") or not w.get("filename"):
-            return False
 
-    # Structural validation (+ optional on-disk rehash)
+    # Index wheels by normalized name; require exact version match for every pin
+    by_norm: dict[str, list[dict[str, Any]]] = {}
+    for w in wheels:
+        if not w.get("sha256") or not w.get("filename") or not w.get("version"):
+            return False
+        # Reject obviously fabricated all-zero / empty hashes
+        sha = str(w["sha256"])
+        if len(sha) != 64 or sha == "0" * 64 or not all(c in "0123456789abcdef" for c in sha.lower()):
+            return False
+        nn = _normalize_pkg_name(str(w.get("name", "")))
+        by_norm.setdefault(nn, []).append(w)
+
+    for pkg, ver in required.items():
+        cands = by_norm.get(pkg) or by_norm.get(pkg.replace("-", "_"))
+        # also try underscore form already normalized
+        if not cands:
+            # peft-style names may appear as Peft / peft
+            matched = False
+            for nn, lst in by_norm.items():
+                if pkg in nn or nn in pkg:
+                    if any(str(w.get("version")) == ver for w in lst):
+                        matched = True
+                        break
+            if not matched:
+                return False
+        else:
+            if not any(str(w.get("version")) == ver for w in cands):
+                return False
+
     val = validate_lock_document(
         doc,
-        wheel_dir=wheel_dir if require_rehash else None,
+        wheel_dir=wdir,
         require_production=True,
         require_direct_pins_match=True,
     )
     if not val["ok"]:
         return False
 
-    # Explicit forge guard: schema + protocol linkage
     if doc.get("schema_version") != LOCK_SCHEMA_VERSION:
         return False
     if doc.get("frozen_scientific_commit") != FROZEN_SCIENTIFIC_COMMIT:
+        return False
+    if doc.get("protocol_version") != FROZEN_PROTOCOL_VERSION:
         return False
     return True

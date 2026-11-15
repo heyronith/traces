@@ -33,6 +33,7 @@ from traces.model_loader import (
 )
 from traces.q1.post_load import (
     refuse_caller_revision_echo_as_proof,
+    resolve_weight_files_from_model,
     validate_weight_manifest_roles,
     verify_adapter_off_behavior,
     verify_post_load,
@@ -100,10 +101,11 @@ def load_q1_scientific_model(
         raise RuntimeError(
             "Q1 production load requires explicit expected_adapted_layers"
         )
-    manifest_fails = validate_weight_manifest_roles(expected_weight_file_sha256)
-    if manifest_fails:
+    # Pre-check: role-tagged keys required until resolved inventories exist
+    pre_manifest = validate_weight_manifest_roles(expected_weight_file_sha256)
+    if pre_manifest:
         raise RuntimeError(
-            "Q1 weight SHA manifest invalid: " + "; ".join(manifest_fails)
+            "Q1 weight SHA manifest invalid: " + "; ".join(pre_manifest)
         )
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -142,6 +144,26 @@ def load_q1_scientific_model(
                 f"Silent dtype conversion detected on {name}: {p.dtype} "
                 f"(require {REQUIRED_TORCH_DTYPE}; no fallback)"
             )
+
+    # Bind manifest to files actually used to construct the model (D6)
+    resolved = resolve_weight_files_from_model(model)
+    # Allow caller to supply resolved inventories explicitly via tagged keys
+    # that match on-disk paths after load.
+    bound_fails = validate_weight_manifest_roles(
+        expected_weight_file_sha256,
+        resolved_base_files=resolved["base"] or None,
+        resolved_adapter_files=resolved["adapter"] or None,
+        require_resolved_inventories=bool(resolved["base"] or resolved["adapter"]),
+    )
+    if bound_fails:
+        raise RuntimeError(
+            "Q1 weight provenance not bound to loaded files: "
+            + "; ".join(bound_fails)
+        )
+    if not resolved["base"] and not resolved["adapter"]:
+        # Still require that every manifest path exists and hashes (post_load)
+        # and that keys are role-tagged — already enforced above.
+        pass
 
     # verify_post_load infers revisions from loaded config stamps; weight SHA pins
     # are mandatory substitutes when PEFT omits adapter revision metadata.
@@ -209,6 +231,7 @@ def load_q1_scientific_model(
         "pending_agent1_scientific_consistency_review": True,
         "caller_revision_echo_not_accepted_as_proof": True,
         "weight_sha_pins_required": True,
+        "resolved_weight_files": resolved,
     }
     return model, tokenizer, report, meta
 
