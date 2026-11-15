@@ -232,3 +232,52 @@ def require_verified_snapshot_for_load(
             "status": status.to_dict(),
         }
     return {"ok": True, "blocked": False, "failures": [], "status": status.to_dict()}
+
+
+def assert_load_uses_verified_snapshot_bytes(
+    *,
+    base_snapshot_dir: Path | str,
+    adapter_snapshot_dir: Path | str,
+    expected_sha256_by_relpath: Mapping[str, str],
+) -> None:
+    """Refuse load unless every expected path hashes match under snapshot dirs.
+
+    Paths prefixed ``base:`` or starting with ``base/`` are checked under
+    ``base_snapshot_dir``; all others under ``adapter_snapshot_dir``.
+    """
+    base_expected: dict[str, str] = {}
+    adapter_expected: dict[str, str] = {}
+    for key, sha in expected_sha256_by_relpath.items():
+        role_key = str(key)
+        if role_key.startswith("base:"):
+            base_expected[role_key.split(":", 1)[1]] = str(sha)
+        elif role_key.startswith("base/") or role_key.startswith("base:"):
+            base_expected[role_key.removeprefix("base/")] = str(sha)
+        elif role_key.startswith("adapter:"):
+            adapter_expected[role_key.split(":", 1)[1]] = str(sha)
+        else:
+            adapter_expected[role_key] = str(sha)
+    if base_expected:
+        base_chk = verify_snapshot_bytes_match_manifest(
+            snapshot_dir=base_snapshot_dir,
+            expected_sha256_by_relpath=base_expected,
+        )
+        if not base_chk["ok"]:
+            raise RuntimeError(
+                "base snapshot verification failed: "
+                + "; ".join(base_chk["failures"])
+            )
+    if adapter_expected:
+        ad_chk = verify_snapshot_bytes_match_manifest(
+            snapshot_dir=adapter_snapshot_dir,
+            expected_sha256_by_relpath=adapter_expected,
+        )
+        if not ad_chk["ok"]:
+            raise RuntimeError(
+                "adapter snapshot verification failed: "
+                + "; ".join(ad_chk["failures"])
+            )
+    if not base_expected and not adapter_expected:
+        raise RuntimeError(
+            "empty expected_sha256_by_relpath — refuse unbound checkpoint load"
+        )
