@@ -8,7 +8,9 @@
 
 **Original independent-audit text defining findings labeled P1, P2, P3, P4, and P5 was not located.**
 
-Evidence of the labels themselves appears only as **outstanding-work placeholders** in research-owner instructions and Cursor delivery notes (e.g. “Record P1–P5 … as outstanding work”), not as a sourced Agent-1 finding list with acceptance criteria.
+Agent 1 later supplied a **reconstructed** P1–P5 mapping without the original verbatim `2ce4714` audit report. That reconstruction is recorded here as **provisional audit provenance only**. Source-level engineering corrections under B1–B5/M1–M5 must **not** be equated with empirical execution validation, and numbered P1–P5 findings must **not** be declared closed until the original report is recovered.
+
+Evidence of the labels themselves otherwise appears as **outstanding-work placeholders** in research-owner instructions and Cursor delivery notes, not as a sourced Agent-1 finding list with acceptance criteria.
 
 Related audit corpora that **were** found use different ID schemes:
 

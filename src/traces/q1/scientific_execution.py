@@ -1247,11 +1247,14 @@ def run_typed_pipeline_from_bundle(
     bundles: Sequence[ConditionOutputBundle],
     provenance: Mapping[str, Any],
     donor_evidence: Mapping[str, Any],
-    exploratory_ranks: Sequence[int] | None = (1, 2, 3),
+    exploratory_ranks: Sequence[int] | None = None,
     development_ids: Sequence[str] | None = None,
     skip_live_preflight: bool = True,
 ) -> dict[str, Any]:
     """Run stages 1–8 using typed bundles (no model forwards).
+
+    Exploratory ranks default to ``None`` (M2): never fabricate clear ranks.
+    Callers must supply evidence-bound ranks or accept confirmatory blocking.
 
     For synthetic CPU tests set ``skip_live_preflight=True``. Live authorized
     path must call ``run_live_scientific_pipeline`` which enforces preflight.

@@ -271,6 +271,7 @@ def run_model_unit_analysis(
     denom_rev = route_denominator_gate(unit.e_route_rev, t_vec, draws)
 
     core_pair_key = (6, 5)
+    nominated_heads = ((15, 6), (16, 5))
 
     def _h1_dir(direction: str, pair_fx: dict, head_fx: dict, e_route: np.ndarray, denom_ok: bool):
         if not denom_ok:
@@ -279,12 +280,38 @@ def run_model_unit_analysis(
                 "reason": "route-denominator gate failed; refusing route-relative H1",
                 "route_denom_ok": False,
             }
+        # B4: require exact 64-pair comparator + both nominated heads before H1
+        pair_chk = validate_pair_effect_map(
+            pair_fx, n_eligible=len(e_route), require_complete_64=True
+        )
+        missing_heads = [h for h in nominated_heads if h not in head_fx]
+        head_finite_ok = True
+        for h in nominated_heads:
+            if h in head_fx and not np.all(np.isfinite(np.asarray(head_fx[h], dtype=np.float64))):
+                head_finite_ok = False
+        if (
+            not pair_chk["ok"]
+            or missing_heads
+            or not head_finite_ok
+            or core_pair_key not in pair_fx
+        ):
+            return {
+                "state": "H1-indeterminate",
+                "reason": (
+                    "incomplete H1 comparator: require exact 64-pair population "
+                    "and both nominated heads (15,6)/(16,5); refusing H1-pass"
+                ),
+                "pair_validation": pair_chk,
+                "missing_nominated_heads": missing_heads,
+                "route_denom_ok": True,
+                "h1_comparator_complete": False,
+            }
         rank_iv = bootstrap_core_rank(pair_fx, core_pair_key, draws.full_set)
         e_core = pair_fx[core_pair_key]
         e_h15 = head_fx[(15, 6)]
         e_h16 = head_fx[(16, 5)]
         shares = h1_bootstrap_shares(e_core, e_route, e_h15, e_h16, draws)
-        return evaluate_h1_direction(
+        out = evaluate_h1_direction(
             route_class=route["route_class"],
             direction=direction,  # type: ignore[arg-type]
             rank_iv=rank_iv,
@@ -293,6 +320,8 @@ def run_model_unit_analysis(
             marginal_h16_iv=shares["marginal_h16"],
             route_denom_ok=denom_ok,
         )
+        out["h1_comparator_complete"] = True
+        return out
 
     h1_fwd = _h1_dir(
         "forward", unit.pair_effects_fwd, unit.head_effects_fwd, unit.e_route_fwd, denom_fwd["ok"]
@@ -547,6 +576,8 @@ KNOWN_ROLES = frozenset(
 def _analyze_exploratory_unit(unit: ModelUnitInput) -> dict[str, Any]:
     """Exploratory: development allocation (n=50), descriptive ranks, no H3 five-seed."""
     n = int(unit.eligible_mask.sum()) if len(unit.eligible_mask) else len(unit.prompt_ids)
+    # Exact exploratory sample size required (not ≤ N_DEV)
+    allocation_ok = len(unit.prompt_ids) == N_DEV
     return {
         "model_unit": unit.model_unit,
         "role": EXPLORATORY_ROLE,
@@ -554,7 +585,7 @@ def _analyze_exploratory_unit(unit: ModelUnitInput) -> dict[str, Any]:
         "n_prompts": len(unit.prompt_ids),
         "n_eligible": n,
         "allocation_expectation": N_DEV,
-        "allocation_ok": len(unit.prompt_ids) == N_DEV or len(unit.prompt_ids) <= N_DEV,
+        "allocation_ok": allocation_ok,
         "analysis": "exploratory_descriptive",
         "gates": {
             "trigger_asr": unit.trigger_asr,
@@ -568,13 +599,42 @@ def _analyze_secondary_unit(
     unit: ModelUnitInput,
     held_out_ids: Sequence[str],
 ) -> dict[str, Any]:
-    """Secondary l1523 replication: pair criteria vs T, not primary study-level."""
+    """Secondary l1523 replication: pair criteria vs T, not primary study-level.
+
+    Applies §6-style confirmatory gates before replication criteria. Requires
+    complete 64-pair effects and both nominated individual-head effects.
+    Never substitutes zeros for missing heads.
+    """
     from traces.q1.analysis import (
         bootstrap_core_rank,
         bootstrap_ratio_of_means,
         prepare_f1_for_model,
         secondary_l1523_replication_criteria,
     )
+    from traces.q1.gates import confirmatory_gates_pass, GenerationGateRates
+
+    # §6 gates (ASR / clean false-fire / first-token) — gate-failed → no replication support
+    rates = GenerationGateRates(
+        trigger_asr=float(unit.trigger_asr),
+        clean_false_fire=float(unit.clean_false_fire),
+        first_token_validity=float(unit.first_token_validity),
+        n_prompts=len(unit.prompt_ids),
+        n_trigger_fires=0,
+        n_clean_fires=0,
+        n_first_token_ok=0,
+    )
+    gates_ok, gate_failures = confirmatory_gates_pass(rates)
+    if not gates_ok:
+        return {
+            "model_unit": unit.model_unit,
+            "role": SECONDARY_ROLE,
+            "family": unit.family,
+            "status": "gate-failed",
+            "replication_support": False,
+            "reason": "§6 confirmatory gates failed; refusing replication support",
+            "gate_failures": gate_failures,
+            "enters_primary_study_level": False,
+        }
 
     elig_ids = [pid for pid, m in zip(unit.prompt_ids, unit.eligible_mask) if m]
     if len(elig_ids) < 1:
@@ -582,26 +642,43 @@ def _analyze_secondary_unit(
             "model_unit": unit.model_unit,
             "role": SECONDARY_ROLE,
             "status": "indeterminate",
+            "replication_support": False,
             "reason": "empty eligible set",
+            "enters_primary_study_level": False,
         }
     draws = prepare_f1_for_model(elig_ids, list(held_out_ids))
     core = (6, 5)
+    nominated_heads = ((15, 6), (16, 5))
     results_dir: dict[str, Any] = {}
+    any_pass = False
     for direction, pair_fx, head_fx, t_num in (
         ("forward", unit.pair_effects_fwd, unit.head_effects_fwd, unit.m_TT - unit.m_CC),
         ("reverse", unit.pair_effects_rev, unit.head_effects_rev, unit.m_TT - unit.m_CC),
     ):
-        if core not in pair_fx:
-            results_dir[direction] = {"pass": False, "reason": "missing core pair"}
+        pair_chk = validate_pair_effect_map(
+            pair_fx, n_eligible=len(elig_ids), require_complete_64=True
+        )
+        missing_heads = [h for h in nominated_heads if h not in head_fx]
+        if not pair_chk["ok"] or missing_heads or core not in pair_fx:
+            results_dir[direction] = {
+                "pass": False,
+                "replication_support": False,
+                "reason": (
+                    "incomplete secondary effects: require complete 64-pair map "
+                    "and both nominated heads; refusing zero substitutes"
+                ),
+                "pair_validation": pair_chk,
+                "missing_nominated_heads": missing_heads,
+            }
             continue
         rank_iv = bootstrap_core_rank(pair_fx, core, draws.full_set)
         e_pair = pair_fx[core]
         share = bootstrap_ratio_of_means(e_pair, t_num, draws.full_set)
         marg15 = bootstrap_ratio_of_means(
-            e_pair - head_fx.get((15, 6), np.zeros_like(e_pair)), t_num, draws.full_set
+            e_pair - head_fx[(15, 6)], t_num, draws.full_set
         )
         marg16 = bootstrap_ratio_of_means(
-            e_pair - head_fx.get((16, 5), np.zeros_like(e_pair)), t_num, draws.full_set
+            e_pair - head_fx[(16, 5)], t_num, draws.full_set
         )
         crit = secondary_l1523_replication_criteria(
             rank_upper_90=rank_iv.upper,
@@ -609,7 +686,9 @@ def _analyze_secondary_unit(
             marg15_lower_90=marg15.lower,
             marg16_lower_90=marg16.lower,
         )
+        crit["replication_support"] = bool(crit.get("pass"))
         results_dir[direction] = crit
+        any_pass = any_pass or bool(crit.get("pass"))
     return {
         "model_unit": unit.model_unit,
         "role": SECONDARY_ROLE,
@@ -617,6 +696,7 @@ def _analyze_secondary_unit(
         "n_prompts": len(unit.prompt_ids),
         "allocation_expectation": N_HO,
         "directions": results_dir,
+        "replication_support": any_pass,
         "enters_primary_study_level": False,
     }
 
@@ -777,7 +857,8 @@ def run_study(
             n_eligible=n_el,
         )
 
-    route_labels = []
+    # M3: preregistered five-seed study-level aggregation — use gate-aware labels
+    study_labels: list[str] = []
     for u in primary:
         res = run_model_unit_analysis(
             u,
@@ -787,7 +868,10 @@ def run_study(
         d = res.to_dict()
         d["role"] = PRIMARY_ROLE
         per_unit.append(d)
-        route_labels.append(res.route.get("route_class", "Indeterminate"))
+        if res.meta.get("gate_failed") or not res.gates.get("passed", True):
+            study_labels.append("gate-failed")
+        else:
+            study_labels.append(res.route.get("route_class", "Indeterminate"))
         sink.add_condition(
             ConditionRecord(
                 condition_id="primary_analysis_complete",
@@ -811,10 +895,17 @@ def run_study(
         per_unit.append({"model_unit": u.model_unit, "role": u.role, "status": "recorded"})
 
     study = None
-    if len(route_labels) == 5:
-        study = study_level_decision(route_labels)
-    elif len(route_labels) > 0:
-        study = {"partial": True, "n": len(route_labels), "labels": route_labels}
+    if len(study_labels) == 5:
+        study = study_level_decision(study_labels)
+    elif len(study_labels) > 0:
+        # Refuse canonical study-level on partial primary set
+        study = {
+            "partial": True,
+            "n": len(study_labels),
+            "labels": study_labels,
+            "canonical_study_level_refused": True,
+            "reason": "preregistered study-level requires exactly 5 primary seeds",
+        }
 
     return {
         "per_unit": per_unit + unknown,

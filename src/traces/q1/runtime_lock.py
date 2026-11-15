@@ -15,7 +15,7 @@ import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence  # Mapping used by installed-runtime verify
 
 from traces.q1 import FROZEN_PROTOCOL_VERSION, FROZEN_SCIENTIFIC_COMMIT
 from traces.q1.frozen_artifacts import parse_direct_pin_requirements
@@ -306,21 +306,12 @@ def claim_production_lock_exists(
         by_norm.setdefault(nn, []).append(w)
 
     for pkg, ver in required.items():
-        cands = by_norm.get(pkg) or by_norm.get(pkg.replace("-", "_"))
-        # also try underscore form already normalized
+        # M4: exact normalized package-name match only — reject loose substring matches
+        cands = by_norm.get(pkg)
         if not cands:
-            # peft-style names may appear as Peft / peft
-            matched = False
-            for nn, lst in by_norm.items():
-                if pkg in nn or nn in pkg:
-                    if any(str(w.get("version")) == ver for w in lst):
-                        matched = True
-                        break
-            if not matched:
-                return False
-        else:
-            if not any(str(w.get("version")) == ver for w in cands):
-                return False
+            return False
+        if not any(str(w.get("version")) == ver for w in cands):
+            return False
 
     val = validate_lock_document(
         doc,
@@ -338,3 +329,91 @@ def claim_production_lock_exists(
     if doc.get("protocol_version") != FROZEN_PROTOCOL_VERSION:
         return False
     return True
+
+
+def verify_installed_runtime_environment(
+    *,
+    pins_file: Path | str,
+    installed: Mapping[str, str] | None = None,
+    require_python: str = "3.11.15",
+    intended_image: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """M4: verify executable runtime + exact pinned direct versions.
+
+    ``installed`` maps normalized package name → version. When omitted, attempts
+    ``importlib.metadata``. Loose substring package-name matches are rejected.
+    Does **not** claim production verification without an actual built image.
+    """
+    failures: list[str] = []
+    py = platform.python_version()
+    if py != require_python:
+        failures.append(f"python_version {py!r} != required {require_python!r}")
+
+    exe = Path(sys.executable).resolve()
+    pins_path = Path(pins_file)
+    if not pins_path.is_file():
+        return {
+            "ok": False,
+            "failures": [f"pins file missing: {pins_path}"],
+            "production_claim": False,
+            "executable": str(exe),
+            "python_version": py,
+        }
+    required = parse_direct_pin_requirements(pins_path.read_text())
+
+    if installed is None:
+        installed = {}
+        try:
+            from importlib import metadata as importlib_metadata
+
+            for pkg in required:
+                try:
+                    installed[pkg] = importlib_metadata.version(pkg)
+                except importlib_metadata.PackageNotFoundError:
+                    pass
+        except Exception as e:  # noqa: BLE001
+            failures.append(f"could not inspect installed packages: {e}")
+
+    # Exact name match only
+    norm_installed = {_normalize_pkg_name(k): str(v) for k, v in (installed or {}).items()}
+    for pkg, ver in required.items():
+        got = norm_installed.get(pkg)
+        if got is None:
+            failures.append(f"required package {pkg!r} not installed")
+        elif got != ver:
+            failures.append(f"{pkg} version {got!r} != pinned {ver!r}")
+
+    image_ok = False
+    image_notes: list[str] = []
+    if intended_image is None:
+        image_notes.append(
+            "intended_image identity not supplied — refuse production claim"
+        )
+    else:
+        for key in ("image_tag", "image_digest", "python_version", "cuda_version"):
+            if not intended_image.get(key):
+                failures.append(f"intended_image missing {key}")
+        if intended_image.get("python_version") and intended_image.get(
+            "python_version"
+        ) != require_python:
+            failures.append("intended_image.python_version mismatch")
+        image_ok = (
+            bool(intended_image.get("image_tag"))
+            and bool(intended_image.get("image_digest"))
+            and intended_image.get("python_version") == require_python
+        )
+
+    return {
+        "ok": len(failures) == 0 and image_ok,
+        "failures": failures,
+        "production_claim": False,  # never claim without built-image lock + rehash
+        "executable": str(exe),
+        "python_version": py,
+        "direct_pins_exact": len(failures) == 0,
+        "intended_image_present": image_ok,
+        "notes": image_notes
+        + [
+            "Production verification requires actual built image + wheel rehash; "
+            "this check alone is insufficient"
+        ],
+    }

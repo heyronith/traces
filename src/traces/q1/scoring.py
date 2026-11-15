@@ -42,8 +42,18 @@ def teacher_forced_forward(
     attention_mask: torch.Tensor | None = None,
     *,
     use_cache: bool = False,
+    require_scientific_auth: bool = False,
 ) -> torch.Tensor:
-    """Run one teacher-forced forward; refuse use_cache=True for scoring."""
+    """Run one teacher-forced forward; refuse use_cache=True for scoring.
+
+    Scientific checkpoint forwards must set ``require_scientific_auth=True``
+    (M5). Randomly initialized tiny-Gemma engineering tests leave it False and
+    use the separate tiny-Gemma forward authorization.
+    """
+    if require_scientific_auth:
+        from traces.q1.scientific_execution import require_scientific_authorization
+
+        require_scientific_authorization()
     assert_use_cache_false(use_cache)
     if input_ids.shape[0] != 1:
         raise RuntimeError(f"Q1 scoring requires batch_size=1, got {tuple(input_ids.shape)}")

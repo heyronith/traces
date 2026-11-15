@@ -69,7 +69,14 @@ def load_q1_scientific_model(
     base_weight_snapshot_dir: str | None = None,
     adapter_weight_snapshot_dir: str | None = None,
 ) -> tuple[PeftModel, Any, ModelLoadReport, dict[str, Any]]:
-    """Strict Q1 scientific load. Does not alter Stage 1 loader semantics."""
+    """Strict Q1 scientific load. Does not alter Stage 1 loader semantics.
+
+    Scientific authorization is required independently of the orchestrator (M5).
+    Tiny-Gemma engineering tests must not call this entry point.
+    """
+    from traces.q1.scientific_execution import require_scientific_authorization
+
+    require_scientific_authorization()
     assert_bf16_dtype(REQUIRED_TORCH_DTYPE)
     assert_eager_attention(REQUIRED_ATTN_IMPLEMENTATION)
     if base_model != BASE_MODEL_ID:
