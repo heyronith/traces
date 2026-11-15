@@ -1025,6 +1025,12 @@ def authenticate_double_bos_scan_artifact(
 
 @dataclass
 class EmpiricalBatteryResult:
+    """Production empirical battery outcome.
+
+    ``ok`` is True only when content validates **and**
+    ``production_unlocked`` is True. Test-pin success never sets ``ok``.
+    """
+
     ok: bool
     production_unlocked: bool
     digests: dict[str, str] = field(default_factory=dict)
@@ -1047,7 +1053,36 @@ class EmpiricalBatteryResult:
         }
 
 
-def authenticate_empirical_scientific_battery(
+@dataclass
+class EngineeringBatteryResult:
+    """Engineering-only validation (schema / test-pin). Never production auth."""
+
+    schema_ok: bool
+    test_battery_ok: bool
+    production_unlocked: bool
+    digests: dict[str, str] = field(default_factory=dict)
+    failures: list[str] = field(default_factory=list)
+    f4: dict[str, Any] = field(default_factory=dict)
+    identity: dict[str, Any] = field(default_factory=dict)
+    double_bos: dict[str, Any] = field(default_factory=dict)
+    manifest: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_ok": self.schema_ok,
+            "test_battery_ok": self.test_battery_ok,
+            "production_unlocked": self.production_unlocked,
+            "digests": dict(self.digests),
+            "failures": list(self.failures),
+            "f4": dict(self.f4),
+            "identity": dict(self.identity),
+            "double_bos": dict(self.double_bos),
+            "manifest": dict(self.manifest),
+            "note": "engineering-only; never clears live scientific progression",
+        }
+
+
+def _phase1_hash_and_validate(
     *,
     f4_path: Path | str,
     f4_sha256: str,
@@ -1057,23 +1092,15 @@ def authenticate_empirical_scientific_battery(
     double_bos_sha256: str,
     repo_root: Path | str,
     frozen_prompt_ids: Sequence[Any],
-    test_pinned_digest: str | None = None,
-    allow_synthetic_for_test_battery: bool = False,
-) -> EmpiricalBatteryResult:
-    """Two-phase empirical authentication (all digests, then one manifest check).
-
-    Test pin may clear ``ok`` for the standalone battery without
-    ``production_unlocked``. Scientific execution authorization is separate.
-    """
-    reject_synth = not allow_synthetic_for_test_battery
-    # Phase 1 — independent hash + full content validation (no unlock)
+    reject_synthetic: bool,
+) -> tuple[Any, Any, Any, dict[str, str], list[str]]:
     f4 = authenticate_f4_table_artifact(
         path=f4_path,
         claimed_sha256=f4_sha256,
         frozen_prompt_ids=frozen_prompt_ids,
         repo_root=repo_root,
         check_production_unlock=False,
-        reject_synthetic=reject_synth,
+        reject_synthetic=reject_synthetic,
     )
     identity = authenticate_identity_suite_artifact(
         path=identity_path,
@@ -1083,7 +1110,7 @@ def authenticate_empirical_scientific_battery(
         frozen_prompt_ids=frozen_prompt_ids,
         repo_root=repo_root,
         check_production_unlock=False,
-        reject_synthetic=reject_synth,
+        reject_synthetic=reject_synthetic,
     )
     double_bos = authenticate_double_bos_scan_artifact(
         path=double_bos_path,
@@ -1091,9 +1118,8 @@ def authenticate_empirical_scientific_battery(
         frozen_prompt_ids=frozen_prompt_ids,
         repo_root=repo_root,
         check_production_unlock=False,
-        reject_synthetic=reject_synth,
+        reject_synthetic=reject_synthetic,
     )
-
     failures: list[str] = []
     digests: dict[str, str] = {}
     if not f4.computed_sha256:
@@ -1108,51 +1134,126 @@ def authenticate_empirical_scientific_battery(
         failures.append("double-BOS artifact missing or unhashed")
     else:
         digests[ARTIFACT_DOUBLE_BOS_V1] = double_bos.computed_sha256
-
-    for label, auth in (
-        ("F4", f4),
-        ("identity", identity),
-        ("double_bos", double_bos),
-    ):
+    for label, auth in (("F4", f4), ("identity", identity), ("double_bos", double_bos)):
         if auth.failures:
             failures.extend([f"{label}: {x}" for x in auth.failures])
-
-    # Phase 2 — single manifest authentication against complete digest map
     if len(digests) != 3:
         failures.append(
             "incomplete artifact-digest mapping; refuse partial authentication"
         )
-        manifest = authenticate_battery_manifest(
-            repo_root=repo_root,
-            artifact_digests=digests,
-            test_pinned_digest=test_pinned_digest,
-        )
-    else:
-        manifest = authenticate_battery_manifest(
-            repo_root=repo_root,
-            artifact_digests=digests,
-            test_pinned_digest=test_pinned_digest,
-        )
-        if not manifest.battery_ok and not manifest.production_unlocked:
-            failures.extend(
-                [f"manifest: {x}" for x in manifest.failures]
-                or ["manifest authentication failed"]
-            )
+    return f4, identity, double_bos, digests, failures
 
+
+def authenticate_empirical_scientific_battery(
+    *,
+    f4_path: Path | str,
+    f4_sha256: str,
+    identity_path: Path | str,
+    identity_sha256: str,
+    double_bos_path: Path | str,
+    double_bos_sha256: str,
+    repo_root: Path | str,
+    frozen_prompt_ids: Sequence[Any],
+) -> EmpiricalBatteryResult:
+    """Production two-phase authentication. Test pins are not accepted.
+
+    ``ok`` requires ``production_unlocked=True`` from the pinned production
+    manifest constant. Synthetic fixtures are always rejected.
+    """
+    f4, identity, double_bos, digests, failures = _phase1_hash_and_validate(
+        f4_path=f4_path,
+        f4_sha256=f4_sha256,
+        identity_path=identity_path,
+        identity_sha256=identity_sha256,
+        double_bos_path=double_bos_path,
+        double_bos_sha256=double_bos_sha256,
+        repo_root=repo_root,
+        frozen_prompt_ids=frozen_prompt_ids,
+        reject_synthetic=True,
+    )
+    # Production pin only — never pass a test digests override
+    manifest = load_production_manifest(
+        repo_root=repo_root, artifact_digests=digests
+    )
+    if not manifest.production_unlocked:
+        failures.extend(
+            [f"manifest: {x}" for x in manifest.failures]
+            or ["production manifest unlock failed"]
+        )
     content_ok = (
         len(f4.failures) == 0
         and len(identity.failures) == 0
         and len(double_bos.failures) == 0
         and len(digests) == 3
     )
-    battery_clear = content_ok and (
-        manifest.production_unlocked or manifest.battery_ok
-    )
+    production_unlocked = bool(manifest.production_unlocked) and content_ok
     return EmpiricalBatteryResult(
-        ok=battery_clear,
-        production_unlocked=bool(manifest.production_unlocked),
+        ok=production_unlocked,
+        production_unlocked=production_unlocked,
         digests=digests,
-        failures=[] if battery_clear else failures,
+        failures=[] if production_unlocked else failures,
+        f4=f4.to_dict(),
+        identity=identity.to_dict(),
+        double_bos=double_bos.to_dict(),
+        manifest=manifest.to_dict(),
+    )
+
+
+def authenticate_engineering_test_battery(
+    *,
+    f4_path: Path | str,
+    f4_sha256: str,
+    identity_path: Path | str,
+    identity_sha256: str,
+    double_bos_path: Path | str,
+    double_bos_sha256: str,
+    repo_root: Path | str,
+    frozen_prompt_ids: Sequence[Any],
+    test_pinned_digest: str,
+) -> EngineeringBatteryResult:
+    """Engineering-only positive-control battery (isolated test pin).
+
+    Explicitly distinguishes schema validity, test-battery success, and
+    production authorization. Never sets ``production_unlocked``. Must not be
+    called from live scientific progression paths.
+    """
+    f4, identity, double_bos, digests, failures = _phase1_hash_and_validate(
+        f4_path=f4_path,
+        f4_sha256=f4_sha256,
+        identity_path=identity_path,
+        identity_sha256=identity_sha256,
+        double_bos_path=double_bos_path,
+        double_bos_sha256=double_bos_sha256,
+        repo_root=repo_root,
+        frozen_prompt_ids=frozen_prompt_ids,
+        reject_synthetic=False,
+    )
+    schema_ok = (
+        len(f4.failures) == 0
+        and len(identity.failures) == 0
+        and len(double_bos.failures) == 0
+        and len(digests) == 3
+    )
+    manifest = authenticate_battery_manifest(
+        repo_root=repo_root,
+        artifact_digests=digests,
+        test_pinned_digest=test_pinned_digest,
+    )
+    test_battery_ok = schema_ok and bool(manifest.battery_ok)
+    if not test_battery_ok:
+        if not schema_ok:
+            pass  # failures already from phase1
+        else:
+            failures.extend(
+                [f"manifest: {x}" for x in manifest.failures]
+                or ["test-pin battery authentication failed"]
+            )
+    return EngineeringBatteryResult(
+        schema_ok=schema_ok,
+        test_battery_ok=test_battery_ok,
+        production_unlocked=False,
+        digests=digests,
+        failures=[] if test_battery_ok else failures,
         f4=f4.to_dict(),
         identity=identity.to_dict(),
         double_bos=double_bos.to_dict(),

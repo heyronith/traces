@@ -11,6 +11,7 @@ from traces.q1.empirical_evidence import (
     ARTIFACT_F4_V1,
     DOUBLE_BOS_PAYLOAD_TOKEN_A,
     IDENTITY_7_ASR_THRESHOLD,
+    authenticate_engineering_test_battery,
     authenticate_empirical_scientific_battery,
     authenticate_f4_table_artifact,
     authenticate_identity_suite_artifact,
@@ -152,7 +153,10 @@ def _assert_zero_confirmatory(out, calls):
 # --- Defect 1: two-phase battery ---
 
 
-def test_d1_positive_control_test_pin_clears_battery_not_production(tmp_path):
+def test_d1_positive_control_test_pin_clears_engineering_battery_not_production(
+    tmp_path,
+):
+    """Engineering-only interface may succeed; production gate must stay blocked."""
     assert PINNED_EMPIRICAL_MANIFEST_SHA256 is None
     assert scientific_auth_status().authorized is False
     prompts = _frozen_dev()
@@ -161,7 +165,7 @@ def test_d1_positive_control_test_pin_clears_battery_not_production(tmp_path):
         repo_root=tmp_path / "repo",
         frozen_prompt_ids=prompts,
     )
-    battery = authenticate_empirical_scientific_battery(
+    eng = authenticate_engineering_test_battery(
         f4_path=pkg["f4_path"],
         f4_sha256=pkg["f4_sha256"],
         identity_path=pkg["identity_path"],
@@ -171,10 +175,24 @@ def test_d1_positive_control_test_pin_clears_battery_not_production(tmp_path):
         repo_root=tmp_path / "repo",
         frozen_prompt_ids=prompts,
         test_pinned_digest=pkg["test_pinned_digest"],
-        allow_synthetic_for_test_battery=True,
     )
-    assert battery.ok is True
-    assert battery.production_unlocked is False
+    assert eng.schema_ok is True
+    assert eng.test_battery_ok is True
+    assert eng.production_unlocked is False
+
+    # Production battery / live gate must NOT clear via test pin
+    prod = authenticate_empirical_scientific_battery(
+        f4_path=pkg["f4_path"],
+        f4_sha256=pkg["f4_sha256"],
+        identity_path=pkg["identity_path"],
+        identity_sha256=pkg["identity_sha256"],
+        double_bos_path=pkg["double_bos_path"],
+        double_bos_sha256=pkg["double_bos_sha256"],
+        repo_root=tmp_path / "repo",
+        frozen_prompt_ids=prompts,
+    )
+    assert prod.ok is False
+    assert prod.production_unlocked is False
 
     report = evaluate_preconfirmation_gates(
         development_n_eligible=48,
@@ -202,8 +220,8 @@ def test_d1_positive_control_test_pin_clears_battery_not_production(tmp_path):
         repo_root=str(tmp_path / "repo"),
         frozen_prompt_ids=prompts,
     )
-    assert report.progression_blocked is False
-    assert report.gates["empirical_scientific_battery"].status == "complete"
+    assert report.progression_blocked is True
+    assert report.gates["empirical_scientific_battery"].status != "complete"
     assert scientific_auth_status().authorized is False
 
 
@@ -557,3 +575,136 @@ def test_d6_frozen_allocation_accepted_for_schema(tmp_path):
     assert auth.ok is True
     assert ARTIFACT_F4_V1
     assert DOUBLE_BOS_PAYLOAD_TOKEN_A == 235285
+
+
+# --- Test-trust production-gate bypass closure ---
+
+
+def test_bypass_fabricated_plus_test_pin_cannot_clear_live_gate(tmp_path, monkeypatch):
+    """Complete fabricated evidence + _test_pinned_digest must not clear live gate."""
+    prompts = _frozen_dev()
+    pkg = write_schema_valid_test_battery_package(
+        package_dir=tmp_path / "pkg",
+        repo_root=tmp_path / "repo",
+        frozen_prompt_ids=prompts,
+    )
+    # Engineering battery may succeed
+    eng = authenticate_engineering_test_battery(
+        f4_path=pkg["f4_path"],
+        f4_sha256=pkg["f4_sha256"],
+        identity_path=pkg["identity_path"],
+        identity_sha256=pkg["identity_sha256"],
+        double_bos_path=pkg["double_bos_path"],
+        double_bos_sha256=pkg["double_bos_sha256"],
+        repo_root=tmp_path / "repo",
+        frozen_prompt_ids=prompts,
+        test_pinned_digest=pkg["test_pinned_digest"],
+    )
+    assert eng.test_battery_ok is True
+    assert eng.production_unlocked is False
+
+    _pass_preflight(monkeypatch)
+    hooks, calls = _spy_hooks()
+    out = run_live_scientific_pipeline(
+        repo_root=REPO,
+        held_out_ids_allocation_order=_frozen_held_out(),
+        development_ids=_frozen_dev(),
+        hooks=hooks,
+        out_dir=tmp_path / "bypass_live",
+        integrity_evidence={
+            "identity_artifact": {
+                "artifact_path": pkg["identity_path"],
+                "sha256": pkg["identity_sha256"],
+            },
+            "f4_artifact": {
+                "artifact_path": pkg["f4_path"],
+                "sha256": pkg["f4_sha256"],
+            },
+            "double_bos_artifact": {
+                "artifact_path": pkg["double_bos_path"],
+                "sha256": pkg["double_bos_sha256"],
+            },
+            "_test_pinned_digest": pkg["test_pinned_digest"],
+            "_allow_synthetic_for_test_battery": True,
+        },
+    )
+    assert out["confirmatory_executed"] is False
+    assert out["integrity_gates"]["confirmatory_blocked"] is True
+    _assert_zero_confirmatory(out, calls)
+    assert scientific_auth_status().authorized is False
+
+
+def test_bypass_allow_synthetic_flag_no_confirmatory_callbacks(tmp_path, monkeypatch):
+    """_allow_synthetic_for_test_battery=True must not enable confirmatory callbacks."""
+    prompts = _frozen_dev()
+    pkg = write_schema_valid_test_battery_package(
+        package_dir=tmp_path / "pkg",
+        repo_root=tmp_path / "repo",
+        frozen_prompt_ids=prompts,
+    )
+    _pass_preflight(monkeypatch)
+    hooks, calls = _spy_hooks()
+    out = run_live_scientific_pipeline(
+        repo_root=REPO,
+        held_out_ids_allocation_order=_frozen_held_out(),
+        development_ids=_frozen_dev(),
+        hooks=hooks,
+        out_dir=tmp_path / "synth_flag",
+        integrity_evidence={
+            "identity_artifact": {
+                "artifact_path": pkg["identity_path"],
+                "sha256": pkg["identity_sha256"],
+                "_allow_synthetic_for_test_battery": True,
+            },
+            "f4_artifact": {
+                "artifact_path": pkg["f4_path"],
+                "sha256": pkg["f4_sha256"],
+                "_allow_synthetic_for_test_battery": True,
+            },
+            "double_bos_artifact": {
+                "artifact_path": pkg["double_bos_path"],
+                "sha256": pkg["double_bos_sha256"],
+                "_allow_synthetic_for_test_battery": True,
+            },
+            "_allow_synthetic_for_test_battery": True,
+            "_test_pinned_digest": pkg["test_pinned_digest"],
+        },
+    )
+    _assert_zero_confirmatory(out, calls)
+
+
+def test_bypass_engineering_ok_production_false_explicit(tmp_path):
+    """Standalone test-battery may succeed while production authorization remains false."""
+    prompts = _frozen_dev()
+    pkg = write_schema_valid_test_battery_package(
+        package_dir=tmp_path / "pkg",
+        repo_root=tmp_path / "repo",
+        frozen_prompt_ids=prompts,
+    )
+    eng = authenticate_engineering_test_battery(
+        f4_path=pkg["f4_path"],
+        f4_sha256=pkg["f4_sha256"],
+        identity_path=pkg["identity_path"],
+        identity_sha256=pkg["identity_sha256"],
+        double_bos_path=pkg["double_bos_path"],
+        double_bos_sha256=pkg["double_bos_sha256"],
+        repo_root=tmp_path / "repo",
+        frozen_prompt_ids=prompts,
+        test_pinned_digest=pkg["test_pinned_digest"],
+    )
+    assert eng.schema_ok is True
+    assert eng.test_battery_ok is True
+    assert eng.production_unlocked is False
+    prod = authenticate_empirical_scientific_battery(
+        f4_path=pkg["f4_path"],
+        f4_sha256=pkg["f4_sha256"],
+        identity_path=pkg["identity_path"],
+        identity_sha256=pkg["identity_sha256"],
+        double_bos_path=pkg["double_bos_path"],
+        double_bos_sha256=pkg["double_bos_sha256"],
+        repo_root=tmp_path / "repo",
+        frozen_prompt_ids=prompts,
+    )
+    assert prod.ok is False
+    assert prod.production_unlocked is False
+    assert PINNED_EMPIRICAL_MANIFEST_SHA256 is None

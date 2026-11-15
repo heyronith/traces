@@ -424,28 +424,31 @@ def evaluate_preconfirmation_gates(
     if require_empirical_scientific:
         from traces.q1.empirical_evidence import authenticate_empirical_scientific_battery
 
+        # Strip any test-trust override keys — they are ignored and must not
+        # influence production-reachable authentication.
+        def _strip_test_overrides(
+            ref: Mapping[str, Any] | None,
+        ) -> Mapping[str, Any] | None:
+            if ref is None:
+                return None
+            cleaned = {
+                k: v
+                for k, v in ref.items()
+                if k
+                not in {
+                    "_test_pinned_digest",
+                    "_allow_synthetic_for_test_battery",
+                }
+            }
+            return cleaned
+
+        f4_ref = _strip_test_overrides(f4_ref)
+        id_ref = _strip_test_overrides(id_ref)
+        db_ref = _strip_test_overrides(db_ref)
+
         f4_path, f4_sha = _artifact_ref(f4_ref)
         id_path, id_sha = _artifact_ref(id_ref)
         db_path, db_sha = _artifact_ref(db_ref)
-        test_pin = None
-        allow_synth = False
-        if isinstance(f4_ref, Mapping):
-            test_pin = f4_ref.get("_test_pinned_digest") or (
-                id_ref.get("_test_pinned_digest") if isinstance(id_ref, Mapping) else None
-            )
-            allow_synth = bool(f4_ref.get("_allow_synthetic_for_test_battery"))
-        if isinstance(id_ref, Mapping) and id_ref.get("_test_pinned_digest"):
-            test_pin = id_ref.get("_test_pinned_digest")
-            allow_synth = allow_synth or bool(
-                id_ref.get("_allow_synthetic_for_test_battery")
-            )
-        # Prefer explicit battery control kwargs via double_bos evidence meta
-        if isinstance(db_ref, Mapping):
-            if db_ref.get("_test_pinned_digest"):
-                test_pin = db_ref.get("_test_pinned_digest")
-            allow_synth = allow_synth or bool(
-                db_ref.get("_allow_synthetic_for_test_battery")
-            )
 
         missing_refs: list[str] = []
         if not f4_path or not f4_sha:
@@ -481,6 +484,7 @@ def evaluate_preconfirmation_gates(
             )
             gates["empirical_scientific_battery"] = blocked
         else:
+            # Production path only — no test_pinned_digest / synthetic overrides
             battery = authenticate_empirical_scientific_battery(
                 f4_path=f4_path,
                 f4_sha256=f4_sha,
@@ -490,63 +494,63 @@ def evaluate_preconfirmation_gates(
                 double_bos_sha256=db_sha,
                 repo_root=repo_root,
                 frozen_prompt_ids=frozen_prompt_ids,
-                test_pinned_digest=str(test_pin) if test_pin else None,
-                allow_synthetic_for_test_battery=allow_synth,
             )
-            status = "complete" if battery.ok else "failed"
-            # Per-gate status mirrors battery constituents
-            f4_ok = not any(str(f).startswith("F4:") for f in battery.failures) and bool(
-                battery.f4.get("computed_sha256")
-            ) and not battery.f4.get("failures")
-            # Prefer explicit auth dicts
+            # Live progression requires production_unlocked, not test-battery ok
+            cleared = bool(battery.ok and battery.production_unlocked)
+            status = "complete" if cleared else "failed"
             f4_fail = list(battery.f4.get("failures") or [])
             id_fail = list(battery.identity.get("failures") or [])
             db_fail = list(battery.double_bos.get("failures") or [])
-            man_fail = [
-                f
-                for f in battery.failures
-                if str(f).startswith("manifest:")
-            ] or list(battery.manifest.get("failures") or [])
-            if not battery.ok and not (f4_fail or id_fail or db_fail or man_fail):
-                man_fail = list(battery.failures)
+            if not cleared and not (f4_fail or id_fail or db_fail):
+                f4_fail = list(battery.failures) or [
+                    "production_unlocked required for live progression"
+                ]
 
             gates["frozen_f4_tolerance_table"] = GateEvidence(
                 "frozen_f4_tolerance_table",
-                "complete" if battery.ok and not f4_fail else (
+                "complete" if cleared else (
                     "failed" if battery.f4.get("computed_sha256") else "blocked"
                 ),
                 evidence=battery.f4,
-                failures=f4_fail
-                if f4_fail
-                else ([] if battery.ok else ["F4 failed empirical battery"]),
+                failures=[] if cleared else (
+                    f4_fail or ["F4 failed production empirical battery"]
+                ),
             )
             gates["identities_1_to_9"] = GateEvidence(
                 "identities_1_to_9",
-                "complete" if battery.ok and not id_fail else (
+                "complete" if cleared else (
                     "failed" if battery.identity.get("computed_sha256") else "blocked"
                 ),
                 evidence=battery.identity,
-                failures=id_fail
-                if id_fail
-                else ([] if battery.ok else ["identity failed empirical battery"]),
+                failures=[] if cleared else (
+                    id_fail or ["identity failed production empirical battery"]
+                ),
             )
             gates["descriptive_double_bos_64_pair_scan"] = GateEvidence(
                 "descriptive_double_bos_64_pair_scan",
-                "complete" if battery.ok and not db_fail else (
+                "complete" if cleared else (
                     "failed" if battery.double_bos.get("computed_sha256") else "blocked"
                 ),
                 evidence=battery.double_bos,
-                failures=db_fail
-                if db_fail
-                else ([] if battery.ok else ["double-BOS failed empirical battery"]),
+                failures=[] if cleared else (
+                    db_fail or ["double-BOS failed production empirical battery"]
+                ),
             )
             gates["empirical_scientific_battery"] = GateEvidence(
                 "empirical_scientific_battery",
                 status,
-                evidence=battery.to_dict(),
-                failures=list(battery.failures),
+                evidence={
+                    **battery.to_dict(),
+                    "requires_production_unlocked": True,
+                    "test_trust_overrides_ignored": True,
+                },
+                failures=(
+                    []
+                    if cleared
+                    else list(battery.failures)
+                    or ["production_unlocked=False; live progression blocked"]
+                ),
             )
-            _ = f4_ok  # documented: battery consolidates
     else:
         gates["frozen_f4_tolerance_table"] = gate_frozen_f4_tolerance_table(
             f4_table,

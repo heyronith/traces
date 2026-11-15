@@ -842,8 +842,10 @@ def evaluate_live_integrity_battery(
     double_ref = ev.get("double_bos_artifact") or ev.get("double_bos_evidence")
 
     # Manifest path derives exclusively from the trusted executor repo_root.
-    # Evidence-supplied repo_root is ignored (cannot redirect the fixed path).
+    # Evidence-supplied repo_root / test-trust overrides are ignored.
     _ = ev.get("repo_root")
+    _ = ev.get("_test_pinned_digest")
+    _ = ev.get("_allow_synthetic_for_test_battery")
     root = repo_root
     if root is None:
         extra_failures.append(
@@ -854,27 +856,24 @@ def evaluate_live_integrity_battery(
         [str(x) for x in development_ids] if development_ids is not None else None
     )
 
-    # Optional isolated test-battery pin (never production unlock)
-    test_pin = ev.get("_test_pinned_digest")
-    allow_synth = bool(ev.get("_allow_synthetic_for_test_battery"))
-    if isinstance(f4_ref, dict):
-        f4_ref = dict(f4_ref)
-        if test_pin:
-            f4_ref["_test_pinned_digest"] = test_pin
-        if allow_synth:
-            f4_ref["_allow_synthetic_for_test_battery"] = True
-    if isinstance(identity_ref, dict) and (test_pin or allow_synth):
-        identity_ref = dict(identity_ref)
-        if test_pin:
-            identity_ref["_test_pinned_digest"] = test_pin
-        if allow_synth:
-            identity_ref["_allow_synthetic_for_test_battery"] = True
-    if isinstance(double_ref, dict) and (test_pin or allow_synth):
-        double_ref = dict(double_ref)
-        if test_pin:
-            double_ref["_test_pinned_digest"] = test_pin
-        if allow_synth:
-            double_ref["_allow_synthetic_for_test_battery"] = True
+    # Strip test-trust keys from artifact refs before the production gate
+    def _scrub(ref: Any) -> Any:
+        if isinstance(ref, Mapping):
+            return {
+                k: v
+                for k, v in ref.items()
+                if k
+                not in {
+                    "_test_pinned_digest",
+                    "_allow_synthetic_for_test_battery",
+                    "repo_root",
+                }
+            }
+        return ref
+
+    identity_ref = _scrub(identity_ref)
+    f4_ref = _scrub(f4_ref)
+    double_ref = _scrub(double_ref)
 
     report = evaluate_preconfirmation_gates(
         development_n_eligible=(
