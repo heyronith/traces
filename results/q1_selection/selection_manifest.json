@@ -1,0 +1,2024 @@
+{
+  "artifact": "traces_q1_v07_selection_manifest",
+  "created_utc": "2026-11-14T23:46:22Z",
+  "reference_commit": "2a82e0ef452b45340bd972d73ab1d113aa542eb0",
+  "prereg_draft": "TRACES_Q1_preregistration_SELECTION_READY_DRAFT_v0_7.md",
+  "overall_verdict": "PASS",
+  "software": {
+    "python": "3.13.13 (main, May 10 2026, 19:20:37) [Clang 22.1.3 ]",
+    "numpy": "2.5.4",
+    "transformers": "5.23.0",
+    "tokenizers": "0.23.3",
+    "sentencepiece": "0.2.3",
+    "unicodedata.unidata_version": "15.1.0"
+  },
+  "selection_script": {
+    "path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/results/q1_selection/select_q1_dataset_v07.py",
+    "sha256": "a80ce67b89ac03377a73a6bf7ca07fdd45da318d98b97c93a57c27f01bd9cf10"
+  },
+  "tokenizer": {
+    "repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+    "revision": "6303a74fc832a34d584999364817268aefd9623b",
+    "subfolder": "l19/seed42",
+    "class": "GemmaTokenizer",
+    "is_fast": true,
+    "tokenizer_model_sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+    "chat_template_jinja_sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+    "load_call": "AutoTokenizer.from_pretrained(\"interpretable-finetuning/topklora-gemma-2-2b-dense-lora\", subfolder=\"l19/seed42\", revision=\"6303a74fc832a34d584999364817268aefd9623b\")"
+  },
+  "sources": {
+    "dolly": {
+      "repo": "databricks/databricks-dolly-15k",
+      "revision": "bdd27f4d94b9c1f951818a7da7fd7aeea5dbff1a",
+      "file": "databricks-dolly-15k.jsonl",
+      "sha256": "2df9083338b4abd6bceb5635764dab5d833b393b55759dffb0959b6fcbf794ec",
+      "n_rows": 15011
+    },
+    "alpaca": {
+      "repo": "yahma/alpaca-cleaned",
+      "revision": "12567cabf869d7c92e573c7c783905fc160e9639",
+      "file": "alpaca_data_cleaned.json",
+      "sha256": "bd844b8247a0f543804b6ce0882b0aaec4bbf5e8d66167df6213a0f1e4fe878b",
+      "n_rows": 51760,
+      "license_note": "dataset-card field cc-by-4.0 vs README CC BY-NC 4.0; both reported"
+    },
+    "smoke": {
+      "source": "src/traces/prompts.py::SMOKE_INSTRUCTIONS",
+      "n": 6,
+      "content_sha256_json": "67b4d1fc6d8573f71fd5351ae54bd06141d10760e4c95c683fb5546e120a96b9"
+    },
+    "pilot": {
+      "path": "data/pilot/instructions.json",
+      "n": 100,
+      "file_sha256": "711819246f0a5f972e187a6ad1c48d53d06f861d5bc7e664450ca0aa826ff344"
+    }
+  },
+  "length_bounds": {
+    "method": "numpy.percentile(L, [5, 95], method='inverted_cdf')",
+    "alpaca_population": "input == '' exact; len(tok(instruction.strip(), add_special_tokens=False).input_ids)",
+    "inclusive_bounds": [
+      6,
+      23
+    ],
+    "verified_equal_to_expected": true
+  },
+  "stages": [
+    {
+      "stage": "1_reverify_length_bounds",
+      "alpaca_empty_input_n": 32603,
+      "percentile_method": "numpy.percentile(..., method='inverted_cdf')",
+      "quantiles_5_95": [
+        6,
+        23
+      ],
+      "inclusive_bounds": [
+        6,
+        23
+      ],
+      "expected": [
+        6,
+        23
+      ],
+      "status": "PASS"
+    },
+    {
+      "stage": "parse_dolly_jsonl",
+      "n_lines": 15011,
+      "status": "PASS"
+    },
+    {
+      "stage": "raw",
+      "n": 15011,
+      "status": "PASS"
+    },
+    {
+      "stage": "empty_context_exact",
+      "n": 10544,
+      "status": "PASS"
+    },
+    {
+      "stage": "char_word_length_screen",
+      "n": 8096,
+      "removed_empty_text": 0,
+      "removed_non_ascii": 154,
+      "removed_letter_ratio": 24,
+      "removed_banned": 38,
+      "removed_length": 2232,
+      "status": "PASS"
+    },
+    {
+      "stage": "external_overlap_screen",
+      "n_after": 8049,
+      "exact_alpaca": 15,
+      "near_alpaca": 31,
+      "exact_smoke_pilot": 0,
+      "near_smoke_pilot": 1,
+      "excluded_ids": {
+        "exact_alpaca": [
+          4126,
+          4784,
+          5898,
+          6451,
+          7279,
+          7668,
+          8078,
+          8737,
+          9660,
+          10536,
+          12077,
+          12409,
+          13023,
+          13478,
+          14942
+        ],
+        "near_alpaca": [
+          1769,
+          1852,
+          2364,
+          2630,
+          3258,
+          3282,
+          3787,
+          3996,
+          4393,
+          5078,
+          5207,
+          6585,
+          6986,
+          8113,
+          8549,
+          9143,
+          9829,
+          11306,
+          11720,
+          11973,
+          12158,
+          12939,
+          13639,
+          13735,
+          13879,
+          13911,
+          14429,
+          14461,
+          14476,
+          14502,
+          14948
+        ],
+        "exact_smoke_pilot": [],
+        "near_smoke_pilot": [
+          4873
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "stage": "within_dolly_cluster_removal",
+      "n_before": 8049,
+      "n_components": 7614,
+      "n_discarded_components": 184,
+      "n_records_discarded": 619,
+      "n_singletons": 7430,
+      "status": "PASS"
+    },
+    {
+      "stage": "deterministic_allocation",
+      "n_development": 50,
+      "n_held_out": 200,
+      "n_unused_singletons": 7180,
+      "development_id_seq_hash": "6ea712c08207858826037fd7c78067b6c3af852b89783fcc339fe3f17aaa1a43",
+      "held_out_id_seq_hash": "13c2c5a396ab58f9492e1161707a2acb8e4d242a058c9823470fa38bcca48b3a",
+      "status": "PASS"
+    },
+    {
+      "stage": "full_template_alignment_250",
+      "n_pairs": 250,
+      "n_pass": 250,
+      "n_fail": 0,
+      "status": "PASS"
+    }
+  ],
+  "discarded_within_dolly_components": [
+    {
+      "size": 44,
+      "dolly_ids": [
+        51,
+        1311,
+        2434,
+        2566,
+        2642,
+        2684,
+        2781,
+        2842,
+        3247,
+        3514,
+        4040,
+        4052,
+        4334,
+        4449,
+        4900,
+        4970,
+        5115,
+        5401,
+        5421,
+        5936,
+        6073,
+        6117,
+        6129,
+        6265,
+        7337,
+        7595,
+        8268,
+        9340,
+        9543,
+        10134,
+        10225,
+        10467,
+        10683,
+        10985,
+        11073,
+        11432,
+        11906,
+        11969,
+        12392,
+        12548,
+        12708,
+        14531,
+        14680,
+        14992
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        172,
+        2995
+      ]
+    },
+    {
+      "size": 7,
+      "dolly_ids": [
+        204,
+        1303,
+        2337,
+        4071,
+        5538,
+        10061,
+        11907
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        266,
+        7680
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        270,
+        698
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        323,
+        9837
+      ]
+    },
+    {
+      "size": 9,
+      "dolly_ids": [
+        340,
+        784,
+        2939,
+        6390,
+        8898,
+        11098,
+        12181,
+        12531,
+        14127
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        352,
+        513,
+        13683
+      ]
+    },
+    {
+      "size": 23,
+      "dolly_ids": [
+        361,
+        844,
+        1375,
+        1446,
+        1526,
+        2764,
+        3190,
+        3544,
+        4617,
+        4640,
+        4671,
+        4902,
+        4907,
+        7946,
+        8022,
+        11555,
+        12078,
+        12996,
+        13535,
+        13662,
+        13798,
+        14688,
+        14855
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        406,
+        14984
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        414,
+        6752
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        447,
+        5388
+      ]
+    },
+    {
+      "size": 10,
+      "dolly_ids": [
+        503,
+        1286,
+        3528,
+        3717,
+        7590,
+        7750,
+        9094,
+        13152,
+        13406,
+        13976
+      ]
+    },
+    {
+      "size": 78,
+      "dolly_ids": [
+        506,
+        614,
+        665,
+        1035,
+        1256,
+        1272,
+        1402,
+        1428,
+        1599,
+        1898,
+        2194,
+        2494,
+        2546,
+        2687,
+        2864,
+        3080,
+        3083,
+        3509,
+        3771,
+        4389,
+        4680,
+        5329,
+        5338,
+        5361,
+        5433,
+        5498,
+        5748,
+        5812,
+        5858,
+        5859,
+        6440,
+        6520,
+        6804,
+        6841,
+        7219,
+        7280,
+        7334,
+        7579,
+        7633,
+        7728,
+        7836,
+        8020,
+        8225,
+        8363,
+        8512,
+        8546,
+        8723,
+        8727,
+        9474,
+        9700,
+        9726,
+        9821,
+        9877,
+        10250,
+        10538,
+        10548,
+        10566,
+        10661,
+        11045,
+        11692,
+        11777,
+        11782,
+        11815,
+        11890,
+        12416,
+        12453,
+        12687,
+        13077,
+        13590,
+        13598,
+        13601,
+        14192,
+        14367,
+        14443,
+        14620,
+        14921,
+        14953,
+        14963
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        534,
+        3836
+      ]
+    },
+    {
+      "size": 8,
+      "dolly_ids": [
+        543,
+        2586,
+        4119,
+        5866,
+        6176,
+        9331,
+        9565,
+        13212
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        556,
+        7306
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        579,
+        2212,
+        6021,
+        10720
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        606,
+        7788
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        622,
+        9401,
+        13482
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        769,
+        2483
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        833,
+        8245
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        899,
+        3975
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        917,
+        3876,
+        4342,
+        4734
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        919,
+        1373,
+        10463
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        926,
+        10093
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        948,
+        6446
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        950,
+        5989
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1025,
+        3041
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1040,
+        9577
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        1054,
+        2159,
+        7798
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        1061,
+        3932,
+        13275,
+        13943
+      ]
+    },
+    {
+      "size": 7,
+      "dolly_ids": [
+        1075,
+        1245,
+        3176,
+        7075,
+        8972,
+        9273,
+        12338
+      ]
+    },
+    {
+      "size": 9,
+      "dolly_ids": [
+        1113,
+        1391,
+        2958,
+        5071,
+        5735,
+        7767,
+        11580,
+        11972,
+        12419
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1118,
+        6489
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1165,
+        9338
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1169,
+        10084
+      ]
+    },
+    {
+      "size": 8,
+      "dolly_ids": [
+        1191,
+        4936,
+        5984,
+        8034,
+        8098,
+        9630,
+        10320,
+        13391
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1208,
+        6277
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1210,
+        1456
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1219,
+        11588
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1279,
+        5889
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1298,
+        3052
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1344,
+        6344
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1404,
+        14539
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1440,
+        3578
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1461,
+        13576
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1464,
+        2357
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        1499,
+        9722,
+        14219
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1510,
+        8924
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1518,
+        5170
+      ]
+    },
+    {
+      "size": 5,
+      "dolly_ids": [
+        1584,
+        4105,
+        5251,
+        5457,
+        14318
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        1598,
+        9984,
+        10996,
+        14656
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1736,
+        11629
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1783,
+        13571
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1799,
+        3525
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        1836,
+        6506,
+        7994,
+        12942
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1851,
+        7440
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        1956,
+        6640,
+        12259
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        1980,
+        3842
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2154,
+        2801
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2195,
+        4245
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2198,
+        12508
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2207,
+        9166
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2213,
+        11097
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2278,
+        5301
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2329,
+        13731
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2377,
+        4920
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2432,
+        12985
+      ]
+    },
+    {
+      "size": 7,
+      "dolly_ids": [
+        2537,
+        2681,
+        3263,
+        4778,
+        7515,
+        11838,
+        12675
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2541,
+        13540
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2551,
+        7236
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        2669,
+        2989,
+        5465
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2848,
+        4533
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        2853,
+        12476,
+        13319
+      ]
+    },
+    {
+      "size": 8,
+      "dolly_ids": [
+        2961,
+        6159,
+        8742,
+        10497,
+        14130,
+        14263,
+        14417,
+        14860
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2979,
+        4419
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        2986,
+        12716
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3006,
+        10711
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3009,
+        11761
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3032,
+        8430
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3117,
+        6010
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3120,
+        4122
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3152,
+        7423
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3180,
+        14849
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3184,
+        3998
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3300,
+        3568
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3319,
+        9934
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3361,
+        5011
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3380,
+        13817
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3382,
+        5447
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3398,
+        5604
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3400,
+        8956
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3468,
+        7377
+      ]
+    },
+    {
+      "size": 6,
+      "dolly_ids": [
+        3530,
+        4972,
+        5082,
+        7071,
+        7671,
+        7980
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3533,
+        9284
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3537,
+        7026
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3549,
+        11233
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        3718,
+        6762,
+        12894
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3747,
+        12099
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3790,
+        8064
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3824,
+        8909
+      ]
+    },
+    {
+      "size": 6,
+      "dolly_ids": [
+        3848,
+        7108,
+        8681,
+        8687,
+        10603,
+        12592
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3863,
+        13003
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        3946,
+        5540
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        3961,
+        7840,
+        9836
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4034,
+        11502
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4137,
+        5997
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        4143,
+        9391,
+        10429,
+        12945
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4155,
+        13089
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4156,
+        8110
+      ]
+    },
+    {
+      "size": 5,
+      "dolly_ids": [
+        4166,
+        9350,
+        12933,
+        13175,
+        13510
+      ]
+    },
+    {
+      "size": 7,
+      "dolly_ids": [
+        4268,
+        4507,
+        5566,
+        7543,
+        9947,
+        12350,
+        12477
+      ]
+    },
+    {
+      "size": 6,
+      "dolly_ids": [
+        4352,
+        6201,
+        6499,
+        10798,
+        12907,
+        14179
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        4370,
+        5819,
+        14396
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4563,
+        8066
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4660,
+        13094
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4670,
+        11574
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4710,
+        6342
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4740,
+        7102
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4752,
+        14789
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4758,
+        14549
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4794,
+        7081
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4864,
+        9183
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4867,
+        12129
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        4893,
+        14037
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        5081,
+        10287
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        5637,
+        5840
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        5653,
+        8159
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        5693,
+        8900
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        5975,
+        7051
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        6167,
+        7410,
+        11705,
+        12381
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6267,
+        11221
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6391,
+        12170
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6437,
+        11504
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6463,
+        12012
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        6620,
+        8986,
+        14862
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6669,
+        6702
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6720,
+        7776
+      ]
+    },
+    {
+      "size": 5,
+      "dolly_ids": [
+        6761,
+        9704,
+        11843,
+        13914,
+        14537
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6777,
+        6826
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6874,
+        9674
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        6904,
+        14792
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        7093,
+        10606
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        7209,
+        12203
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        7230,
+        13936
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        7314,
+        11802
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        7424,
+        9886
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        7431,
+        10584
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        7486,
+        7851
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        7831,
+        12118
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        7916,
+        8776,
+        9303,
+        14107
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        8230,
+        14301
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        8582,
+        13487
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        8590,
+        13355
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        8647,
+        11999
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        8676,
+        13323
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        8774,
+        10575
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        8987,
+        13762
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        9001,
+        9138
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        9043,
+        14935
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        9178,
+        10144
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        9264,
+        14183
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        9316,
+        10434
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        9442,
+        13586
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        9898,
+        11814
+      ]
+    },
+    {
+      "size": 3,
+      "dolly_ids": [
+        9904,
+        12604,
+        14550
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        9971,
+        14099
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        10346,
+        13217
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        10437,
+        14240
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        10585,
+        14864
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        10660,
+        12572
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        10761,
+        13567
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        11078,
+        11272
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        11239,
+        14229
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        11298,
+        14032
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        11382,
+        13335
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        11390,
+        12071
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        11644,
+        14096
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        11904,
+        14002
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        12428,
+        14692
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        12478,
+        14355
+      ]
+    },
+    {
+      "size": 2,
+      "dolly_ids": [
+        12609,
+        13288
+      ]
+    },
+    {
+      "size": 4,
+      "dolly_ids": [
+        12773,
+        13030,
+        13906,
+        14159
+      ]
+    }
+  ],
+  "allocation": {
+    "hash_key_format": "TRACES_Q1_DOLLY_20261114_V1|<index:06d>",
+    "sort": "(sha256_hex_lowercase, numeric_index) ascending",
+    "development_ids": [
+      9793,
+      1634,
+      5149,
+      14198,
+      11344,
+      11282,
+      5560,
+      10876,
+      8428,
+      11764,
+      1361,
+      14596,
+      196,
+      14144,
+      13897,
+      2545,
+      8767,
+      10663,
+      7883,
+      7969,
+      12865,
+      4209,
+      12280,
+      2304,
+      8750,
+      8753,
+      7556,
+      6999,
+      2385,
+      6340,
+      10000,
+      7698,
+      11074,
+      5467,
+      5294,
+      8980,
+      6796,
+      12093,
+      13250,
+      14395,
+      4607,
+      9751,
+      10475,
+      4944,
+      11573,
+      7648,
+      9641,
+      10035,
+      9517,
+      11882
+    ],
+    "held_out_ids": [
+      7077,
+      5799,
+      9254,
+      11744,
+      10500,
+      9534,
+      2791,
+      4335,
+      885,
+      9053,
+      5955,
+      8171,
+      6151,
+      9415,
+      7407,
+      11284,
+      5937,
+      12789,
+      7392,
+      14776,
+      3908,
+      9747,
+      2892,
+      6320,
+      4154,
+      13958,
+      2247,
+      6682,
+      12335,
+      7876,
+      12085,
+      12345,
+      6142,
+      14787,
+      50,
+      5749,
+      12955,
+      5677,
+      5944,
+      9126,
+      4960,
+      5956,
+      12296,
+      10830,
+      8393,
+      5526,
+      1484,
+      12951,
+      6317,
+      1362,
+      11778,
+      10396,
+      8992,
+      13778,
+      324,
+      578,
+      1082,
+      6584,
+      1094,
+      3698,
+      7837,
+      12766,
+      2652,
+      6462,
+      12052,
+      9359,
+      1989,
+      526,
+      4835,
+      2823,
+      12981,
+      4973,
+      14368,
+      12331,
+      13000,
+      7283,
+      12867,
+      8836,
+      4549,
+      13102,
+      10209,
+      1422,
+      10701,
+      8955,
+      11338,
+      5697,
+      7760,
+      11055,
+      3712,
+      12114,
+      2638,
+      1212,
+      4288,
+      7013,
+      5833,
+      4574,
+      3165,
+      5506,
+      6844,
+      11971,
+      8071,
+      4837,
+      3399,
+      13469,
+      5481,
+      6425,
+      10267,
+      9438,
+      6835,
+      14938,
+      6649,
+      10878,
+      11475,
+      864,
+      8275,
+      29,
+      10579,
+      569,
+      7961,
+      4476,
+      900,
+      14024,
+      13363,
+      291,
+      10754,
+      7023,
+      9308,
+      10565,
+      4829,
+      2982,
+      5853,
+      6729,
+      893,
+      1447,
+      4886,
+      1041,
+      11037,
+      8591,
+      3572,
+      11867,
+      11160,
+      10314,
+      9987,
+      1103,
+      12196,
+      9155,
+      5408,
+      11527,
+      1475,
+      10883,
+      5728,
+      13374,
+      8813,
+      8327,
+      7745,
+      3963,
+      2346,
+      13347,
+      10418,
+      7697,
+      1374,
+      4642,
+      7234,
+      448,
+      5406,
+      10987,
+      5988,
+      11840,
+      7311,
+      2983,
+      1777,
+      8284,
+      7492,
+      3321,
+      14977,
+      2960,
+      11202,
+      3977,
+      623,
+      4601,
+      14351,
+      12805,
+      2279,
+      13375,
+      14506,
+      4871,
+      4501,
+      14833,
+      12065,
+      3476,
+      5582,
+      10651,
+      1424,
+      7331,
+      13777,
+      11347,
+      12302,
+      3377,
+      12369,
+      9057
+    ],
+    "development_id_seq_hash": "6ea712c08207858826037fd7c78067b6c3af852b89783fcc339fe3f17aaa1a43",
+    "held_out_id_seq_hash": "13c2c5a396ab58f9492e1161707a2acb8e4d242a058c9823470fa38bcca48b3a",
+    "n_unused_singletons": 7180
+  },
+  "final_category_breakdown_250": {
+    "open_qa": 100,
+    "general_qa": 46,
+    "creative_writing": 17,
+    "brainstorming": 59,
+    "classification": 28
+  },
+  "alignment_summary": {
+    "n_pairs": 250,
+    "n_pass": 250,
+    "unique_diff_positions": [
+      5
+    ],
+    "unique_diff_id_pairs": [
+      [
+        154657,
+        152798
+      ]
+    ]
+  },
+  "warnings": [],
+  "note": "full-corpus screen; row-level reconstruction not performed. ASCII-only character filter, not English-language verification. Selection blind to model outputs. Preregistration not frozen."
+}

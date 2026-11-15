@@ -1,0 +1,452 @@
+[
+  {
+    "dolly_id": 9793,
+    "split": "development",
+    "instruction": "When did the American Civil War end?",
+    "content_sha256": "efb81c945bbb9c20fbd8bde3ed64270212bc3a113a3ef5ec3c4258ec9ade40f4",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "000106c55479bc75e2b0cb6f29b32239b3655b9dbae8345e36a6c90641d7ebe6"
+  },
+  {
+    "dolly_id": 1634,
+    "split": "development",
+    "instruction": "Name 5 different vegetables. List them with dashes",
+    "content_sha256": "eb8ec4b3a8302bfcdb04f0b916041632276dc9f64c491341f52dc29c432285c6",
+    "category": "general_qa",
+    "tok_len": 10,
+    "allocation_hash": "000973c529e94d19001edddbbc50d52b44569588cf491d8abc58bd7d57b4eaf4"
+  },
+  {
+    "dolly_id": 5149,
+    "split": "development",
+    "instruction": "Why did the Allies invade Normandy during world war 2?",
+    "content_sha256": "610144902fb3eb6067fc3b4bd91c11bb2766b693fa2dc5939aed5ace31d53fb0",
+    "category": "general_qa",
+    "tok_len": 12,
+    "allocation_hash": "000bd1705cd26e0c1bd30a326786784babac6edc92d7984a84318324a87e7c56"
+  },
+  {
+    "dolly_id": 14198,
+    "split": "development",
+    "instruction": "Explain the best way to swing a golf iron compared to a golf driver.",
+    "content_sha256": "6ddb5f444a6332bd8c1b0a39d0766e86ef9694911dff22fc540ba0d2919fed02",
+    "category": "creative_writing",
+    "tok_len": 15,
+    "allocation_hash": "001dc8da9a6442676943525f7480a22527d0d1be1fffa4700cdde76afc8ba381"
+  },
+  {
+    "dolly_id": 11344,
+    "split": "development",
+    "instruction": "How old is the Greek language?",
+    "content_sha256": "c6da248d0fbfaf8f133cc8c124f3b8e5d9691f92e53bbed7cadf8257fb72743e",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "00278c4cbd263667fa6e54d124a8e0df90aed20d57537bff8b78d96f34ab1767"
+  },
+  {
+    "dolly_id": 11282,
+    "split": "development",
+    "instruction": "I have some vermouth and bitters. What cocktails can I make with those ingredients?",
+    "content_sha256": "118510819594705c0b716a5b2294dd62cb4fe03d90890c9987b3d39e36aa3238",
+    "category": "open_qa",
+    "tok_len": 17,
+    "allocation_hash": "002979b05a57dc6376a6b169eb0bf89734acedf5198d26c36755ab1851232a5d"
+  },
+  {
+    "dolly_id": 5560,
+    "split": "development",
+    "instruction": "What are some classic board games to play with the family?",
+    "content_sha256": "ec572975e1565faa24b442502d6f52fd47463e2a5624cd4306b66aa345512d5d",
+    "category": "brainstorming",
+    "tok_len": 12,
+    "allocation_hash": "00354afcc7c554c50f36c0b63a7c5fae694eadb94638e39f58d6635c148a2d9d"
+  },
+  {
+    "dolly_id": 10876,
+    "split": "development",
+    "instruction": "Tell me whether these are rivers or oceans: Nile, Amazon, Ganges, Hudson, Rhine",
+    "content_sha256": "82f537b57db5a884cf0fdd2029c9d14923ddf27420846ae3388aebc4c46fd974",
+    "category": "classification",
+    "tok_len": 18,
+    "allocation_hash": "00356a3a36a0847c3f592c12825aa3d8f2a40254e6c57c331a4a55879720f8f9"
+  },
+  {
+    "dolly_id": 8428,
+    "split": "development",
+    "instruction": "What are the two professional  football teams in Chicago?",
+    "content_sha256": "82238328ca69d32dc3e927b3fba0c5124b0e30e52faa4eb3980f6bbd3f371333",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "003888f8e2f1eea7e582873da2dad289d75da6f2afb6e7e2f6970ac095d80643"
+  },
+  {
+    "dolly_id": 11764,
+    "split": "development",
+    "instruction": "What is the difference between interface and abstract class in Java?",
+    "content_sha256": "cf0e310f0010c879a06d2bc14b629b4e2307417fe554eca6e029bda69ce346e3",
+    "category": "open_qa",
+    "tok_len": 12,
+    "allocation_hash": "004d5e1d7c4b0fb4ef473b50dc1d3ef5281320175f0ead7765a1d1c03a72daa9"
+  },
+  {
+    "dolly_id": 1361,
+    "split": "development",
+    "instruction": "How do you brew beer?",
+    "content_sha256": "df1a316b0e530ed4497f5c2d8b7e6a9cc5bcacb580411816a1e54fbb137877e1",
+    "category": "open_qa",
+    "tok_len": 6,
+    "allocation_hash": "004dc44c2ed65a9329b2e6b5b8955b21c827a6680624111bd70c6d3c92ff80c5"
+  },
+  {
+    "dolly_id": 14596,
+    "split": "development",
+    "instruction": "What are some approaches to prevent abuse of LLMs?",
+    "content_sha256": "0f13a53eb8910318018005941500d28937d197ffd0bc7527fd3ddfab00cab07a",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "0057679016d1b71d11ef9a000630c648f09d26b23e3a4d4535990ae6719488e9"
+  },
+  {
+    "dolly_id": 196,
+    "split": "development",
+    "instruction": "What is cloud computing in simple terms?",
+    "content_sha256": "e4344ba6d82e8624b5707f48a6d492419636fcc4f74ae2d6060a42ab74bd7a45",
+    "category": "general_qa",
+    "tok_len": 8,
+    "allocation_hash": "005da6555ed8ea55f658904df8aa8dc6790a28601fbc0c6558b76f4fda1e04a0"
+  },
+  {
+    "dolly_id": 14144,
+    "split": "development",
+    "instruction": "Who is called Napoleon of Iran?",
+    "content_sha256": "06d6a9e8601b4581e3ca2953ee667f0ae1088574ff5a8cbf96cf40c42d9a0b32",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "0064c580b42f8044f2661d4ae57c261237a0e6750213e7168cb89ed6914f7c5b"
+  },
+  {
+    "dolly_id": 13897,
+    "split": "development",
+    "instruction": "Identify which instrument is string or percussion: Sakara, Cavaquinho",
+    "content_sha256": "ac59421b15c0b9452ec96450c5d72fd3ab3188d9d7bf7d53fc13d97a097e9383",
+    "category": "classification",
+    "tok_len": 13,
+    "allocation_hash": "0070eca26124f330c1f6073665dd17294bdca67948db82818c4c3ae9f674b89f"
+  },
+  {
+    "dolly_id": 2545,
+    "split": "development",
+    "instruction": "Who was the original lead singer of the band Linkin Park?",
+    "content_sha256": "33b25c1eba6463ace43a3677d9f7244f7d72d6fa86afe301439cdfc49c5923dd",
+    "category": "open_qa",
+    "tok_len": 13,
+    "allocation_hash": "00728320f5a9d43ceb7b04bfb78d2d829fbeea07b40e7fbab93f3f94ecf9260d"
+  },
+  {
+    "dolly_id": 8767,
+    "split": "development",
+    "instruction": "Why is the SEC the best football conference in America?",
+    "content_sha256": "5664cc81f955410dc58ef6fe1b8d0b8d830d25eaa3d21be28c8c5bfbabd226de",
+    "category": "classification",
+    "tok_len": 11,
+    "allocation_hash": "0073b2e08ae68a707a2667746e09abe07efe4023883deb15ed325a206cf6e6ba"
+  },
+  {
+    "dolly_id": 10663,
+    "split": "development",
+    "instruction": "What are modifiers in English?",
+    "content_sha256": "abc4d6c5f2e6785d654c602f50efa2cd09d637f87285daae522b182a0d304d46",
+    "category": "creative_writing",
+    "tok_len": 6,
+    "allocation_hash": "00858258c02ae4e6235f4363749ade11fd0ec2ae47d7c1a5352dcaf70c938aaa"
+  },
+  {
+    "dolly_id": 7883,
+    "split": "development",
+    "instruction": "What is a time signature in music?",
+    "content_sha256": "3bdca77a2f1828cd23c2b8a34e7c5e0508e019308f093a225466205363644e97",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "008d4e9308812859b5f5d6d129473bd4165626e43ecade1a0d2a2aca63e610bd"
+  },
+  {
+    "dolly_id": 7969,
+    "split": "development",
+    "instruction": "What are some good sources of vegetarian protein?",
+    "content_sha256": "0cc1b1ca58de80bd1a084eb9cd120ffd98e3e8832e29250a7226cd60a1597709",
+    "category": "brainstorming",
+    "tok_len": 9,
+    "allocation_hash": "008e094ecdda194b9bde316a22b9fd1ea3015d80f9306d0fb6f63c999b18ac69"
+  },
+  {
+    "dolly_id": 12865,
+    "split": "development",
+    "instruction": "How long does it take our sun to orbit the center of our galaxy",
+    "content_sha256": "2275c839ef8cd54de439711c44f2a919d0042bdac4ea7534438a770294a02b1f",
+    "category": "brainstorming",
+    "tok_len": 14,
+    "allocation_hash": "00977cf7e553251bb95281a050608fce82b484e1713d455b34e063ef810db006"
+  },
+  {
+    "dolly_id": 4209,
+    "split": "development",
+    "instruction": "Why are most plans green?",
+    "content_sha256": "68781679f3f3a26a4fc1ca149c78e432838a9198995700d4eaa42ff2810faa2f",
+    "category": "general_qa",
+    "tok_len": 6,
+    "allocation_hash": "009afb1183fba3102d717786c6f560524ac03957ec9c0a87d31d65425ee1e86c"
+  },
+  {
+    "dolly_id": 12280,
+    "split": "development",
+    "instruction": "How do I make great Neapolitan pizza dough at home?",
+    "content_sha256": "8801cdbb3ab68e0015a66b4f70f50d036597c5d82677ef065afaa686888fb907",
+    "category": "general_qa",
+    "tok_len": 12,
+    "allocation_hash": "009cb8cff71504fd8191d12908d57f86416209b6c40764111fea74be75cde06c"
+  },
+  {
+    "dolly_id": 2304,
+    "split": "development",
+    "instruction": "Are UGGs considered fashionable?",
+    "content_sha256": "db42a171d86ae79283625fe06f56315939ec4b08f634ff55d80b320f1a4d3009",
+    "category": "general_qa",
+    "tok_len": 7,
+    "allocation_hash": "009e1ac7b224e54048e631eaa12042e0f496f6c977ca0b3d343e833cf7764a01"
+  },
+  {
+    "dolly_id": 8750,
+    "split": "development",
+    "instruction": "What are some good flowers to plant in Hardiness Zone 7?",
+    "content_sha256": "e15f08ee2cc3f42d465b1af3a00da5390626042ac2c12c6a45f115558deef957",
+    "category": "brainstorming",
+    "tok_len": 14,
+    "allocation_hash": "00a4efac31abb34f5eecf1d2300c645f32b28a7a2895207cdbe96104b9452721"
+  },
+  {
+    "dolly_id": 8753,
+    "split": "development",
+    "instruction": "What are some dishes that avocados can be used in?",
+    "content_sha256": "2a48f6138ae63f67911af66d15534ab86081eb0734ea2606ceee572006c4c411",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "00a723c5afd69a7e5231c85aa73dc6c208084d3d38099f9c02be1943a44e8788"
+  },
+  {
+    "dolly_id": 7556,
+    "split": "development",
+    "instruction": "Write me an introductory email to a lawyer to represent me in court for a red light ticket I did not deserve",
+    "content_sha256": "84e795a604b21ca245b7fa6745be466f378c49fbf2b9a91741c4a53483eefbda",
+    "category": "creative_writing",
+    "tok_len": 22,
+    "allocation_hash": "00c4d0eb350a981175f7c8905a68edcbcac98fbbac7f3f452ac52e466bb64693"
+  },
+  {
+    "dolly_id": 6999,
+    "split": "development",
+    "instruction": "Give me a list of songs to listen to with the artist for each song.",
+    "content_sha256": "988a53c6149b31275ccb0b3e4b645f10785903923a717b6c51f120d07ed0fa22",
+    "category": "brainstorming",
+    "tok_len": 16,
+    "allocation_hash": "00cabecf4e2f7fe0561982b0f08207394ef80a70585576a99fc6b4ca2f6c7d2e"
+  },
+  {
+    "dolly_id": 2385,
+    "split": "development",
+    "instruction": "What famous character did William B. Davis portray?",
+    "content_sha256": "11a412d5b33cbe88e8cd1a88c1308ba03a7681f91ed4db8bd61ed85e326a81a0",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "00cdfe17223562a144e4a7ddb34ce535d4490b7c69e99f2a92f5149ba2512604"
+  },
+  {
+    "dolly_id": 6340,
+    "split": "development",
+    "instruction": "Can you recommend best taco places in Austin?",
+    "content_sha256": "ec0ebd4fd723253517781df68d1de392412b47d91413bf9b339201f2216bb383",
+    "category": "brainstorming",
+    "tok_len": 9,
+    "allocation_hash": "00d444794736f126f90dcb3a7eb8272745c1f171319bed7716ffeedaa9c268f9"
+  },
+  {
+    "dolly_id": 10000,
+    "split": "development",
+    "instruction": "what is the number of US house of representatives?",
+    "content_sha256": "61003842c1cc09fedf4a474a1a6cf22018a4b649b43110104e18c96d0fb351f8",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "00dc7032477e86fb27cbbd37d44b48762f9470175d02c14871802b5681515168"
+  },
+  {
+    "dolly_id": 7698,
+    "split": "development",
+    "instruction": "Give me a list of the only two American cyclists to win the Tour de France general classification.",
+    "content_sha256": "13f83465188e5a02d575b50c01c1e505dbc2ed19893d1ad96855f070a08521c3",
+    "category": "brainstorming",
+    "tok_len": 19,
+    "allocation_hash": "00f0d083a44afcdd352b3247035332bb65c550622c93494fd3a78be394c61073"
+  },
+  {
+    "dolly_id": 11074,
+    "split": "development",
+    "instruction": "Identify which instrument is string or percussion: Teponaztli, Tricordia",
+    "content_sha256": "6a8efac81d2b6f5fbf74b0d3fbcefc066126d81559df6e69351e83182c4e5f4e",
+    "category": "classification",
+    "tok_len": 16,
+    "allocation_hash": "00fa2ef2c8cc31647f72394b4494fc146b590099764acb023463edfb2641d849"
+  },
+  {
+    "dolly_id": 5467,
+    "split": "development",
+    "instruction": "Why do kids have to take tests in school?",
+    "content_sha256": "0d997f5ed6b0c8dcaf48329c15858d9b384466e6ebc55e78a8c33509ca1be5b9",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "00fb41f26a1fb44b0f62cf42b6d907eed8bd2ef7fb50adb752f2bd5b996ab197"
+  },
+  {
+    "dolly_id": 5294,
+    "split": "development",
+    "instruction": "What are some good items to keep in your pantry if you want to cook Asian food?",
+    "content_sha256": "cf30c6ac7122d657c9624ceffb4380b20e0f69ebc8ed6e9c25daa810808cd383",
+    "category": "brainstorming",
+    "tok_len": 18,
+    "allocation_hash": "010f80a3a505d743972ea996e35fdad7b094be673aa218003d8bcd3100d67f61"
+  },
+  {
+    "dolly_id": 8980,
+    "split": "development",
+    "instruction": "Think of a lot of different ways you could tell your roommate about something you need to buy at the store.",
+    "content_sha256": "7975896999feb5017e2467f9061c2c5794bf8892a5c5fc2a4c3f2a7a1e63522e",
+    "category": "brainstorming",
+    "tok_len": 22,
+    "allocation_hash": "010fe8ce86dccc9d287cfbd49522660ee922e7855881d95f4a50ad5c903a717f"
+  },
+  {
+    "dolly_id": 6796,
+    "split": "development",
+    "instruction": "What are the different towns that make up New England?",
+    "content_sha256": "acf4baa18689020737805d3f3ebe38cdcc1464ba28c4cb49a588b48cdff5df58",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "011347f7350fbf26b94d33105643b2cd95ba6f979c0b2649d6666a4e53140e69"
+  },
+  {
+    "dolly_id": 12093,
+    "split": "development",
+    "instruction": "Which is a species of fish? American sole or American dream",
+    "content_sha256": "168579bc944d624094175a2cf6fd3c8a42b502f382165e866dfe4fde67a9d41c",
+    "category": "classification",
+    "tok_len": 12,
+    "allocation_hash": "0121814d7c64cf415b00d1798b58c95e60260976776c90482a66548029f4f4db"
+  },
+  {
+    "dolly_id": 13250,
+    "split": "development",
+    "instruction": "Who designed the current Indian flag?",
+    "content_sha256": "6ec321602e53e6d369218b327946cba738c299f37e5846108156cd2a6677e977",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "012653c584c36c6e1e465e2486c621271bb90cf82b735870359e02bf03ab7f70"
+  },
+  {
+    "dolly_id": 14395,
+    "split": "development",
+    "instruction": "What are some fun board games to play as a family?",
+    "content_sha256": "7bf3c41e6184eac4f3b535821b7af0ae3f2846f5351aa3ed6882e771c651c3f5",
+    "category": "open_qa",
+    "tok_len": 12,
+    "allocation_hash": "0137030e2d53a51fdee705d48f3a0cb84760f6bf473483e24d62c36aa7481a2b"
+  },
+  {
+    "dolly_id": 4607,
+    "split": "development",
+    "instruction": "What cause did the Suffragettes advance?",
+    "content_sha256": "b276bf793babad8167335735275fc2d9e4c6392a97d0dc99b7ef49c274830e0f",
+    "category": "open_qa",
+    "tok_len": 9,
+    "allocation_hash": "01419ffb4e6b798bd7fee2309f38155c385cb84ec0cca034f9000cf6e2fb2ceb"
+  },
+  {
+    "dolly_id": 9751,
+    "split": "development",
+    "instruction": "What are the differences between a ukulele and guitar?",
+    "content_sha256": "bf770411260de782df4dbd92db182aa81536d07b24c7e5358b21e5d6b8273c7b",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "01444daa19a333f278d0221661e69ac9df1e68796afb422c403ed7b7daf03abc"
+  },
+  {
+    "dolly_id": 10475,
+    "split": "development",
+    "instruction": "Why is the Uniqlo round mini shoulder bag so popular right now?",
+    "content_sha256": "167e975aeede45ce3fb4aac095502bcd55bceca73bab7db610c9b8bf30949e88",
+    "category": "general_qa",
+    "tok_len": 15,
+    "allocation_hash": "0145564de25bbc2551fdd53c85898c2989e545ce52a5346cea2126564bac811f"
+  },
+  {
+    "dolly_id": 4944,
+    "split": "development",
+    "instruction": "What are some games you can play in the middle of nature and a bunch of people?",
+    "content_sha256": "4c845d21829e325984050bb6314265dbe5c2df9ded4a1fdd28811675572ac036",
+    "category": "brainstorming",
+    "tok_len": 18,
+    "allocation_hash": "01479deb86432d62c4fc04f7a8f296b867484aae72e9adddb8cbdd2fbc645487"
+  },
+  {
+    "dolly_id": 11573,
+    "split": "development",
+    "instruction": "What is Scottsdale, Arizona USA known for?",
+    "content_sha256": "6408f741c1b60c9b23b620bd8326f6ee83609c48033ecc33dbb359adea2197c4",
+    "category": "brainstorming",
+    "tok_len": 9,
+    "allocation_hash": "017f862e3fe112dfc98f4a17d412d147f397b09253e3c5b3a94f597afd16e387"
+  },
+  {
+    "dolly_id": 7648,
+    "split": "development",
+    "instruction": "Why does treasury bond price drop when bond yield increases?",
+    "content_sha256": "d340acebcc6a07e71426c49465e74c6cb25c2a4765182b6b67e2f587f5b79b6d",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "018d8a41462590d132bbfeb594b834d839904b5cff670fde9972693b65466f03"
+  },
+  {
+    "dolly_id": 9641,
+    "split": "development",
+    "instruction": "Should I immigrate to Canada?",
+    "content_sha256": "1f583cc782c40b82494ae923d820f3585aaf21c1622a166eb9d80b6618a33340",
+    "category": "general_qa",
+    "tok_len": 7,
+    "allocation_hash": "019cf30394ec3b6a59b3b8b9e2dfcdd5bfde962b046d087563e7bd881a29c9bd"
+  },
+  {
+    "dolly_id": 10035,
+    "split": "development",
+    "instruction": "What is the name of Portland, Oregon's light rail system?",
+    "content_sha256": "76db0be7d2e5e7b5ccded83f56bca1b986b02cd9efbc4321beaa10fcb5bff136",
+    "category": "open_qa",
+    "tok_len": 14,
+    "allocation_hash": "019f53745b8dde9fe5ed916a199b2e0e4836a2d8faa59c85e403af58d7aea865"
+  },
+  {
+    "dolly_id": 9517,
+    "split": "development",
+    "instruction": "Why do children love playing sports?",
+    "content_sha256": "6a4071202a8bd7764beb218f8d82d532592461093b6a70ffd0443d684a286298",
+    "category": "general_qa",
+    "tok_len": 7,
+    "allocation_hash": "01a8bff69c8f5f5d8776cd4382c1dae92400c3089887149ff3fda5e6066a01cd"
+  },
+  {
+    "dolly_id": 11882,
+    "split": "development",
+    "instruction": "To which London club did Mycroft Holmes belong",
+    "content_sha256": "5103a15f36570b35243ec7e3fcd08f05d4b1dbb07e2d4b03bba07752d25e0cbd",
+    "category": "open_qa",
+    "tok_len": 9,
+    "allocation_hash": "01c4d597898f511208607a7027ad56cb90fda73cf6693611b583b0fdc7f94d22"
+  }
+]

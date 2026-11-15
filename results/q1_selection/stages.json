@@ -1,0 +1,135 @@
+[
+  {
+    "stage": "1_reverify_length_bounds",
+    "alpaca_empty_input_n": 32603,
+    "percentile_method": "numpy.percentile(..., method='inverted_cdf')",
+    "quantiles_5_95": [
+      6,
+      23
+    ],
+    "inclusive_bounds": [
+      6,
+      23
+    ],
+    "expected": [
+      6,
+      23
+    ],
+    "status": "PASS"
+  },
+  {
+    "stage": "parse_dolly_jsonl",
+    "n_lines": 15011,
+    "status": "PASS"
+  },
+  {
+    "stage": "raw",
+    "n": 15011,
+    "status": "PASS"
+  },
+  {
+    "stage": "empty_context_exact",
+    "n": 10544,
+    "status": "PASS"
+  },
+  {
+    "stage": "char_word_length_screen",
+    "n": 8096,
+    "removed_empty_text": 0,
+    "removed_non_ascii": 154,
+    "removed_letter_ratio": 24,
+    "removed_banned": 38,
+    "removed_length": 2232,
+    "status": "PASS"
+  },
+  {
+    "stage": "external_overlap_screen",
+    "n_after": 8049,
+    "exact_alpaca": 15,
+    "near_alpaca": 31,
+    "exact_smoke_pilot": 0,
+    "near_smoke_pilot": 1,
+    "excluded_ids": {
+      "exact_alpaca": [
+        4126,
+        4784,
+        5898,
+        6451,
+        7279,
+        7668,
+        8078,
+        8737,
+        9660,
+        10536,
+        12077,
+        12409,
+        13023,
+        13478,
+        14942
+      ],
+      "near_alpaca": [
+        1769,
+        1852,
+        2364,
+        2630,
+        3258,
+        3282,
+        3787,
+        3996,
+        4393,
+        5078,
+        5207,
+        6585,
+        6986,
+        8113,
+        8549,
+        9143,
+        9829,
+        11306,
+        11720,
+        11973,
+        12158,
+        12939,
+        13639,
+        13735,
+        13879,
+        13911,
+        14429,
+        14461,
+        14476,
+        14502,
+        14948
+      ],
+      "exact_smoke_pilot": [],
+      "near_smoke_pilot": [
+        4873
+      ]
+    },
+    "status": "PASS"
+  },
+  {
+    "stage": "within_dolly_cluster_removal",
+    "n_before": 8049,
+    "n_components": 7614,
+    "n_discarded_components": 184,
+    "n_records_discarded": 619,
+    "n_singletons": 7430,
+    "status": "PASS"
+  },
+  {
+    "stage": "deterministic_allocation",
+    "n_development": 50,
+    "n_held_out": 200,
+    "n_unused_singletons": 7180,
+    "development_id_seq_hash": "6ea712c08207858826037fd7c78067b6c3af852b89783fcc339fe3f17aaa1a43",
+    "held_out_id_seq_hash": "13c2c5a396ab58f9492e1161707a2acb8e4d242a058c9823470fa38bcca48b3a",
+    "status": "PASS"
+  },
+  {
+    "stage": "full_template_alignment_250",
+    "n_pairs": 250,
+    "n_pass": 250,
+    "n_fail": 0,
+    "status": "PASS"
+  }
+]

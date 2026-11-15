@@ -1,0 +1,1802 @@
+[
+  {
+    "dolly_id": 7077,
+    "split": "held_out",
+    "instruction": "What are different types of grass?",
+    "content_sha256": "249e64a65d4961451ff6e125998e7b6fa607e2b49fa6e9d0b0e0a6e2dcce559b",
+    "category": "brainstorming",
+    "tok_len": 7,
+    "allocation_hash": "01d55cec4d259d9a815ea9320090240b22bf2015d26c44bce2f7bba527f8117c"
+  },
+  {
+    "dolly_id": 5799,
+    "split": "held_out",
+    "instruction": "What are the top 5 best ways to prepare a burger?",
+    "content_sha256": "6f72ba55ddec3845098989bbf84b10017a05b4e347cf16b5a7d4552e9383b2fc",
+    "category": "brainstorming",
+    "tok_len": 13,
+    "allocation_hash": "01fcd27dff9bcc2a6689cce36b173b8098503f016ccb15278b76d3d5b65693ed"
+  },
+  {
+    "dolly_id": 9254,
+    "split": "held_out",
+    "instruction": "Are Air Fryers safe to use?",
+    "content_sha256": "f569ca4b0eb48677c5d0583d07ea5c0872601d2d1fa6de9f7d0e931325cb4a41",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "01fe4475231696c5a1253771df516004dce404a4f5e35de372e4b306e3a0b60b"
+  },
+  {
+    "dolly_id": 11744,
+    "split": "held_out",
+    "instruction": "What were the top 3 best-selling PlayStation 2 video games?",
+    "content_sha256": "53200765bd4f48aed7524eca71c62ff17d2e56eee36be5589e32f2454ef31ee1",
+    "category": "brainstorming",
+    "tok_len": 15,
+    "allocation_hash": "01fee153da372b177135fb153cff2b389ed00d688dbb1db79d9ee4c380b04192"
+  },
+  {
+    "dolly_id": 10500,
+    "split": "held_out",
+    "instruction": "When was the Tesla Factory in Fremont purchased by Tesla?",
+    "content_sha256": "5bf7d8772bc65bece4f1a90061ab9c43160de2045355b5d274e06c9346a4aec1",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "020f4f7ded43a8d9a9b5462638168ee4159899e5c5478448973c3260d5bab556"
+  },
+  {
+    "dolly_id": 9534,
+    "split": "held_out",
+    "instruction": "How do I become successful?",
+    "content_sha256": "c506096d1f6c97ad92a00a41096b839128a1e2d85303896dc4a36f490b195a6e",
+    "category": "general_qa",
+    "tok_len": 6,
+    "allocation_hash": "0226d0e431e69e479304dbabb7f126809d0522a7d4dc30c6cb10106ff00fe0eb"
+  },
+  {
+    "dolly_id": 2791,
+    "split": "held_out",
+    "instruction": "Why are people afraid of sharks?",
+    "content_sha256": "8d9a4297ea9c86eff504ebee5ef90bd2e1853605536868421f2c150d311d107b",
+    "category": "general_qa",
+    "tok_len": 7,
+    "allocation_hash": "0226f09c53f1b7f81c65b829cf86357633146e5b58b4d92e4bad32ffa667c3dc"
+  },
+  {
+    "dolly_id": 4335,
+    "split": "held_out",
+    "instruction": "What makes an organization standout?",
+    "content_sha256": "ed17c7ae05ccd44b488f28bf4a5564da4f91b9d2d9b9b46691638ec9fbf7bd41",
+    "category": "general_qa",
+    "tok_len": 6,
+    "allocation_hash": "0227bb8019d04fe75e69bdab89e64ac0196d903e602d454906b771c41faa72a3"
+  },
+  {
+    "dolly_id": 885,
+    "split": "held_out",
+    "instruction": "Describe the sensation of taking a cold shower and explain the rationale for why someone might take one.",
+    "content_sha256": "2d252cd8661c55e95badb1bcd87e303dd8cec5e40c6d5b7f6851492fb61baacf",
+    "category": "creative_writing",
+    "tok_len": 19,
+    "allocation_hash": "02292474606cccf5c3ac272dcfb5025f9fd5ba1622bb8ce586ccf9fedb673d58"
+  },
+  {
+    "dolly_id": 9053,
+    "split": "held_out",
+    "instruction": "What are the top graph databases?",
+    "content_sha256": "209814ea1631be000541ee4982e7f1d58eadf1ffd161a0f410bb0cb898ca928e",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "022c995a093c6151f723d8812411b74b2c632fcb094111914896b441648f22c7"
+  },
+  {
+    "dolly_id": 5955,
+    "split": "held_out",
+    "instruction": "What are some important things that have happened on the Day April 6?",
+    "content_sha256": "89569d3ad372f619f784d07612e1948a44d48b027a82765a7aafc8000fef0552",
+    "category": "open_qa",
+    "tok_len": 15,
+    "allocation_hash": "0232592aa4cc32cd256205e9ad52a8e639ebfa86c81f9b8e0a259471928e8907"
+  },
+  {
+    "dolly_id": 8171,
+    "split": "held_out",
+    "instruction": "What's the different between a plantain and a banana?",
+    "content_sha256": "f6f064368a3d0d069b8021df43de1e0bea22088418e7711139df3f2d148c89db",
+    "category": "general_qa",
+    "tok_len": 12,
+    "allocation_hash": "0232d04ee016cc3391d2f15c3031e250958529bb0d713d40caa2ba2d477ca85c"
+  },
+  {
+    "dolly_id": 6151,
+    "split": "held_out",
+    "instruction": "Q: What treatments are available in the U.S. to treat COVID-19?",
+    "content_sha256": "e0804ae5d59a4db3eeab2b3c983a42a14ed73c8813583429028763d78d12feb2",
+    "category": "general_qa",
+    "tok_len": 19,
+    "allocation_hash": "023e385eb9cc1fb7dbf9aa985d169c677977eea6a7101c841048ef7e0858986d"
+  },
+  {
+    "dolly_id": 9415,
+    "split": "held_out",
+    "instruction": "Why can't the whole world be 1 country?",
+    "content_sha256": "a23d74f20a0f033637d43a26537c57a1c8edea4ec1a472ee0f62151187ba4673",
+    "category": "brainstorming",
+    "tok_len": 12,
+    "allocation_hash": "02445ef463d239a31250bbbbb75336bcc132759b29d6cf54e18fc2e8d051c468"
+  },
+  {
+    "dolly_id": 7407,
+    "split": "held_out",
+    "instruction": "What are easy desserts I can make at home?",
+    "content_sha256": "0eb48d6d711547220b8b92db9de2fbc81876ec673cac5c0bf2fce293de84b6d8",
+    "category": "brainstorming",
+    "tok_len": 10,
+    "allocation_hash": "024ce8cfc4dc24a364addb044cf50e21ffe4b718515a2a6fa59bd3ddae3b39bf"
+  },
+  {
+    "dolly_id": 11284,
+    "split": "held_out",
+    "instruction": "Which of these colors are primary colors?",
+    "content_sha256": "a5682a3dc8b7c0ca54e6cc99bf5eb5ba640102132cdc029f1078dc6db099a4de",
+    "category": "classification",
+    "tok_len": 8,
+    "allocation_hash": "02502b275f3b0944d8538fe9dda752328ee4a6eb727c22f391a92907abdaa137"
+  },
+  {
+    "dolly_id": 5937,
+    "split": "held_out",
+    "instruction": "Name some famous Sci-Fi books",
+    "content_sha256": "5636af4e4da860f6282158c85ddf1176a1cae1f22f3888ff87aebaedde217da9",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "0266deec975ca62c889c31ce3df5f83681c90de23ebc835b28194d7b27c71aed"
+  },
+  {
+    "dolly_id": 12789,
+    "split": "held_out",
+    "instruction": "Is Britain the only country that drives on the left-hand side of the road?",
+    "content_sha256": "9957282221065cce71cd7359aeebf2df3e87462a73995528abb4b164490fada0",
+    "category": "open_qa",
+    "tok_len": 17,
+    "allocation_hash": "02747d61feda6d3f9105cfd4a76408a59f532963c6548d67c53f4d6b97766305"
+  },
+  {
+    "dolly_id": 7392,
+    "split": "held_out",
+    "instruction": "Identify which animal species is alive or extinct: Repenomamus, Jaguar",
+    "content_sha256": "e2a8e88f3226b2caaa84958ffd5e92fc4517dbdc5231bc083d1b3a4adb7fea10",
+    "category": "classification",
+    "tok_len": 15,
+    "allocation_hash": "0285ed902c36416afcfb4002c99ab0ef9a28550e7c35f3622694778611a06056"
+  },
+  {
+    "dolly_id": 14776,
+    "split": "held_out",
+    "instruction": "What foods are high in antioxidants?",
+    "content_sha256": "83568976190c9272af2178be498afbb9c33e91053000223b1f3404162765f741",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "029f8ed1349b489f06f6addeef8485915947e5833dc806f06ab390e1caf86aec"
+  },
+  {
+    "dolly_id": 3908,
+    "split": "held_out",
+    "instruction": "Who are the best golfers of all time?",
+    "content_sha256": "fb11b50588e697db955982e5681a87a45d12a375bea9c2ab72d8e501297f66e9",
+    "category": "open_qa",
+    "tok_len": 9,
+    "allocation_hash": "02a48aff48520972a74372a61aca2497e80691aa0b448ed74d26f69cb77948e3"
+  },
+  {
+    "dolly_id": 9747,
+    "split": "held_out",
+    "instruction": "Is a Hot dog a sandwich?",
+    "content_sha256": "01462dcc0401b52469ed60835fad55c351360e2094fb72c2f29780fbfeabbe15",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "02ad5832c8a8a579bdbe500ea7a6a37d1d2b829b3b295f827851e93dd2c71f83"
+  },
+  {
+    "dolly_id": 2892,
+    "split": "held_out",
+    "instruction": "How many Harry Potter books are there?",
+    "content_sha256": "a06119ac942bbbfa2d2ff4aa6e0c18bddd9183d81f0421d1e01812afeacd1082",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "02ba7423af52eaf62af4d37b1d8cb1154e310365ff8ffb95f2aa2a099adf99d3"
+  },
+  {
+    "dolly_id": 6320,
+    "split": "held_out",
+    "instruction": "Cuzco, Machu Pichu is a famous place located in which country?",
+    "content_sha256": "0b7fd0e6d8947ebcaee639ddc04baf2a6b18b778fa5f3627020e629b7c0d5857",
+    "category": "open_qa",
+    "tok_len": 15,
+    "allocation_hash": "02c09040ab2924de4de34410497c46d718691180098bfc391f703bbd7e62390e"
+  },
+  {
+    "dolly_id": 4154,
+    "split": "held_out",
+    "instruction": "Identify which animal is domesticated or wild: Hedgehog, Sea-monkey",
+    "content_sha256": "a4af3915c8eb6258b77856e30d149be258447917ac70bef434ca429e2c006898",
+    "category": "classification",
+    "tok_len": 13,
+    "allocation_hash": "02cdc8077fceec4aa89271b12d0f3d80d22bc56f33d207c9d50a80e5ed549a56"
+  },
+  {
+    "dolly_id": 13958,
+    "split": "held_out",
+    "instruction": "What type of jacket do grizzlies usually wear?",
+    "content_sha256": "55ec316da650bf639e1085b5561079facd116ab7e2f7e4cee3efe05beb0ec691",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "02d5bcc5d55b0842224290ef165796d67f6867ee13cf1056ed88b3a090d0f297"
+  },
+  {
+    "dolly_id": 2247,
+    "split": "held_out",
+    "instruction": "What is the difference between bills, notes, and bonds?",
+    "content_sha256": "f23600bf84af8cbf483d453f761b9ff7742a48173ddaffb308aefac9dde153a6",
+    "category": "open_qa",
+    "tok_len": 12,
+    "allocation_hash": "02d60d746735286223985e18ed7967c2f148a599fc64fe78a6f04fcb8085a305"
+  },
+  {
+    "dolly_id": 6682,
+    "split": "held_out",
+    "instruction": "Which of these words are homonyms (words that have two meanings): cleave, cotton, red, hungry",
+    "content_sha256": "c02b9d4dbf18082415bdf94d46416571aa20fdaa3c1628d6ca92682dcb07008f",
+    "category": "classification",
+    "tok_len": 21,
+    "allocation_hash": "02ddd6656a8b4fd144b235fa0450e4e3e2ed281129c786675d767d714978bded"
+  },
+  {
+    "dolly_id": 12335,
+    "split": "held_out",
+    "instruction": "What is John Ellis water and the bond angle of water?",
+    "content_sha256": "13dc9eefc460c32de66bcb9a5d4eb4af6ffcf69b466c6c1dd9c714f5b0df8a42",
+    "category": "open_qa",
+    "tok_len": 12,
+    "allocation_hash": "02e0bdda8555f5078653605fa61cdbb339a6de035c24e6be578e162d1656971d"
+  },
+  {
+    "dolly_id": 7876,
+    "split": "held_out",
+    "instruction": "List five titles by Veronica Roth.",
+    "content_sha256": "59cbe85ee55cac11871e2ab4f47c1825342615d813321ab122ec50c90a7e6775",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "02e6759cb4fd24c51f3f29826b05de5ce001b0920569b6db76b9120e37dba56e"
+  },
+  {
+    "dolly_id": 12085,
+    "split": "held_out",
+    "instruction": "Give me a listing of ways I can incorporate physical activity into my daily routine.",
+    "content_sha256": "0e29678112455d8b856e4d3bd65c4fe83a280ac8f92a68ed9ea1673055b8d99b",
+    "category": "brainstorming",
+    "tok_len": 16,
+    "allocation_hash": "02f22f57cb0e82438e07dfd0c74a60e7e3da83c1bc76e9dedaed4279568feb9c"
+  },
+  {
+    "dolly_id": 12345,
+    "split": "held_out",
+    "instruction": "Does platonic love hurt?",
+    "content_sha256": "c1b390c751b90642af9d2694b9d534cb86e639e7638250c552675d4364e9edb2",
+    "category": "creative_writing",
+    "tok_len": 6,
+    "allocation_hash": "02f5c385ada14b8d78a7520982e035c97ae3a7ca4c12101ddbf2363f299ada6f"
+  },
+  {
+    "dolly_id": 6142,
+    "split": "held_out",
+    "instruction": "Classify the following games in ascending order of computational complexity: tic-tac-toe, chess, checkers, go",
+    "content_sha256": "f0b9adb96ed0076435197f4c32c5eaf06dd3089ada74de3b647fd7374ccff03e",
+    "category": "classification",
+    "tok_len": 22,
+    "allocation_hash": "02fc6bebdccc5f691fbf44634331bcaeb5707980bd694e05efba5e273328b833"
+  },
+  {
+    "dolly_id": 14787,
+    "split": "held_out",
+    "instruction": "Which bird has the longest wingspan?",
+    "content_sha256": "8bb9b939bd7120084176d9f4a63bf313f7cc66990f079b5c94f28f4edc168142",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "02fde6747d57960ba7ac3591f2b0411c3be748bd8ed5e81ad8115c91d8321325"
+  },
+  {
+    "dolly_id": 50,
+    "split": "held_out",
+    "instruction": "Think of some family rules to promote a healthy family relationship",
+    "content_sha256": "7b8a551b12325d278aaf48dc2a7ad4f59ebf03e1cb175b303ca9bcac4bf699bf",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "030496f4359590beb05ceb49adbdd01708de9ef3d7452d2bbd93bb6b56770e01"
+  },
+  {
+    "dolly_id": 5749,
+    "split": "held_out",
+    "instruction": "Think up of a bunch of different dishes you could make with a pound of potatoes",
+    "content_sha256": "49658211779cc3794715f0e9bcf11b8dc2cb293d0040db1ce249a1fd6c746aaf",
+    "category": "brainstorming",
+    "tok_len": 16,
+    "allocation_hash": "030511a8d584f775d4a5e1f2049f5e949d1a20f4c32e40a2bd5249544480f410"
+  },
+  {
+    "dolly_id": 12955,
+    "split": "held_out",
+    "instruction": "Is this a list of universities or companies: Alphabet, Microsoft, Dell, John Deere, and JP Morgan Chase?",
+    "content_sha256": "ef0a6bcd807efb86c8bded0a882104d1faa104addd86bef050d8478e2271e35f",
+    "category": "classification",
+    "tok_len": 23,
+    "allocation_hash": "0309c170ce1e4452d2057646f43a3116ce37a0e0255f0f7fd53d55ba9c2a5220"
+  },
+  {
+    "dolly_id": 5677,
+    "split": "held_out",
+    "instruction": "What is the difference between men's and women's lacrosse",
+    "content_sha256": "2d13950303b321a45dd4ee3b35842042c71aff34a63db4921886ab02b576ff2d",
+    "category": "general_qa",
+    "tok_len": 13,
+    "allocation_hash": "030e74f0d0682ba732d0dd0a9bab178ad907f7e2dd8135115fd58410f0fe5bf7"
+  },
+  {
+    "dolly_id": 5944,
+    "split": "held_out",
+    "instruction": "Who are the most famous cricket players of all time?",
+    "content_sha256": "84d0af7034abb170356e4d5e516c0df71a598305fe765f05315c3042e73902ad",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "0314a28507fc28511e4d990a676280fabfe111958d326dad15d2e47063b447a8"
+  },
+  {
+    "dolly_id": 9126,
+    "split": "held_out",
+    "instruction": "What are the benefits of in-person learning versus online?",
+    "content_sha256": "9f0f0c26b4533f8926081a4e9e0a362a45521aec8c2da0df7ce09811c1cd46c2",
+    "category": "general_qa",
+    "tok_len": 12,
+    "allocation_hash": "032df8056d028cf1ba4e43e18b2aa9bc2d31b0319cea450fd08435dab1533658"
+  },
+  {
+    "dolly_id": 4960,
+    "split": "held_out",
+    "instruction": "What is the best watch in the world ?",
+    "content_sha256": "a6ece4f6b0ccbfc91a0b242d9aa2d276f8ecd9d0f58457eb550c2e4ef083365c",
+    "category": "creative_writing",
+    "tok_len": 9,
+    "allocation_hash": "034f052f1389711bda9bc5a7c26da3ee4a1ce8861fa4b16179d3eeb24d53fc32"
+  },
+  {
+    "dolly_id": 5956,
+    "split": "held_out",
+    "instruction": "Is caffeine good for mental health?",
+    "content_sha256": "c4624e1fa7960e8b4cf58d429dc183112306d3405eb05f543e9d00921b42ec3b",
+    "category": "general_qa",
+    "tok_len": 7,
+    "allocation_hash": "035d956105e18179c0dd417e88afa8cd2d63e1b662623735bd9cb789cd2d96e9"
+  },
+  {
+    "dolly_id": 12296,
+    "split": "held_out",
+    "instruction": "List high quality binge worthy tv shows",
+    "content_sha256": "a77412a7293ca22835de5d8a8fadc07f280a4d0bff270812cf2ea4671bc0856b",
+    "category": "brainstorming",
+    "tok_len": 7,
+    "allocation_hash": "035fcd8abc888f32a63127027b76fa0ca9bb9dff6f81cab74fd270ea7839ac5f"
+  },
+  {
+    "dolly_id": 10830,
+    "split": "held_out",
+    "instruction": "Identify which instrument is string or percussion: Wobble board, Scheitholt",
+    "content_sha256": "b8a9e1adb598ddd550f571b196219ab1e842839aad418c5df90b4de39a66d15f",
+    "category": "classification",
+    "tok_len": 15,
+    "allocation_hash": "0361e5ab4701c53fb09f1bc53e417db0b019b83ee764e75344f32cec3e3c6b78"
+  },
+  {
+    "dolly_id": 8393,
+    "split": "held_out",
+    "instruction": "What is Bayes theorem mathematical formula",
+    "content_sha256": "63f4dd00419f14048cf3c71876750eaec9211e1462b2322d6309773a39718e29",
+    "category": "brainstorming",
+    "tok_len": 6,
+    "allocation_hash": "036dd6283c84202ebcf6262a53ef954735180e339b8df184b60cedc2a73fbdea"
+  },
+  {
+    "dolly_id": 5526,
+    "split": "held_out",
+    "instruction": "What was the cause of Michael Jackson's death?",
+    "content_sha256": "047ed1a4136ee1a72d0a46c045c156d290fec43de3e879d7d46f548b1665668f",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "036ecf36906778b9db8a435e4c28bc0302bb736e26d11f2d251c5daaa762106f"
+  },
+  {
+    "dolly_id": 1484,
+    "split": "held_out",
+    "instruction": "What is best creator's platform",
+    "content_sha256": "6d09b3d36be53a315723c3c11249005b6a24b1099026f5946b7577d69dcec8b7",
+    "category": "brainstorming",
+    "tok_len": 7,
+    "allocation_hash": "036fde084dcc06ecb9e0cc23ad1a126ad18877a0abfa414bfae4221de9e19cd2"
+  },
+  {
+    "dolly_id": 12951,
+    "split": "held_out",
+    "instruction": "What is the legality of owning an alligator as a pet in the United States?",
+    "content_sha256": "45a08930eabe72009bf6031ab0a60bc7099b57ac6298540da45959725cc97c1c",
+    "category": "open_qa",
+    "tok_len": 16,
+    "allocation_hash": "0378e403a46b49fe7738dacb61900b1eac63288951e1ab826a0dc64fbfd2d1df"
+  },
+  {
+    "dolly_id": 6317,
+    "split": "held_out",
+    "instruction": "How can UV light be used?",
+    "content_sha256": "e91f5909982c34fe2d495456b1b9bb6b35d838ebf4252ab141b35621298c11d1",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "037a1fe56b5be38fd04b19f7c381a486c9d8ae8d03aba8cb932fbf7bfc280e15"
+  },
+  {
+    "dolly_id": 1362,
+    "split": "held_out",
+    "instruction": "What are some of the most popular undergraduate majors at UC Berkeley?",
+    "content_sha256": "69e599533c5542a3322e87b34190aa4d644426459aa26d98fb61673f0a3eaa66",
+    "category": "open_qa",
+    "tok_len": 13,
+    "allocation_hash": "038825b529e3f9cd1c8e08c24bb754ad731ba78341ba63e2c2a438f4f9525f6c"
+  },
+  {
+    "dolly_id": 11778,
+    "split": "held_out",
+    "instruction": "What characteristics are IPAs known for?",
+    "content_sha256": "8f363945d0b476216a48f8c7137272c861dea3c3b1e189c3709577fae4bcb459",
+    "category": "general_qa",
+    "tok_len": 8,
+    "allocation_hash": "039320f5a66fe82fed1044288e46aa0e5610b1a2634b05e29f84f17d4b2f71f3"
+  },
+  {
+    "dolly_id": 10396,
+    "split": "held_out",
+    "instruction": "Neeraj Chopra the Tokyo Olympic Gold Medallist won the Silver Medal at",
+    "content_sha256": "4a28da622983c366258dfb5a3abf1a827b941966ebcb6ac88f7eba6c317e19cf",
+    "category": "open_qa",
+    "tok_len": 15,
+    "allocation_hash": "03967faf472602979e21e1081730d50c2ceb1aad44cb5ba3f7a1ec2e676758af"
+  },
+  {
+    "dolly_id": 8992,
+    "split": "held_out",
+    "instruction": "Give me the instructions on how to escape a labyrinth",
+    "content_sha256": "47d9f0b59c4b73c70296021f565c39ae5b3c155961cb78d32a0128c509ef3dc8",
+    "category": "creative_writing",
+    "tok_len": 10,
+    "allocation_hash": "03a41dec080fb04512e37b7e07a2c38512e77b21c0fec5d2e07b200db7a69354"
+  },
+  {
+    "dolly_id": 13778,
+    "split": "held_out",
+    "instruction": "If I'm strong in the gym will I be good at rock climbing?",
+    "content_sha256": "580dbce5ca64cbd6473c5199767a3ee364249b8bbe29375c6c2f802a49bfb07f",
+    "category": "general_qa",
+    "tok_len": 16,
+    "allocation_hash": "03afec48a5ba8ee8fea150beecc405a7e54114966a0e8f42a60965ef7624abd3"
+  },
+  {
+    "dolly_id": 324,
+    "split": "held_out",
+    "instruction": "Which country makes the best coffee in the world?",
+    "content_sha256": "9a2e28710850e38a94bf14eb79d18157621737d5758bf067b61675e7f1767655",
+    "category": "general_qa",
+    "tok_len": 10,
+    "allocation_hash": "03bbb27fa0adaa733b3d72164dcaeca1e5493b5e9893ba5a53c2d7fe7fec0ba7"
+  },
+  {
+    "dolly_id": 578,
+    "split": "held_out",
+    "instruction": "What to do in Mexico City?",
+    "content_sha256": "ec1a08283af56b42565f23104b91894553fe593c78038cb452b134bb8b6ffb28",
+    "category": "general_qa",
+    "tok_len": 7,
+    "allocation_hash": "03bc2155cf832086d6573d8c700efe7d7ddc681cd4fe104c6b247e5704c8bd95"
+  },
+  {
+    "dolly_id": 1082,
+    "split": "held_out",
+    "instruction": "Total 15 PMs served under Queen Elizabeth II, name the last PM",
+    "content_sha256": "0ab8371ab20f84ebbbc38d790b3e9c2ff1e43d6f597d6b348767a4abed1cdeaf",
+    "category": "open_qa",
+    "tok_len": 16,
+    "allocation_hash": "03c82677db304afe7b91f89f9259a0016413d6b5d184e33affa44c8e7f57b884"
+  },
+  {
+    "dolly_id": 6584,
+    "split": "held_out",
+    "instruction": "Which months were added to the calendar and why?",
+    "content_sha256": "996b54793dc0cd7535fc45b5e31e5c482ef536443666c0c55751e09aeb49791b",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "03e67c80d525c54801d46e9e779feed85849a7d47c2dda82239906eadf3b047d"
+  },
+  {
+    "dolly_id": 1094,
+    "split": "held_out",
+    "instruction": "What are the pros and cons of high interest rates?",
+    "content_sha256": "2340d90174e88d253fa3f16f6aec1d563bc845ea9bed8e40132d823035890d70",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "03ee86f12f150149db640f526ad7bf3f909721dd893684f8e9176e5758a9a120"
+  },
+  {
+    "dolly_id": 3698,
+    "split": "held_out",
+    "instruction": "Identify which car manufacturer is French or American: Aixam, Buick",
+    "content_sha256": "7f016abc7f5b63d33860c10682dc799dec9fca8fccf989edd646363ccef62114",
+    "category": "classification",
+    "tok_len": 13,
+    "allocation_hash": "03fa3f97078a746fde9193a28cf00ff4683e6c4377cf2da11d52ed38b740f96d"
+  },
+  {
+    "dolly_id": 7837,
+    "split": "held_out",
+    "instruction": "In the Impeachment proceeding against Donald Trump, the motion was passed by?",
+    "content_sha256": "3083af4a440b2279e1322f34056d874328e8920e123f098cd1e5ccebc6d0a2e6",
+    "category": "open_qa",
+    "tok_len": 16,
+    "allocation_hash": "03fbbcecb55b2acdb7f739863774529b9f892f0459160c8d317e6f0abf51b207"
+  },
+  {
+    "dolly_id": 12766,
+    "split": "held_out",
+    "instruction": "Write an analysis of the meaning of the green light in the Great Gatsby",
+    "content_sha256": "649caf71505de2630cf72b1f764b1ab605b73894e55105729f26e26d4912cea3",
+    "category": "creative_writing",
+    "tok_len": 14,
+    "allocation_hash": "0402350575282e8419812a23cf9a54ed6b97ac65c6f01d49b58e6bf353e120e3"
+  },
+  {
+    "dolly_id": 2652,
+    "split": "held_out",
+    "instruction": "What is heliocentrism?",
+    "content_sha256": "a803b569f6d22645d5f2df5db86781347bd9a282250be43f4a68c24d9435e205",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "0405517a73e4b44c89c9fd88f33d363552cbc9321c6808ba7a7e77444ad24fb2"
+  },
+  {
+    "dolly_id": 6462,
+    "split": "held_out",
+    "instruction": "Give me a list of summer activities for an 8-year-old.",
+    "content_sha256": "3e62c84da02809d15a7c7bf3d86f1f11b84685a37e0aa302f8208a05d5e31649",
+    "category": "brainstorming",
+    "tok_len": 16,
+    "allocation_hash": "040f6f92a0b6c8b8e77ab63660aa9c44e222b99fc920b16ed8ebf49aa16bf7ff"
+  },
+  {
+    "dolly_id": 12052,
+    "split": "held_out",
+    "instruction": "Write a brief history of the world as told from the perspective of a redwood.",
+    "content_sha256": "8f6b4d1b1da35015ffc4135b9925fc85500286fdd823eb6a94f89914764ba1d4",
+    "category": "creative_writing",
+    "tok_len": 16,
+    "allocation_hash": "04265cb9c3cc4619c4dc0b99516ad2730290450bbdd02b9c30804f4a8aa619a1"
+  },
+  {
+    "dolly_id": 9359,
+    "split": "held_out",
+    "instruction": "What are the best places in the United States for a golf trip?",
+    "content_sha256": "ba44a7363b9d625cb0567e5c9b2591fc3a9aca00c3278e609fcd4a5a7e11c6db",
+    "category": "brainstorming",
+    "tok_len": 14,
+    "allocation_hash": "042b69d89cf372f6badbee6017c63bb215ca7e303b4b372561b526aee4d95d35"
+  },
+  {
+    "dolly_id": 1989,
+    "split": "held_out",
+    "instruction": "When and where did Pokemon Go first launch?",
+    "content_sha256": "0892ee23a0699509dd1130646b1ad14bf60038a3a3740c050377bc4b75b17c88",
+    "category": "open_qa",
+    "tok_len": 9,
+    "allocation_hash": "043166abc0aae9ed3553815bbf7202cec942c860a0794a3840710f4036575526"
+  },
+  {
+    "dolly_id": 526,
+    "split": "held_out",
+    "instruction": "What are common swimming strokes?",
+    "content_sha256": "30a80dfd1d3cd434ee92109e4e4d53337a9c37272c4c42ef15d1f7fb040e0adc",
+    "category": "brainstorming",
+    "tok_len": 6,
+    "allocation_hash": "043d524cc1485302072c338f4e8d542555a69fb2add251d618707d99d99b4668"
+  },
+  {
+    "dolly_id": 4835,
+    "split": "held_out",
+    "instruction": "What is the difference between retinol and tretinoin?",
+    "content_sha256": "a166c03c535ecd5cd9a05e6a6cef98e5f4985aa214d6b71235a8c1b5fd84a942",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "045241888ea27b45cdcd1e1d4b6753fc3af2e9744deb4f26c7f51abfb5810e91"
+  },
+  {
+    "dolly_id": 2823,
+    "split": "held_out",
+    "instruction": "What is the difference between Eczema and Atopic Dermatitis?",
+    "content_sha256": "b56ade6899b04a4b3bfca82ca8321c91bd2554d3b78f1b6b240653176e1111c9",
+    "category": "open_qa",
+    "tok_len": 13,
+    "allocation_hash": "04593a094542867fa9211a1b58625e9ba8da8e0bc420fefbc04f83ec339fa1fd"
+  },
+  {
+    "dolly_id": 12981,
+    "split": "held_out",
+    "instruction": "Give me 5 ways to reduce my electricity bill.",
+    "content_sha256": "a3cd2e1b0f1b26e7edb983883146c767a933c2a6f0379541ef4650b3cec30997",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "046b17c8b68ed5abb0dc65cebeeb048d03dcf032325f63a3717a6aa4e2233032"
+  },
+  {
+    "dolly_id": 4973,
+    "split": "held_out",
+    "instruction": "Why do people like to drink tea?",
+    "content_sha256": "13e72e5fd639d3d11ac2fcc491a3791cfed6df91b17d15000d288b5c2f9d5b8f",
+    "category": "general_qa",
+    "tok_len": 8,
+    "allocation_hash": "046ed939640c2a0f240e16a80160f5d80cedfd3abb0bd0172f48ca87d5e25072"
+  },
+  {
+    "dolly_id": 14368,
+    "split": "held_out",
+    "instruction": "Creative ways to call in sick at work",
+    "content_sha256": "710fb1a08b85a88bef9824fd8e84f141a78d0903edfb217590c710592bf2fece",
+    "category": "brainstorming",
+    "tok_len": 8,
+    "allocation_hash": "0470aa88671536a9bfb3c6dfd4045d63524717f34ad96041e2f3a3148d392e43"
+  },
+  {
+    "dolly_id": 12331,
+    "split": "held_out",
+    "instruction": "Give me a bulleted list of who received the last best player awards at the World Cup.",
+    "content_sha256": "3732cb26064befa7f89f975226e4f925707dffe44696b5c1e0a902c590545686",
+    "category": "brainstorming",
+    "tok_len": 19,
+    "allocation_hash": "047ddb212833d5fa2a58eb88dbd7e86a3f399bb41c04799757d61b50bd8b2179"
+  },
+  {
+    "dolly_id": 13000,
+    "split": "held_out",
+    "instruction": "Write the scariest short story possible",
+    "content_sha256": "32e9950be983af886fa3bab5cd26229dba725bf5fc2dafcd7910c83139652d6e",
+    "category": "creative_writing",
+    "tok_len": 7,
+    "allocation_hash": "047fbd34605412027a4e1867604dab833febfa64f7611a1f588e1f252a99a1fb"
+  },
+  {
+    "dolly_id": 7283,
+    "split": "held_out",
+    "instruction": "What is single-cell sequencing?",
+    "content_sha256": "34e7a0162ecbfa2163869cc7ee894c2a5940367860d7a832d8371d3ec5d416fe",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "048010d6823e58fbcb2e89340f67cf82974efdc4cd6a480184e65ac4353b9461"
+  },
+  {
+    "dolly_id": 12867,
+    "split": "held_out",
+    "instruction": "Name some  active NBA famous players",
+    "content_sha256": "f86833c9e90b699e50c1d4e6c0d4ae27ebaa7801bfb123c9a40a446e28e30936",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "0483127f5a863159482e384954de79f835a683a7091b117f2c7b79d9eec6e4b8"
+  },
+  {
+    "dolly_id": 8836,
+    "split": "held_out",
+    "instruction": "How does a push rod internal combustion engine work?",
+    "content_sha256": "c83b5740a79b8b0a8b646d06fd5bf35a4e31e6c768a68390e045e92db37707a5",
+    "category": "general_qa",
+    "tok_len": 10,
+    "allocation_hash": "04839fd80abd22230827b295e19ecbb203ba7dc49288dc67190a8f9c4ccad4f2"
+  },
+  {
+    "dolly_id": 4549,
+    "split": "held_out",
+    "instruction": "How long do you need to train before running a marathon?",
+    "content_sha256": "e531b99b084335f15cff2ece3fc57c0494e3b1e7d538ed7e6b89e95fbbf40881",
+    "category": "general_qa",
+    "tok_len": 12,
+    "allocation_hash": "04849d4baea8cd2d6a5e8b3e812bad93e47d2863971db65009cf4d228bd186dc"
+  },
+  {
+    "dolly_id": 13102,
+    "split": "held_out",
+    "instruction": "Who was Hitler's mistress?",
+    "content_sha256": "c234e1ecc4e9f6de8182d0fea91e6f09d1ee5a130746e5b5c796bbda821630c1",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "048a13a3341d5b548171fefc1282872e8366d8bfee5e9d952e45ba60d524a108"
+  },
+  {
+    "dolly_id": 10209,
+    "split": "held_out",
+    "instruction": "Classify the following animals as mammal or not: whale, kangaroo, mouse, snake, fish, human, koala",
+    "content_sha256": "63e00e57f810f32b351f34e72037c2d1aa74fa5915f49628342eb0fb4d44f6a4",
+    "category": "classification",
+    "tok_len": 22,
+    "allocation_hash": "049127e8206a00f46ef2ff139464e124770d48446a164bdb562ce6a4ba1ec57f"
+  },
+  {
+    "dolly_id": 1422,
+    "split": "held_out",
+    "instruction": "What are the names of Daenerys Targaryen's three dragons?",
+    "content_sha256": "f41d9e241ad584a4918106f20a64712eb0459be9113dd754be2cdf4846a7db9a",
+    "category": "open_qa",
+    "tok_len": 14,
+    "allocation_hash": "0491ded4c33fb82394373aa5617c0d40ecb28c079d85351ff7020b8116c74c67"
+  },
+  {
+    "dolly_id": 10701,
+    "split": "held_out",
+    "instruction": "Why are mama's boys the worst partners?",
+    "content_sha256": "aa685843d3c9880f91d71acab16dbe8e1a13818ebf8280ab5db8108be63ed74d",
+    "category": "general_qa",
+    "tok_len": 10,
+    "allocation_hash": "049ad6239d8f18653437e0ff46c6a763d2050f766969847a1f6dab41b27cf63d"
+  },
+  {
+    "dolly_id": 8955,
+    "split": "held_out",
+    "instruction": "What are some of the challenges when walking with crutches?",
+    "content_sha256": "cfef64607c613c502a933e7e9ead7aa99837a82f66c3b005fe22701ce33fe6d6",
+    "category": "general_qa",
+    "tok_len": 11,
+    "allocation_hash": "04aed8fc0d600a5289054f62330b01124317432feadf97d47c2b345f40078609"
+  },
+  {
+    "dolly_id": 11338,
+    "split": "held_out",
+    "instruction": "Why do people travel to Puerto Rico?",
+    "content_sha256": "f98de858cfe0b1359a00761ce17b61932b2dc118765bb50bf492ad72fc3c4680",
+    "category": "general_qa",
+    "tok_len": 8,
+    "allocation_hash": "04b259b47646a2210ebe255bf42a966e837ab807250152d00691131c781c2940"
+  },
+  {
+    "dolly_id": 5697,
+    "split": "held_out",
+    "instruction": "I want to develop OKRs for my team at work. What process should I use?",
+    "content_sha256": "1598885ae571be43b13c32709ce9e5105f49fc0bf87641013b0fee3f4febc5c4",
+    "category": "general_qa",
+    "tok_len": 18,
+    "allocation_hash": "04b95d9586dbfc0808e2ba722f0b965d36f1349ac585831f61ce0bde4035b6d3"
+  },
+  {
+    "dolly_id": 7760,
+    "split": "held_out",
+    "instruction": "Which soccer player has the most number of career goals?",
+    "content_sha256": "1eb34872a5eb2a1bc4247bc1dac82a7f707d6addfaf549efdafc5b4301fa104d",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "04bd043e87c5547b9519025fe73db212c230a98b3d65ab28796bf861aa885bca"
+  },
+  {
+    "dolly_id": 11055,
+    "split": "held_out",
+    "instruction": "What are the best books of the 19th century?",
+    "content_sha256": "1e5b5d13888180731138fadcde4203a679bd6bb2bbc903f90a09f6c55fd5d140",
+    "category": "open_qa",
+    "tok_len": 13,
+    "allocation_hash": "04ca3911f5e1e97e8fca1295509f451312f17268f6500061b8254324db50e70a"
+  },
+  {
+    "dolly_id": 3712,
+    "split": "held_out",
+    "instruction": "What is a Treasury Bond?",
+    "content_sha256": "462609d0924f948fe9da704d2353565e91877ccee90c6e6729b81741c8ab9489",
+    "category": "open_qa",
+    "tok_len": 6,
+    "allocation_hash": "04ca7cfa8fb011d28b53a2951751b1818c9dee37730184f161de3f9b79a76639"
+  },
+  {
+    "dolly_id": 12114,
+    "split": "held_out",
+    "instruction": "Name some of the popular sitcoms from 1990s",
+    "content_sha256": "a3039d61df7d1821cc158f4042ef4b3441ce1153c16f53cadee8a8795b57d696",
+    "category": "open_qa",
+    "tok_len": 14,
+    "allocation_hash": "04d364029382058cf776251a223beb547f8d7f0cda6c57e2efa214c390beec6f"
+  },
+  {
+    "dolly_id": 2638,
+    "split": "held_out",
+    "instruction": "Give me 5 examples of why using a prime lens is better than a zoom lens for photography ?",
+    "content_sha256": "7428232b1a105179c5652632ccbd8e35c3b38bcf24bcefabf6811cd80dbde3df",
+    "category": "brainstorming",
+    "tok_len": 20,
+    "allocation_hash": "04dc6f600dc20cfc620b48750dd8699066b8ce02ef446b06cd443bebfb4c9c02"
+  },
+  {
+    "dolly_id": 1212,
+    "split": "held_out",
+    "instruction": "Which countries are part of the five eyes alliance and what is its purpose?",
+    "content_sha256": "eeb55d18f999988bc0752ca2fe02c620aa20d161cc17deba10f0faf529031ca8",
+    "category": "general_qa",
+    "tok_len": 15,
+    "allocation_hash": "04de205af4d5516f56cdf1236d25948e9cce14e65d493a984fdd911b073f7d7f"
+  },
+  {
+    "dolly_id": 4288,
+    "split": "held_out",
+    "instruction": "Why do you love Biriyani?",
+    "content_sha256": "7e20e3795970bc460a268dd2e4502de6d44e861712945b65f06ce6da4a9ad235",
+    "category": "brainstorming",
+    "tok_len": 8,
+    "allocation_hash": "04e4e9d93cdac3e6833b579cc8c9f665cc6d3b1300c4d4ea25d138d35dd229f0"
+  },
+  {
+    "dolly_id": 7013,
+    "split": "held_out",
+    "instruction": "What is a safe temperature for a hot bath?",
+    "content_sha256": "c3da761992fc4d6bd6d6b4b632241df605a58091ab458a2d08c187cbb087e48e",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "04fe0297a1ddb30aba5a8200d6969dc9bb9f03cc9f1a11248ef07ba3769452f0"
+  },
+  {
+    "dolly_id": 5833,
+    "split": "held_out",
+    "instruction": "What do you understand by Boosting in machine learning?",
+    "content_sha256": "52a4caad365ebbb7e9ce8388317837a4ab34e09d1ba57e1a17b3dc6188ca9899",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "04fe7d7795639b5321eb31fbfbf37b60acc62a79b51e8993945ed362b5f01820"
+  },
+  {
+    "dolly_id": 4574,
+    "split": "held_out",
+    "instruction": "What is the sun made of?",
+    "content_sha256": "4f96ea86bf6d7f8167509319f9f9f8eeb404e0dc0607168363b4fc4b8f06e022",
+    "category": "general_qa",
+    "tok_len": 7,
+    "allocation_hash": "0501933262be81434c04b9a77f730803098df5c312b36724342982d3ea746a2f"
+  },
+  {
+    "dolly_id": 3165,
+    "split": "held_out",
+    "instruction": "How do you determine the severity of vulnerabilities.",
+    "content_sha256": "8aa88f12d03be46856278f9e1289e4db452b8d871bf6fc1e341982ae5546aa73",
+    "category": "open_qa",
+    "tok_len": 9,
+    "allocation_hash": "0512e5354ca4d3150b668a13d0b76b35110507d844d234eaed23a790bc640915"
+  },
+  {
+    "dolly_id": 5506,
+    "split": "held_out",
+    "instruction": "Classify each of the following as flammable or non-flammable: coal, wood, newspaper, water, glass",
+    "content_sha256": "e593449aa692862c0f66aaf4ae441c39f56354abff4badad35bb4b4b240e5dc2",
+    "category": "classification",
+    "tok_len": 22,
+    "allocation_hash": "05140ca3dbe093a3eaaa0cecaa2c645736c90663e818d78c9f44305064e6bc8e"
+  },
+  {
+    "dolly_id": 6844,
+    "split": "held_out",
+    "instruction": "What are the four ingredients for beer?",
+    "content_sha256": "3bd444cf2798541d9b38696d8031f2832823e7c6e8031d85be68ee1bcb95fb31",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "051aa9d877b4bc0536848c03d51caa64f8f468f6bbaee49036c873feab3f1d80"
+  },
+  {
+    "dolly_id": 11971,
+    "split": "held_out",
+    "instruction": "List five titles by J.K. Rowling.",
+    "content_sha256": "bafee1f9a5a4fae0d7070e57b413ac83f14e3ba9d4531ee85a06562273d027b2",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "051edfc216bb8df7bd72eec0ff7ec4b469838017328e8a883e4c5b94b9f06347"
+  },
+  {
+    "dolly_id": 8071,
+    "split": "held_out",
+    "instruction": "What is the best BBQ restaurant in Raleigh?",
+    "content_sha256": "3f81803226862d3a81e5722371841b02a84ed986220cc06551ee70ff58762ad7",
+    "category": "brainstorming",
+    "tok_len": 9,
+    "allocation_hash": "051f284afec345754fc2561b9b366ddcd62d7a5bbcabe8e4f4b28b8dcf33262a"
+  },
+  {
+    "dolly_id": 4837,
+    "split": "held_out",
+    "instruction": "What are some pro tips when cold calling?",
+    "content_sha256": "bd06bebb6698dc2c0b8f92f0af7d0f3aade409e2b4c63bb74495ddd9425d27e1",
+    "category": "general_qa",
+    "tok_len": 9,
+    "allocation_hash": "05214893546d5ea7945aeba38a1493710ca96e9f7fb4209f666939cc947f7b1d"
+  },
+  {
+    "dolly_id": 3399,
+    "split": "held_out",
+    "instruction": "Who is best Alexa or Siri",
+    "content_sha256": "9beb3a5fad7a0feeabc9f2f851b18200b7d3d7c3a36fdaa29ef4071998e9985b",
+    "category": "brainstorming",
+    "tok_len": 6,
+    "allocation_hash": "052d6cee4b1fae832baead84429bf38081e729d629e416f690f9ff40f8e3d76d"
+  },
+  {
+    "dolly_id": 13469,
+    "split": "held_out",
+    "instruction": "Missy Elliott references what infamous celebrity couple in \"Let Me Fix My Weave?\"",
+    "content_sha256": "07295190575c8f713b17976a557ac151f5087b8cf78ffa46c09adc8b37d3706a",
+    "category": "open_qa",
+    "tok_len": 17,
+    "allocation_hash": "053088bc4e5bd5888f7badbe8f908040cd229f31d901fda8d03ea7410c625ae2"
+  },
+  {
+    "dolly_id": 5481,
+    "split": "held_out",
+    "instruction": "Give me a bulleted list of the seven most recent Chancellors of Federal Republic of Germany",
+    "content_sha256": "81b90844a13aa6d8a74783ab925afb6d1a9893b4381b19ef3f1539e3efe60243",
+    "category": "brainstorming",
+    "tok_len": 19,
+    "allocation_hash": "05338a2fb6c7d6fb6324fbe9b83c52770e44950cf9fbe55be48e1c6b6a88a605"
+  },
+  {
+    "dolly_id": 6425,
+    "split": "held_out",
+    "instruction": "Should differential privacy be used in the U.S. census?",
+    "content_sha256": "61bfe68e81e58bf618c2c37f3e3ccc85319acd621db3d8376bff1cfb59eac0b4",
+    "category": "creative_writing",
+    "tok_len": 13,
+    "allocation_hash": "0542460b609083fd6c00773af9ccfc9862832051e44a6a9f976dfc45c800fa41"
+  },
+  {
+    "dolly_id": 10267,
+    "split": "held_out",
+    "instruction": "Identify which instrument is string or percussion: Hi-hat, Vihuela",
+    "content_sha256": "7ac9391c7933d7eff7e1d2de5acf79253d30477c264d7498a115b8d709a7effc",
+    "category": "classification",
+    "tok_len": 15,
+    "allocation_hash": "0550542807f5276eb4ca1356d0c444588b9f7dedcc6a37c50a064116a8f86ded"
+  },
+  {
+    "dolly_id": 9438,
+    "split": "held_out",
+    "instruction": "Who is the greatest Boston Red Sox player of all time?",
+    "content_sha256": "6294e04e40c12578529de9766b3d5bfdb997fe24dad59c5d82eb96d120d46ecd",
+    "category": "open_qa",
+    "tok_len": 12,
+    "allocation_hash": "05570ee8f739f3b60bfa3b2595af3c6e3a43de05bc752b23ae4c6a3be9823e8a"
+  },
+  {
+    "dolly_id": 6835,
+    "split": "held_out",
+    "instruction": "Who is the mercedes formula 1 team principal?",
+    "content_sha256": "f6b2c4c7b927b467706584a82d7d01142c7c6a6a046e55c531a561b1cd428583",
+    "category": "classification",
+    "tok_len": 10,
+    "allocation_hash": "055d87f8b5a809c82038f354d3a4b99729448a6b8df372bcc938ec25f2a02826"
+  },
+  {
+    "dolly_id": 14938,
+    "split": "held_out",
+    "instruction": "What are some low fat snack options?",
+    "content_sha256": "ed020299123df2f506036aa06fe5accd250d70b0e4bf580f877edc1dc78364b9",
+    "category": "brainstorming",
+    "tok_len": 8,
+    "allocation_hash": "055eb0167ada7bc3dd178bf394dbe7050aa73967ff1cb6f0072957048f13c77c"
+  },
+  {
+    "dolly_id": 6649,
+    "split": "held_out",
+    "instruction": "Why do gas prices go high in winter",
+    "content_sha256": "a04de5ed0725ed6c1b8596c1e2aefa8876c39a4f8301b471af5d73c63e81322d",
+    "category": "general_qa",
+    "tok_len": 8,
+    "allocation_hash": "0564069064a16becb899448c1fc50ef33ce032b3db65f58cba559a427fa11cca"
+  },
+  {
+    "dolly_id": 10878,
+    "split": "held_out",
+    "instruction": "How do you get your pilot's license?",
+    "content_sha256": "e6c2f5c7c05f24f359bcbd5373d912a3db1fb06443d9ada2d087db0a198c62dc",
+    "category": "general_qa",
+    "tok_len": 10,
+    "allocation_hash": "0564ef67edcad602b3d97541e0b8012d62e8cf7a43161cb5becdc8fbc1eefe29"
+  },
+  {
+    "dolly_id": 11475,
+    "split": "held_out",
+    "instruction": "What is the best way to handle depression",
+    "content_sha256": "cbd8481597fb15520bae85c485f47cd57800b43e46fe6e31dbdb39b5c1f3e08b",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "05668474a2399e8b212388291f24832ad061ee550627af30ddce1f9cfb20e153"
+  },
+  {
+    "dolly_id": 864,
+    "split": "held_out",
+    "instruction": "write short essay on Neil Armstrong experience on moon",
+    "content_sha256": "f417f34818341f99d9ad9c390ff10f3cc99f94ae8a41e3937780fbbcf691a0b3",
+    "category": "creative_writing",
+    "tok_len": 9,
+    "allocation_hash": "057141b6816ba78537f2b6fee0b123672ee88908afbbac55f626ed70e1b084f0"
+  },
+  {
+    "dolly_id": 8275,
+    "split": "held_out",
+    "instruction": "Why do people like pickleball?",
+    "content_sha256": "1e547566b1a2062bf1df0889d98eab606ef94dd9e03c7249b730a717a5a4093d",
+    "category": "general_qa",
+    "tok_len": 7,
+    "allocation_hash": "05723f233e4fd7224a062d0e5000e4630da6104484e511af689bd5d5f54c6c16"
+  },
+  {
+    "dolly_id": 29,
+    "split": "held_out",
+    "instruction": "Who became king of Holland in 1806?",
+    "content_sha256": "a9c6794ac12ae04f6b1236005822a59f5a74f7e1e6b2f31194f22af2ac37c14d",
+    "category": "open_qa",
+    "tok_len": 12,
+    "allocation_hash": "05794a597ea72d32df786334bcff2d0e3b805061152aff4659f4b28dc0eaff1b"
+  },
+  {
+    "dolly_id": 10579,
+    "split": "held_out",
+    "instruction": "Name some popular computer games from early this millenia.",
+    "content_sha256": "2ad269922419c7fb1219364c63837d6bf572d0183afb73b208b9d09c55239616",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "05862810a44532c3f9cb100ea9d3580ffd5affbab9cb12c10a4e7bf467ec6dea"
+  },
+  {
+    "dolly_id": 569,
+    "split": "held_out",
+    "instruction": "Classify the eight planets of Earth's solar system as rocky or gaseous, according to their primary composition.",
+    "content_sha256": "342d8e0ad7e6a73a13fb28ad1d639e4802641af9917fd4e700435f566e02e7ff",
+    "category": "classification",
+    "tok_len": 21,
+    "allocation_hash": "059611b6f9361d6f4ac23a6a20c8b1b769c0cfbdfeb8590de87005b116ab2016"
+  },
+  {
+    "dolly_id": 7961,
+    "split": "held_out",
+    "instruction": "Where do sloths live?",
+    "content_sha256": "75cc7129077e946d9320488441348ce8c654dbfe9e9457f2bdc7039dc9aa0708",
+    "category": "creative_writing",
+    "tok_len": 6,
+    "allocation_hash": "0598cf3e278e63c4323f60055b5d2efe2e08fcdaa25f10dc9581ce50a4ea53b7"
+  },
+  {
+    "dolly_id": 4476,
+    "split": "held_out",
+    "instruction": "What is the largest city in Ecuador by population?",
+    "content_sha256": "4b03acb9b76153dc01daba7900c974a6422a31ebcea5a29d8e4d6f71bf650a94",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "059f05fd9c95b195951d444a5ac76594ecbcbfa00485bef78eed13dd2e345bfa"
+  },
+  {
+    "dolly_id": 900,
+    "split": "held_out",
+    "instruction": "Name a style of hot yoga.",
+    "content_sha256": "f8ef0df4b219ff76728e5d94de89847d3c6e0eda722a9c891ddd21a78d609a34",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "05a82036be7f2b6b160d706d9b3d56c14891ea580b53013b7cb225c6bd7b05d9"
+  },
+  {
+    "dolly_id": 14024,
+    "split": "held_out",
+    "instruction": "What is the largest city in Oregon?",
+    "content_sha256": "fc5fd352d86e5a8041e438c1548ad2e3e1461961c9a09a3313ccaabba30ea410",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "05ad73e70d3f854a2f32ced42334d7e05fc93daeb2f3b3b3d28888e8bdc14a1f"
+  },
+  {
+    "dolly_id": 13363,
+    "split": "held_out",
+    "instruction": "Give me the list of British artists born before 1700",
+    "content_sha256": "3eb3e0961d56eae5dbef4a09ba74583a089fd6c861c1d03332d6347d0d93bdfd",
+    "category": "brainstorming",
+    "tok_len": 14,
+    "allocation_hash": "05ad9521612e31be3ba6ca0ac96b5fc8a1ca1c9d62d67fabaf348b322822e8cf"
+  },
+  {
+    "dolly_id": 291,
+    "split": "held_out",
+    "instruction": "Do cats have nine lives?",
+    "content_sha256": "2cd8c5f6aca92b08062dbdfb09254812016cbf26a8bddaa39e860fe11f785ab4",
+    "category": "open_qa",
+    "tok_len": 6,
+    "allocation_hash": "05b18191001d91dadd04a713b82070b8277981296771663096eb2e7d236821c8"
+  },
+  {
+    "dolly_id": 10754,
+    "split": "held_out",
+    "instruction": "Which is a species of fish? Poacher or Hunter",
+    "content_sha256": "db229d23c58fd26d91ded49fe662764aa85a90e4e55958e5c590909ff64fe2d7",
+    "category": "classification",
+    "tok_len": 11,
+    "allocation_hash": "05c4495fae59bfa48f19cf4317fb14afa3dbc17d966274909c32e5532a3b4ae7"
+  },
+  {
+    "dolly_id": 7023,
+    "split": "held_out",
+    "instruction": "What is the difference between cherry blossoms and plum blossoms?",
+    "content_sha256": "3061c6896ab40a15f92a1705e75384344f8026e8391d077dc5ed68576ee45896",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "05c8ad9caa7bdde7f94bccd718b378145fd621e54ddf6127cbe897ed436361bd"
+  },
+  {
+    "dolly_id": 9308,
+    "split": "held_out",
+    "instruction": "Identify which animal species is alive or extinct: Phytosaurs, Leatherback Turtle",
+    "content_sha256": "09dbe1f8ca8af8d7c9a834f2e7ceba7f239097f6526f39855296ef4abfac1d89",
+    "category": "classification",
+    "tok_len": 16,
+    "allocation_hash": "05d83f36af8f735dd798c6cf5d3bc368456e1dcddf604a0f5ab27d208f01ad67"
+  },
+  {
+    "dolly_id": 10565,
+    "split": "held_out",
+    "instruction": "What do you think is the best Kanye album of all time?",
+    "content_sha256": "2b035cdf956403c1d69d8fd6cb8396f3fce8ab122649b2f59e9ade0f2f03f0dc",
+    "category": "open_qa",
+    "tok_len": 13,
+    "allocation_hash": "05e6395dfaaa5595536e285d180703be8f66518ba4467c5e805d683434ca9d94"
+  },
+  {
+    "dolly_id": 4829,
+    "split": "held_out",
+    "instruction": "Give me a list of the best golf courses in America",
+    "content_sha256": "d56ca3601edccdd72d7d913c47a88f7e5ee207cd922d00a6b4ac8bcc994c1752",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "05ee6c8c0a15c4dfb8518b636a716476675438cac2c04d82ebaa57a1be9b44c0"
+  },
+  {
+    "dolly_id": 2982,
+    "split": "held_out",
+    "instruction": "Is it better to rebuild or remodel a house?",
+    "content_sha256": "e6f42adbf129f5aafec0d3b55e38229717c63ad1bb64bc25a1488be51fe2cd52",
+    "category": "brainstorming",
+    "tok_len": 10,
+    "allocation_hash": "060193e26377de094170b9f2f67ca279e413bb8a2e9a1a2cfea319906c9b3f26"
+  },
+  {
+    "dolly_id": 5853,
+    "split": "held_out",
+    "instruction": "What are the most common sorting algorithms?",
+    "content_sha256": "d3154d8afdbff6ae8e7311022b045384beb3a9deab3098f79e81a94e2d1d313f",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "060873537ba1dd7c804824aa7f816c57d3438a7b1671c6e9f99f471d04d80537"
+  },
+  {
+    "dolly_id": 6729,
+    "split": "held_out",
+    "instruction": "Provide a few different ideas for games for 4 adults to play.",
+    "content_sha256": "7db71a80979a331202ba004f6989197935182e1e3824093abf0ca9004db1e1db",
+    "category": "brainstorming",
+    "tok_len": 14,
+    "allocation_hash": "060a7186eca8da0e18375d947f31ea52c7f881c636783a8c4989154cfb8941c5"
+  },
+  {
+    "dolly_id": 893,
+    "split": "held_out",
+    "instruction": "Who regulates banks in Australia?",
+    "content_sha256": "dc3434a5a4a7880222d77b74ea67daf56970a07d0f40a3d10888054ea3255055",
+    "category": "open_qa",
+    "tok_len": 6,
+    "allocation_hash": "0611bec760c0c13ca15d78946767220362ff228caf475c9031d51f6264db712b"
+  },
+  {
+    "dolly_id": 1447,
+    "split": "held_out",
+    "instruction": "Write a letter to my mom to convince her that I should be able to get a cat.",
+    "content_sha256": "cccfe617f6c4a999784fe6a435b429be64e900ee0ffbb16507bc211f5af74bac",
+    "category": "creative_writing",
+    "tok_len": 19,
+    "allocation_hash": "062ee4d52c3cf87b95b5aa8f1716e3946deb2a4f573665248d0d384d66750d83"
+  },
+  {
+    "dolly_id": 4886,
+    "split": "held_out",
+    "instruction": "How long was the Titanic?",
+    "content_sha256": "1621be635863807193e78262023c1731933d8ed917b65c10dfc156554c65bf81",
+    "category": "general_qa",
+    "tok_len": 6,
+    "allocation_hash": "062f7c51d989ffb76f14e648aed6c4b51682d272781842bd95aabad1b1a5dbd0"
+  },
+  {
+    "dolly_id": 1041,
+    "split": "held_out",
+    "instruction": "What is the difference between income and property taxes?",
+    "content_sha256": "e20f6da0411c16c43c90393ec7c902515782501f45cda5425b1e0ce5c7d7996e",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "0636b5f5f6acd0cbe7b153ba16715e5c7a60d424d051bd536724a6e2c87f4f44"
+  },
+  {
+    "dolly_id": 11037,
+    "split": "held_out",
+    "instruction": "How many kids does Apu have on the Simpsons?",
+    "content_sha256": "a04994525484a9e27de260c40d1189b820ed9280418a1f00043c09eba5805799",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "0636ed7dfd3469dd9e03d96aebb40093d4beffd41d216043bd3574ef5cd0cd31"
+  },
+  {
+    "dolly_id": 8591,
+    "split": "held_out",
+    "instruction": "Give me a list of pros and cons of buying a bigger house",
+    "content_sha256": "69c8e17cea26c626d3425236ef3da8548fd98d9bef667e72805427c96fcf2301",
+    "category": "brainstorming",
+    "tok_len": 13,
+    "allocation_hash": "063ab0647053549d0bae55588715c6a2af7a76d533d5b91c76fe646ee37bbc87"
+  },
+  {
+    "dolly_id": 3572,
+    "split": "held_out",
+    "instruction": "Why do sailboats have to tack upwind?",
+    "content_sha256": "3ee264c2428c1900e50bb6588d8bb4c3fbebbedd7612d7071e040e0e6ae46eac",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "065a5757bd89bae9040d339239f0bf8111270b457a0edc871a53060a9daa0a22"
+  },
+  {
+    "dolly_id": 11867,
+    "split": "held_out",
+    "instruction": "What are the teams in the NL Central Division in Major League Baseball?",
+    "content_sha256": "bcc2f64c9ea50524ec92b6b9ae35db0a8f7a2352b3419607e135993da1c2fed7",
+    "category": "open_qa",
+    "tok_len": 14,
+    "allocation_hash": "066a6d2ed9c4501d90029b1ce98d3947f37f7cd80c53666cf80a3c6a2dc7c461"
+  },
+  {
+    "dolly_id": 11160,
+    "split": "held_out",
+    "instruction": "Identify which instrument is string or woodwind: Igil, Koudi",
+    "content_sha256": "6f42a985b86566500c8770841fdad7b10c3dc5fffd6373d2c590f35da9c5af68",
+    "category": "classification",
+    "tok_len": 14,
+    "allocation_hash": "0675e846bf397d4940f08beab4da312f62659949d0b870cf3ae091a089dd183b"
+  },
+  {
+    "dolly_id": 10314,
+    "split": "held_out",
+    "instruction": "What are the five largest countries in the world in terms of land area?",
+    "content_sha256": "5620cd640aeac76b69fdca21a7b21b90094a59b5d0f8e4b55c63bcd29556c3d8",
+    "category": "open_qa",
+    "tok_len": 15,
+    "allocation_hash": "068bb5b56d2a8a40ef3e3d50ebf6ec55b4cd34b2a166909721d387d4978a5c26"
+  },
+  {
+    "dolly_id": 9987,
+    "split": "held_out",
+    "instruction": "How many canals are in Amsterdam?",
+    "content_sha256": "399dbaf8e99816c308d5f26121f98f2c2aa34c8c5fa3ee84bbef754023d5271d",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "068c407563357e8dc19fb03693d33b509b680e1040175f039d6e7d9f1507475a"
+  },
+  {
+    "dolly_id": 1103,
+    "split": "held_out",
+    "instruction": "What are some of the benefits of learning flute as a child",
+    "content_sha256": "149b67981640d23c8f55bf1c5af2bbfcfb33a4a5ff82f3d84e54d651ffae55f7",
+    "category": "general_qa",
+    "tok_len": 12,
+    "allocation_hash": "0691dd3e3ccb25f2eec92d293056b5c33220aad79316f4e65d174e02727b2c96"
+  },
+  {
+    "dolly_id": 12196,
+    "split": "held_out",
+    "instruction": "Should generative AI be banned from the classroom ?",
+    "content_sha256": "aa4d68e4557dc5b680ebabe22c5d34ae6b07bea07074e68479682dd2d0807335",
+    "category": "general_qa",
+    "tok_len": 9,
+    "allocation_hash": "069d07aecefa038e7b5fa92a7bad6063fa2d333827f799167a7f9da27207e3e9"
+  },
+  {
+    "dolly_id": 9155,
+    "split": "held_out",
+    "instruction": "How would you train for a marathon?",
+    "content_sha256": "59cf37bfa94cfe4cd7a68f37f8b1df59e0ea2d879db04d97d11e4254bbe491e7",
+    "category": "brainstorming",
+    "tok_len": 8,
+    "allocation_hash": "069f90d729b5d271e933339f6a6ed6f03de41a9c5eb3948ff0c44142ac2c17d2"
+  },
+  {
+    "dolly_id": 5408,
+    "split": "held_out",
+    "instruction": "What are a lot of different options for traveling across New York City?",
+    "content_sha256": "6ae992b0515e15992ab3b18362ecd617d7a936f483e6ee561cde01aa007d5cd1",
+    "category": "brainstorming",
+    "tok_len": 14,
+    "allocation_hash": "06a581a7693dac0a6d81ccfae8651aebce672ee32d7b8260f7907306906bbb0e"
+  },
+  {
+    "dolly_id": 11527,
+    "split": "held_out",
+    "instruction": "What are some common errors when using Kafka with Spark?",
+    "content_sha256": "20926c39c8446a8b27eab5f7c44544490deca0a1bc8fc64fb87472971972ea7c",
+    "category": "general_qa",
+    "tok_len": 11,
+    "allocation_hash": "06a6de7120f4630d67a776519cfee37e33f833525769aefeb79d9dd422d09c95"
+  },
+  {
+    "dolly_id": 1475,
+    "split": "held_out",
+    "instruction": "What kind of Toys should be prepare for a new puppy",
+    "content_sha256": "d3f0e1f5d2b538cd209d8dd302e1a6ceddb807e97e8e5b408c4120f529857550",
+    "category": "general_qa",
+    "tok_len": 11,
+    "allocation_hash": "06a74ba3b5b63aa3a5d16525d3eac95d594eb0c66002692bd17fa012bea4bb52"
+  },
+  {
+    "dolly_id": 10883,
+    "split": "held_out",
+    "instruction": "What's the best part of having children?",
+    "content_sha256": "9020e7289ce46331caca122f4edf04b533795ff040619b31bb199d5fc2f8dd7f",
+    "category": "general_qa",
+    "tok_len": 10,
+    "allocation_hash": "06a8888e0e2ebdd436570f3d4afe499628c189b67ba6781ab51d521f7be11768"
+  },
+  {
+    "dolly_id": 5728,
+    "split": "held_out",
+    "instruction": "What are the colors of the sky during a sunset?",
+    "content_sha256": "218def6b16b733bceebbee70d33cd52fbf2577e9bf58788ce3af983a110f319e",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "06bb0b709b37fbbb3e419cbc589fb0a8e857e422aef209f54d480967b0bf88d8"
+  },
+  {
+    "dolly_id": 13374,
+    "split": "held_out",
+    "instruction": "What is Ad valorem in finance?",
+    "content_sha256": "f947dcdf304ecfdf765489f1ad159bdeb80d4bef8aac06b1ccc9461698238a3b",
+    "category": "open_qa",
+    "tok_len": 8,
+    "allocation_hash": "06bb7539c8e78519383e5e07d68eea1b84989b1246abff4c608f81b54f9c6713"
+  },
+  {
+    "dolly_id": 8813,
+    "split": "held_out",
+    "instruction": "What is India's rank in Global Gender Gap Index 2022",
+    "content_sha256": "d8f8361b485d4926c24b372d6d1df8e4a6b364011691a0da49b8b5a1813ce2a7",
+    "category": "open_qa",
+    "tok_len": 16,
+    "allocation_hash": "06bd4335b4e4f3e8e0afb0a60e6cd3649d6e4be516373222b6461ea7835517bd"
+  },
+  {
+    "dolly_id": 8327,
+    "split": "held_out",
+    "instruction": "Give me some ideas of places to visit on my next backpacking trip to South America.",
+    "content_sha256": "a27337d97edb1d6f08208f47a6cb8c1871ee626b7ea0d4be3f82830f40915d56",
+    "category": "brainstorming",
+    "tok_len": 17,
+    "allocation_hash": "06bf555d373dca27d6a1f195087b1cefcd2ef9d992630578f50976db8987ad66"
+  },
+  {
+    "dolly_id": 7745,
+    "split": "held_out",
+    "instruction": "What is the Oxford Comma?",
+    "content_sha256": "6039f8ccd7a3e17444ffe60b90f1cd226b2145b044e4f6827774abd9b4d7d28e",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "06dfce7971d1e9f69a07c17b9973cae8efd477be2880a156ff6980f688d06b8d"
+  },
+  {
+    "dolly_id": 3963,
+    "split": "held_out",
+    "instruction": "What are the top 3 GDP countries in 2022?",
+    "content_sha256": "be28aaaa3d6a24ca95f39c57328e530fd250f23bd150feeda1da757a6268055f",
+    "category": "open_qa",
+    "tok_len": 15,
+    "allocation_hash": "06e4c531e37ed62374bb7dedf0ef6ba6986f0ed4f68340c9002282bcde4bc57f"
+  },
+  {
+    "dolly_id": 2346,
+    "split": "held_out",
+    "instruction": "Why do we watch television?",
+    "content_sha256": "20df0946fa28c20b8f2078f3068753aa89e8e8b50e4a1b4679b3bae1fe39fdd1",
+    "category": "open_qa",
+    "tok_len": 6,
+    "allocation_hash": "06f464cbf4349199a17b00e69048705d184f868e4df7a0733ec818357bebb1e4"
+  },
+  {
+    "dolly_id": 13347,
+    "split": "held_out",
+    "instruction": "what is the most talented NBA basketball team of all time?",
+    "content_sha256": "18d3d4a09f3996d7ffc44c0eabc6559ef057a7bbd6371a14e0b5524c84ae64cd",
+    "category": "brainstorming",
+    "tok_len": 12,
+    "allocation_hash": "07078c35fadd997a37d5bc498a526f92061e5e7ec788ac94537ca7f89adceed4"
+  },
+  {
+    "dolly_id": 10418,
+    "split": "held_out",
+    "instruction": "What is a hunting dog?",
+    "content_sha256": "1b7fb472838334f18e749f1cd56de2e226d97595446e1eff39f6002e47e980b4",
+    "category": "general_qa",
+    "tok_len": 6,
+    "allocation_hash": "070927e2e8433b537e23b7f10255526e5762733e8b7a3d724cef8b32fd712cc8"
+  },
+  {
+    "dolly_id": 7697,
+    "split": "held_out",
+    "instruction": "What is the difference between coalesce and repartition when it comes to shuffle partitions in spark",
+    "content_sha256": "5bbb2800c6c0d1acc0574f35c94df0ccd91c7ad712fc96e1c3eca4f9297414ac",
+    "category": "general_qa",
+    "tok_len": 18,
+    "allocation_hash": "071cbba77268a53dd8213cf828ffee7954fd41f9b4fbde7ac9e1471718e44e01"
+  },
+  {
+    "dolly_id": 1374,
+    "split": "held_out",
+    "instruction": "From a financial perspective, tell me five things should be considered when retiring.",
+    "content_sha256": "e24cc3b987fdd467dc75e3a3e7e9d5aad311439ca6fee03c79d3aa414507cd60",
+    "category": "brainstorming",
+    "tok_len": 15,
+    "allocation_hash": "0720a3f8199b7cad4a2666585cf53365245a7be6425732250fa2c9408a906b6c"
+  },
+  {
+    "dolly_id": 4642,
+    "split": "held_out",
+    "instruction": "What does Lady Gaga affectionately call her fans?",
+    "content_sha256": "73b71488d4965e5666422d810bf411df14b0fb1f113de54054f58479751a1de8",
+    "category": "open_qa",
+    "tok_len": 9,
+    "allocation_hash": "0720f94c54fdad946e87b8fac30cdc5af7368b4cb9b48b1f5b562d84e20fa446"
+  },
+  {
+    "dolly_id": 7234,
+    "split": "held_out",
+    "instruction": "What are some modes of transportation I can use to travel downtown?",
+    "content_sha256": "cca5211d087af72f8a8881a948a088b6f79686923e49b06593b728e5b11e13a0",
+    "category": "brainstorming",
+    "tok_len": 13,
+    "allocation_hash": "07279d68e55e5b8294183e629bffac88aeff01c5f42326ce7a916ad64760c3ab"
+  },
+  {
+    "dolly_id": 448,
+    "split": "held_out",
+    "instruction": "What are some types of potatoes commonly grown in Ireland?",
+    "content_sha256": "1e7375066914f39269d6dfe5f3f442cb89811d8a0eb193e56d7647e3f1c1b196",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "073a936bb074e53fbf1fac0c1c9eb54f3a87a8712810cb64bdc96343d345d604"
+  },
+  {
+    "dolly_id": 5406,
+    "split": "held_out",
+    "instruction": "What are some good uses for duct tape",
+    "content_sha256": "94a4c58bbc38462a0e30d752b6ccbd25c999fc5f2fee025e682a2a6d11990fd0",
+    "category": "brainstorming",
+    "tok_len": 8,
+    "allocation_hash": "0740c1e2580b65959b3e945d7176d8d7192b981041e203079e4b10c292b0f617"
+  },
+  {
+    "dolly_id": 10987,
+    "split": "held_out",
+    "instruction": "Identify which animal species is alive or extinct: Black-footed Ferret, Dodo",
+    "content_sha256": "46d252cb3011d05f0667604108ae36d5b516af0783d2c0d840542b47d6eabb13",
+    "category": "classification",
+    "tok_len": 16,
+    "allocation_hash": "0740c80f496d258aeb7d5c244856fbe283e40b2f36b0fe8791194950305708e0"
+  },
+  {
+    "dolly_id": 5988,
+    "split": "held_out",
+    "instruction": "What are the benefits of hot yoga?",
+    "content_sha256": "48437286d43024bbe79e886692f391dd7f6021936d97173c513522c6c435126e",
+    "category": "brainstorming",
+    "tok_len": 8,
+    "allocation_hash": "0743cb304ebae69b6b4ac72f9aea39d1108d2b0e5572138c08aa9295165123d9"
+  },
+  {
+    "dolly_id": 11840,
+    "split": "held_out",
+    "instruction": "Which is a species of fish? Swordtail or Excalibur",
+    "content_sha256": "92e53a1e09b3135786ef151baeec119764b01efad20aa756bb707d3cbfa8d427",
+    "category": "classification",
+    "tok_len": 12,
+    "allocation_hash": "074542bef27e6e2431030743ac64ecf2b27982bed8ef414774574da173e1a6e4"
+  },
+  {
+    "dolly_id": 7311,
+    "split": "held_out",
+    "instruction": "Where was the 11th BRICS held?",
+    "content_sha256": "e4e9dce9e3c006b68099106845ee59b631f6d84a963d375ac2358db64ddd6e1d",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "07585e7172194444db01ae622f5599c4ad34d6ba2efee65db149396a135af9a4"
+  },
+  {
+    "dolly_id": 2983,
+    "split": "held_out",
+    "instruction": "what are the five pillars of migration or modernization from a legacy data warehouse to a modern lakehouse?",
+    "content_sha256": "b272b2c3f101d42dd5b65082a57196b0eedef8687a804def6a49c5dfe728d37f",
+    "category": "open_qa",
+    "tok_len": 20,
+    "allocation_hash": "075b1be42a626cad398f1ce9e4a95996b2631835897c634d0ac48cd5947ab808"
+  },
+  {
+    "dolly_id": 1777,
+    "split": "held_out",
+    "instruction": "Why is soccer the most popular sport in the world?",
+    "content_sha256": "bd85a322cb6c7b1de16b4df90672cd45c27146c1a5e5d56f37b2c933b4495e5a",
+    "category": "open_qa",
+    "tok_len": 11,
+    "allocation_hash": "075f061c5290d267a48c4b7aeb41078811dace46d46356440ee6b894c99b2861"
+  },
+  {
+    "dolly_id": 8284,
+    "split": "held_out",
+    "instruction": "Provide a number of different ways that someone can digest content from a book",
+    "content_sha256": "8eba5918f722b19cbbec801c40395624e9a9093eb435b6bbc61df8885fd98234",
+    "category": "brainstorming",
+    "tok_len": 14,
+    "allocation_hash": "076308bea3344961e1f6847155b8c7dbc6672a468be7a8682bf83da00e37f785"
+  },
+  {
+    "dolly_id": 7492,
+    "split": "held_out",
+    "instruction": "Boiling water is 100 degree in celsius, is that an obtuse angle?",
+    "content_sha256": "64dd1f9d6383d8d509b904f01e63d4a80c6f76b65437d9098dbf849390346268",
+    "category": "general_qa",
+    "tok_len": 17,
+    "allocation_hash": "077de6231664103e54678656ba22947bc13e16a29aae0b90cfcf0851955a7cb5"
+  },
+  {
+    "dolly_id": 3321,
+    "split": "held_out",
+    "instruction": "What does the term 'Thala' mean?",
+    "content_sha256": "7b20627e63993a4684415c8c999dd85d6daac5b18cc0f13ca80b8ca487a2aa16",
+    "category": "brainstorming",
+    "tok_len": 10,
+    "allocation_hash": "0782074e6e82cba2456492ea3642c6608846c99f05506b8c40af7229a33ac55c"
+  },
+  {
+    "dolly_id": 14977,
+    "split": "held_out",
+    "instruction": "What is a world war and how many world wars have happened so far?",
+    "content_sha256": "12398e988a3be7aae4fc2aef2b2b75c9874bb702aa964a3b712244f44af6ca95",
+    "category": "open_qa",
+    "tok_len": 15,
+    "allocation_hash": "0788d498e81b2c46384d7490c77f56500005fbe4021bee0350a9b498cb86f701"
+  },
+  {
+    "dolly_id": 2960,
+    "split": "held_out",
+    "instruction": "How did Jim Henson die?",
+    "content_sha256": "ef605e8ad0e8ddcf8644b951875014a1943c6c2329606d6594fa9bb195480d5e",
+    "category": "open_qa",
+    "tok_len": 6,
+    "allocation_hash": "078aff45e2e311f47119968b08da9f20fb7dc3245a0d0cce99c8e5141847e1a5"
+  },
+  {
+    "dolly_id": 11202,
+    "split": "held_out",
+    "instruction": "\"Big Bang\": what does it mean?",
+    "content_sha256": "a14e8d62b3cd550cc9e70e5ff941c6b59bb5a06b10ada63d359826efa6835eb1",
+    "category": "open_qa",
+    "tok_len": 9,
+    "allocation_hash": "078b96286f4c93fe9ab49cd94d2914bea73ab457bc09cd41e39fef54e89bbc5e"
+  },
+  {
+    "dolly_id": 3977,
+    "split": "held_out",
+    "instruction": "how many times did India won the cricket world cup",
+    "content_sha256": "79cefbf691e71f2917a00902d90460175d37d41667b03485a2f07bc19723c5b2",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "078bcb6fa9d8a3b0e71096340330bfbbaeda67e20bc1c22b82739c821203d3a8"
+  },
+  {
+    "dolly_id": 623,
+    "split": "held_out",
+    "instruction": "Identify which car manufacturer is Chinese or American: Dongfeng, Chrysler",
+    "content_sha256": "ae274feedd57a799190eacfe8978501804baebd2ac999ab7587d4356697f9cb5",
+    "category": "classification",
+    "tok_len": 13,
+    "allocation_hash": "079462e0e8c44e1783bc00a8567b288fe22387cfa834de338fe9b5d510da3e52"
+  },
+  {
+    "dolly_id": 4601,
+    "split": "held_out",
+    "instruction": "Which of Dany's dragons is the largest?",
+    "content_sha256": "62b26fd73f6e62733b5fbca3ee937ca4fed05c782b402ef1014310bc261f1695",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "079740db59506adbc1aa38a0c00ded61c0d4163ca515df7ec8b1ff211ec95f9d"
+  },
+  {
+    "dolly_id": 14351,
+    "split": "held_out",
+    "instruction": "Give me a list of the top MLB home run leaders of all time.",
+    "content_sha256": "bc3a41fa826d90542f5fbe82d3e4604a29275c3f87081cc5f6c78253cc261fe9",
+    "category": "brainstorming",
+    "tok_len": 15,
+    "allocation_hash": "079744999037a6bddeab95cf74a0a2caa030722692a9389184f0691b50f312cb"
+  },
+  {
+    "dolly_id": 12805,
+    "split": "held_out",
+    "instruction": "How does the Harvard housing system work?",
+    "content_sha256": "f2911c487f2e3c45781945bd7b9ad6b50743801045e2f2f5a0f2c17f179ddaf5",
+    "category": "general_qa",
+    "tok_len": 8,
+    "allocation_hash": "079a7302ebef2ee011fa17e106d60825d0457cb387d26fbfa6c93b071f27b301"
+  },
+  {
+    "dolly_id": 2279,
+    "split": "held_out",
+    "instruction": "What was the first living creature sent into orbit around Earth?",
+    "content_sha256": "cf823e6800efc99cbacbfde7b60346f76307962f5d71717c7787352dedeb9bd1",
+    "category": "open_qa",
+    "tok_len": 12,
+    "allocation_hash": "07b18058764f3f3fb3c842dd41ac1f7928887ef3e80f710b2c663d3555999fef"
+  },
+  {
+    "dolly_id": 13375,
+    "split": "held_out",
+    "instruction": "What is the capital city of the United States?",
+    "content_sha256": "f2f71a03e87ed0090e12aec82902d2827ebabb0ffa87dfc1fec4c44642cb0fea",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "07b3c3ed2bb9a501e0b83073f7ff680550b7ac73519f424b9be63088e5e52941"
+  },
+  {
+    "dolly_id": 14506,
+    "split": "held_out",
+    "instruction": "Which weighs more: a shipping container, a couch or a espresso machine?",
+    "content_sha256": "9a966722f5abb693cac8e432159fc1919d6f8e024af6ec7670ad2f6bedd9aab6",
+    "category": "open_qa",
+    "tok_len": 15,
+    "allocation_hash": "07b78ca0d116a55d5c42488898b4a8b7f0e7e8e06be46f54637065bef6913613"
+  },
+  {
+    "dolly_id": 4871,
+    "split": "held_out",
+    "instruction": "Is streaming better than cable?",
+    "content_sha256": "5141eb5d81d3df4aa979d77fdb9f9d615585cfd39927fcc9b90b475af12ee6bb",
+    "category": "general_qa",
+    "tok_len": 6,
+    "allocation_hash": "07c12417d87a62e0b54e1e776b47cf09d51db8e8bce773a96386351fefd21007"
+  },
+  {
+    "dolly_id": 4501,
+    "split": "held_out",
+    "instruction": "Write a story about somebody, anybody, nobody and everybody",
+    "content_sha256": "79dd7ae02377286ad1a3a6bd80074431d44edf4888941dc83cbddd5722948665",
+    "category": "brainstorming",
+    "tok_len": 11,
+    "allocation_hash": "07cc43a82f263e90d4d10f176ad35f80508b074804c1ea89ce42d361d0317bf4"
+  },
+  {
+    "dolly_id": 14833,
+    "split": "held_out",
+    "instruction": "When should I use Slack versus email versus a phone call?",
+    "content_sha256": "319114a171343c43da123c54867b138f3c9222e66b7c7fd9ad9123d6bfbd22ee",
+    "category": "general_qa",
+    "tok_len": 12,
+    "allocation_hash": "07e81c32cd0b3143e64e4110f466f830ad4423fa321d44e743aefdf15c09b084"
+  },
+  {
+    "dolly_id": 12065,
+    "split": "held_out",
+    "instruction": "Help me plan a trip to Nova Scotia",
+    "content_sha256": "97239cc39c82b1ee4fe6939a4c5018484d861a4c8cda1b509eb470fe7123e667",
+    "category": "creative_writing",
+    "tok_len": 8,
+    "allocation_hash": "07edf866d977de5d08d27881a05e6082433e38164fd239a8b0080073bc39065e"
+  },
+  {
+    "dolly_id": 3476,
+    "split": "held_out",
+    "instruction": "Which African country was founded by Americans",
+    "content_sha256": "8246144fd64e77c685981f49a6d4d547ca62a23c721c0c3cbd1f39d4be899f54",
+    "category": "open_qa",
+    "tok_len": 7,
+    "allocation_hash": "07f0674b09a79e4576c4873d1b46736b401e3b118c779bc41b90edfe8d80979e"
+  },
+  {
+    "dolly_id": 5582,
+    "split": "held_out",
+    "instruction": "Why is Utah a top destination for skiing",
+    "content_sha256": "3cf96d11cd0e9eb0b55096dd03260d94c7714a9fba3df6de65debae8bb56f4aa",
+    "category": "creative_writing",
+    "tok_len": 8,
+    "allocation_hash": "07f2e7d97d05f1e6df04eadc06e1746900ba6224828f2247f84dcae2cd188bdc"
+  },
+  {
+    "dolly_id": 10651,
+    "split": "held_out",
+    "instruction": "Tell me which of these States' shapes have exactly four sides: Utah, Colorado, Florida, Washington, California.",
+    "content_sha256": "ec29f4afb033157211fe9e51fe5d60859abf39e4b1aefd28815d078477b95ce9",
+    "category": "classification",
+    "tok_len": 23,
+    "allocation_hash": "07fa0ed695668561e8d23cd3c419c9c05340c7052fa33e2514def60954955226"
+  },
+  {
+    "dolly_id": 1424,
+    "split": "held_out",
+    "instruction": "Does Las Vegas have a professional hockey team?",
+    "content_sha256": "7ba5abac20c545b62bdcc411d808aa61b9c8c0d26bc49bc6db44c62e3a759ac7",
+    "category": "creative_writing",
+    "tok_len": 9,
+    "allocation_hash": "0800178a1a9ef2c36b19d7d554bbae1ae6ca5d127cd7efc9714be326d8671d69"
+  },
+  {
+    "dolly_id": 7331,
+    "split": "held_out",
+    "instruction": "Which characters belong to DC or Marvel Universe? Silver Surfer, Martian Manhunter",
+    "content_sha256": "77190bc55b9f5ca2c7fbd3eb999182792194c107a060af0ddb771130911c799f",
+    "category": "classification",
+    "tok_len": 15,
+    "allocation_hash": "08049457fdcd6eaf870f2f3477012020041558d1bae9a597920644c4d20fa938"
+  },
+  {
+    "dolly_id": 13777,
+    "split": "held_out",
+    "instruction": "Give me the steps to purchase a new pair of shoes.",
+    "content_sha256": "0318cadf31323c7346daaf45f9a91b470e666c13fb1d687c5e34d2f0531708be",
+    "category": "brainstorming",
+    "tok_len": 12,
+    "allocation_hash": "0809c03e79c4fd165e02d136d6a00c84f2dd69ff0ddbaf6e6b012dccd7269e9f"
+  },
+  {
+    "dolly_id": 11347,
+    "split": "held_out",
+    "instruction": "What kind of dog is a Bernedoodle?",
+    "content_sha256": "846a5b6c949db9baca742d79570105fd3268527988294e21bf7ea80601f0cb03",
+    "category": "open_qa",
+    "tok_len": 10,
+    "allocation_hash": "081846fd5a033a21f70aef75bcb55d8b90266bca53f7b22b7b8bab6225ada4fc"
+  },
+  {
+    "dolly_id": 12302,
+    "split": "held_out",
+    "instruction": "Give me some good stock investing tips.",
+    "content_sha256": "cf552b66446f4a5557b03c7ea65edb14f7c9bcf1fdbb9a1ab1e32574809d387a",
+    "category": "brainstorming",
+    "tok_len": 8,
+    "allocation_hash": "0819fd877e929537746fc95ed2374faed0e1d1415e4a363e63b458d4c6212ae6"
+  },
+  {
+    "dolly_id": 3377,
+    "split": "held_out",
+    "instruction": "What are some things that we can do to help the environment?",
+    "content_sha256": "eea0a48e0e6b6f579e405388153223f19c6728170bccd5e01093a1babc2fa77b",
+    "category": "brainstorming",
+    "tok_len": 13,
+    "allocation_hash": "082285f2c8dc4b996e9253dcc06d85f9ad96e4fc88437044387ba6afa4cea18a"
+  },
+  {
+    "dolly_id": 12369,
+    "split": "held_out",
+    "instruction": "Identify which animal species is alive or extinct: Tyrannosaurus Rex, Amazon River Dolphin",
+    "content_sha256": "14ce58e0aa4adf20f52ae5cd9ac39b936f5f8afd24c99333c8780c2de9b2ed89",
+    "category": "classification",
+    "tok_len": 16,
+    "allocation_hash": "08274121c8d6fa1287691b326ad1cff50c5fe2257c435817a3030090677122cb"
+  },
+  {
+    "dolly_id": 9057,
+    "split": "held_out",
+    "instruction": "Identify which instrument is string or percussion: Makuta, Tricordia",
+    "content_sha256": "0e7993b2aa92a821ccf5f217f67e12a58393b103c4e4462342dd8c7aab23d829",
+    "category": "classification",
+    "tok_len": 14,
+    "allocation_hash": "0828f642b7158e6606dab882f7fd577676c1c5e4957ff64a9581ecda8c471d02"
+  }
+]

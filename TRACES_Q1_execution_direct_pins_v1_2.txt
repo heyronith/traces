@@ -1,0 +1,16 @@
+# TRACES Q1 scientific execution direct-dependency specification v1.2
+# Python interpreter: CPython 3.11.15 (exact patch version)
+# Direct pins; transitive wheel hashes and full image lock are execution-time requirements.
+transformers==4.51.3
+tokenizers==0.21.4
+sentencepiece==0.2.0
+torch==2.5.1
+peft==0.19.1
+accelerate==1.6.0
+huggingface-hub==0.30.2
+safetensors==0.5.3
+numpy==2.1.3
+protobuf==5.29.4
+PyYAML==6.0.2
+tqdm==4.67.1
+Jinja2==3.1.6
