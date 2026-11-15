@@ -31,12 +31,17 @@ from traces.model_loader import (
     _read_topk_use_flag,
     _require_hf_auth,
 )
-from traces.q1.post_load import verify_post_load
+from traces.q1.post_load import (
+    refuse_caller_revision_echo_as_proof,
+    verify_adapter_off_behavior,
+    verify_post_load,
+)
 from traces.q1.runtime_spec import (
     REQUIRED_ATTN_IMPLEMENTATION,
     REQUIRED_TORCH_DTYPE,
     assert_bf16_dtype,
     assert_eager_attention,
+    q1_model_load_kwargs,
 )
 
 Q1_LOADER_NOTES = (
@@ -71,9 +76,21 @@ def load_q1_scientific_model(
     if adapter_revision != PINNED_ADAPTER_REVISION:
         raise RuntimeError(f"Q1 adapter revision must be {PINNED_ADAPTER_REVISION}")
 
+    # Canonical kwargs — no silent dtype / attention fallback permitted
+    load_kwargs = q1_model_load_kwargs(
+        dtype=REQUIRED_TORCH_DTYPE,
+        attn_implementation=REQUIRED_ATTN_IMPLEMENTATION,
+    )
+
     token = _require_hf_auth()
     if _read_topk_use_flag(adapter_repo, subfolder, token, revision=adapter_revision) is True:
         raise RuntimeError("Q1 refuses use_topk=true adapters")
+
+    if not expected_weight_file_sha256:
+        raise RuntimeError(
+            "Q1 scientific load requires expected_weight_file_sha256 pins "
+            "(refuse caller-echo-only revision verification)"
+        )
 
     tokenizer = AutoTokenizer.from_pretrained(
         adapter_repo,
@@ -84,11 +101,11 @@ def load_q1_scientific_model(
     )
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
-        torch_dtype=REQUIRED_TORCH_DTYPE,
+        torch_dtype=load_kwargs["torch_dtype"],
         device_map=device_map,
         token=token,
         revision=base_revision,
-        attn_implementation=REQUIRED_ATTN_IMPLEMENTATION,
+        attn_implementation=load_kwargs["attn_implementation"],
         trust_remote_code=False,
     )
     # Explicit: do not autocast adapter weights to a different dtype
@@ -104,11 +121,14 @@ def load_q1_scientific_model(
     _disable_dropout(model)
     torch.set_grad_enabled(False)
 
-    if not expected_weight_file_sha256:
-        raise RuntimeError(
-            "Q1 scientific load requires expected_weight_file_sha256 pins "
-            "(refuse caller-echo-only revision verification)"
-        )
+    # Refuse silent dtype conversion after load
+    for name, p in model.named_parameters():
+        if p.dtype.is_floating_point and p.dtype != REQUIRED_TORCH_DTYPE:
+            raise RuntimeError(
+                f"Silent dtype conversion detected on {name}: {p.dtype} "
+                f"(require {REQUIRED_TORCH_DTYPE}; no fallback)"
+            )
+
     # verify_post_load infers revisions from loaded config stamps; weight SHA pins
     # are mandatory substitutes when PEFT omits adapter revision metadata.
     post = verify_post_load(
@@ -127,6 +147,12 @@ def load_q1_scientific_model(
     )
     if not post.ok:
         raise RuntimeError(f"Q1 post-load verification failed: {post.failures}")
+
+    adapter_off = verify_adapter_off_behavior(model)
+    if not adapter_off["ok"]:
+        raise RuntimeError(
+            f"Q1 adapter-off verification failed: {adapter_off['failures']}"
+        )
 
     peft_cfg = model.peft_config["default"]
     cfg = model.config
@@ -162,7 +188,46 @@ def load_q1_scientific_model(
         "proposed_f5_interpretation": Q1_LOADER_NOTES,
         "autocast_adapter_dtype": False,
         "attn_implementation": REQUIRED_ATTN_IMPLEMENTATION,
+        "torch_dtype": str(REQUIRED_TORCH_DTYPE),
         "post_load": post.to_dict(),
+        "adapter_off_verification": adapter_off,
+        "pending_owner_f5_approval": True,
         "pending_agent1_scientific_consistency_review": True,
+        "caller_revision_echo_not_accepted_as_proof": True,
+        "weight_sha_pins_required": True,
     }
     return model, tokenizer, report, meta
+
+
+def validate_loader_policy_inputs(
+    *,
+    base_revision: str,
+    adapter_revision: str,
+    expected_weight_file_sha256: dict[str, str] | None,
+    torch_dtype: Any = None,
+    attn_implementation: str | None = None,
+) -> list[str]:
+    """CPU-safe policy checks for mocks/negative tests (no HF download)."""
+    failures: list[str] = []
+    if base_revision != PINNED_BASE_REVISION:
+        failures.append(f"base_revision {base_revision!r} != pin")
+    if adapter_revision != PINNED_ADAPTER_REVISION:
+        failures.append(f"adapter_revision {adapter_revision!r} != pin")
+    if not expected_weight_file_sha256:
+        failures.append("expected_weight_file_sha256 required")
+        failures.extend(
+            refuse_caller_revision_echo_as_proof(
+                caller_base_revision=base_revision,
+                caller_adapter_revision=adapter_revision,
+                inferred_base=None,
+                inferred_adapter=None,
+                has_weight_pins=False,
+            )
+        )
+    if torch_dtype is not None and torch_dtype != REQUIRED_TORCH_DTYPE:
+        failures.append(f"refusing dtype {torch_dtype}; no silent conversion")
+    if attn_implementation is not None and attn_implementation != REQUIRED_ATTN_IMPLEMENTATION:
+        failures.append(
+            f"refusing attn_implementation={attn_implementation!r}; no fallback"
+        )
+    return failures

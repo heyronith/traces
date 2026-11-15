@@ -18,7 +18,9 @@
     "allow_tf32": false,
     "matmul_precision": "highest",
     "inference_mode": true,
-    "grad_enabled": false
+    "grad_enabled": false,
+    "use_deterministic_algorithms": true,
+    "cublas_workspace_config": ":4096:8"
   },
   "direct_pins_file": "TRACES_Q1_execution_direct_pins_v1_2.txt",
   "direct_pins_sha256": "4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048",

@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "protocol_version": "1.3",
+  "frozen_scientific_commit": "b1e8874f45311678e6fa241f504e7e09d4a7808c",
+  "created_utc": "2026-11-15T06:30:50Z",
+  "python": {
+    "version": "3.11.15 (main, May 10 2026, 19:23:07) [Clang 22.1.3 ]",
+    "version_info": [
+      3,
+      11,
+      15
+    ],
+    "executable": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/results/q1_final_cpu_checks/.venv_tf4513/bin/python",
+    "implementation": "CPython"
+  },
+  "platform": {
+    "system": "Darwin",
+    "release": "25.5.0",
+    "machine": "arm64",
+    "platform": "macOS-26.5.2-arm64-arm-64bit"
+  },
+  "cuda": {
+    "torch_cuda_available": false,
+    "torch_version": "2.5.1",
+    "cuda_version": null,
+    "device_count": 0,
+    "note": "CPU-safe probe only"
+  },
+  "direct_pins": {
+    "path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/TRACES_Q1_execution_direct_pins_v1_2.txt",
+    "sha256": "4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048",
+    "expected_sha256": "4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048",
+    "match": true,
+    "protocol_version": "1.3",
+    "frozen_commit": "b1e8874f45311678e6fa241f504e7e09d4a7808c"
+  },
+  "wheels": [
+    {
+      "name": "numpy",
+      "version": "2.1.3",
+      "filename": "numpy-2.1.3-py3-none-any.whl",
+      "sha256": "b24db2ad26872a4d594c78f69865bca991be39cc7040f4e59f9cf021fb3898cb"
+    },
+    {
+      "name": "torch",
+      "version": "2.5.1",
+      "filename": "torch-2.5.1-py3-none-any.whl",
+      "sha256": "e4526e9fabc3446e0ae055469f0dc2a9b002609c2ff5dc0277e0fb431b69eb55"
+    }
+  ],
+  "source": "synthetic_fixture",
+  "production_image_lock": false,
+  "notes": [
+    "NOT a production image lock \u2014 synthetic/local fixture only",
+    "pip_freeze_packages_parsed=0",
+    "direct_pins_file=TRACES_Q1_execution_direct_pins_v1_2.txt",
+    "direct_pins_expected_sha256=4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048"
+  ]
+}

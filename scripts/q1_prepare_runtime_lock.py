@@ -23,6 +23,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from traces.q1.runtime_lock import (  # noqa: E402
+    claim_production_lock_exists,
+    generate_lock_from_wheel_dir,
+    validate_lock_document,
+    write_lock_document,
+)
 from traces.q1.runtime_spec import (  # noqa: E402
     DEFAULT_BATCHING,
     DEFAULT_DETERMINISM,
@@ -49,6 +55,12 @@ def main() -> None:
         type=str,
         default="",
         help="Optional interpreter to snapshot pip freeze (must match pins ideally)",
+    )
+    ap.add_argument(
+        "--synthetic-wheel-dir",
+        type=Path,
+        default=None,
+        help="Optional local wheel dir for fixture lock generation (not production)",
     )
     args = ap.parse_args()
     out = args.out_dir
@@ -101,7 +113,37 @@ def main() -> None:
             "Link lock file hash to direct-pins file hash 4a90dd71…",
         ],
         "no_model_inference_in_this_script": True,
+        "production_image_lock_exists": False,
+        "note": (
+            "Do not claim production image lock until generated and verified "
+            "from the actual intended built image (source=built_image, "
+            "production_image_lock=True)."
+        ),
     }
+
+    synthetic_lock_meta: dict = {"generated": False}
+    if args.synthetic_wheel_dir is not None:
+        doc = generate_lock_from_wheel_dir(
+            args.synthetic_wheel_dir,
+            repo_root=ROOT,
+            pip_freeze_text=(freeze_meta.get("captured") and "") or "",
+            source="synthetic_fixture",
+            production_image_lock=False,
+        )
+        lock_path = write_lock_document(doc, out / "runtime_lock_synthetic_fixture.json")
+        val = validate_lock_document(
+            doc.to_dict(),
+            wheel_dir=args.synthetic_wheel_dir,
+            require_production=False,
+        )
+        synthetic_lock_meta = {
+            "generated": True,
+            "path": str(lock_path),
+            "validation": val,
+            "claim_production_lock_exists": claim_production_lock_exists(doc.to_dict()),
+        }
+        procedure["synthetic_fixture_lock"] = synthetic_lock_meta
+
     (out / "runtime_lock_preparation.json").write_text(
         json.dumps(procedure, indent=2) + "\n"
     )
@@ -111,6 +153,8 @@ def main() -> None:
                 "out_dir": str(out),
                 "pins_match": pins["match"],
                 "workload_ok": enum["validation"]["scientific_tf_matches_readiness_v1"],
+                "production_image_lock_exists": False,
+                "synthetic_fixture_lock": synthetic_lock_meta,
             },
             indent=2,
         )

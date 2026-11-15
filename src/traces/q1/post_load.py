@@ -257,3 +257,74 @@ def verify_post_load(
         weight_file_sha256=weight_hashes,
         failures=failures,
     )
+
+
+def verify_adapter_off_behavior(model: Any) -> dict[str, Any]:
+    """Fail-closed check that adapter-off API exists and toggles ``disable`` state.
+
+    Uses PEFT ``disable_adapter_layers`` / enable pair when available. Does not
+    run model forwards. Suitable for mock objects in negative tests.
+    """
+    failures: list[str] = []
+    has_disable = hasattr(model, "disable_adapter_layers")
+    has_enable = hasattr(model, "enable_adapter_layers")
+    has_ctx = hasattr(model, "disable_adapters")
+    if not has_disable and not has_ctx:
+        failures.append(
+            "model lacks disable_adapter_layers/disable_adapters; "
+            "adapter-off references cannot be verified"
+        )
+        return {"ok": False, "failures": failures, "toggled": False}
+
+    toggled = False
+    try:
+        if has_disable:
+            model.disable_adapter_layers()
+            toggled = True
+            if has_enable:
+                model.enable_adapter_layers()
+        elif has_ctx:
+            # Context manager form — enter/exit without durable off
+            cm = model.disable_adapters()
+            if hasattr(cm, "__enter__"):
+                cm.__enter__()
+                toggled = True
+                cm.__exit__(None, None, None)
+            else:
+                failures.append(
+                    "disable_adapters() did not return a context manager; "
+                    "refuse ambiguous adapter-off"
+                )
+    except Exception as e:  # noqa: BLE001
+        failures.append(f"adapter-off toggle raised: {e}")
+
+    return {
+        "ok": len(failures) == 0 and toggled,
+        "failures": failures,
+        "toggled": toggled,
+        "has_disable_adapter_layers": has_disable,
+        "has_enable_adapter_layers": has_enable,
+    }
+
+
+def refuse_caller_revision_echo_as_proof(
+    *,
+    caller_base_revision: str | None,
+    caller_adapter_revision: str | None,
+    inferred_base: str | None,
+    inferred_adapter: str | None,
+    has_weight_pins: bool,
+) -> list[str]:
+    """Explicit policy: caller-supplied revision strings are not provenance proof."""
+    failures: list[str] = []
+    if caller_base_revision and inferred_base is None and not has_weight_pins:
+        failures.append(
+            "refusing caller-supplied base revision echo as proof "
+            f"(caller={caller_base_revision!r})"
+        )
+    if caller_adapter_revision and inferred_adapter is None and not has_weight_pins:
+        failures.append(
+            "refusing caller-supplied adapter revision echo as proof "
+            f"(caller={caller_adapter_revision!r})"
+        )
+    return failures

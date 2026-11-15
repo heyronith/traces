@@ -1,18 +1,30 @@
 {
-  "artifact": "TRACES_Q1_recommended_workload_enumerator_v1_1",
+  "artifact": "TRACES_Q1_recommended_workload_enumerator_v1_3",
   "frozen_commit": "b1e8874f45311678e6fa241f504e7e09d4a7808c",
   "protocol": "v1.3 Recommended tier",
   "include_downstream56": true,
   "validation": {
-    "expected_tf": 824400,
-    "expected_gen": 3600,
+    "baseline_scientific_tf_v1": 824400,
+    "baseline_scientific_gen_v1": 3600,
     "expected_loads": 11,
-    "tf_passes": 824400,
+    "tf_passes_total": 824830,
+    "scientific_condition_tf": 824400,
+    "integrity_tf": 430,
+    "f4_double_bos_within_scientific_baseline": 10500,
+    "benchmark_overhead_tf": 0,
     "gen_passes": 3600,
     "n_loads": 11,
-    "tf_matches_readiness_v1": true,
+    "scientific_tf_matches_readiness_v1": true,
     "gen_matches_readiness_v1": true,
     "loads_match_readiness_v1": true,
+    "breakdown": {
+      "scientific_and_prescribed_exploratory_extras": 824400,
+      "identity_integrity_extra": 430,
+      "exploratory_identity": 150,
+      "confirmatory_identity": 280,
+      "f4_and_double_bos_inside_baseline": 10500,
+      "benchmark_proposal_not_included": true
+    },
     "primary_tf_per_prompt": 660,
     "primary_conditions_enumerated": 658,
     "secondary_tf_per_prompt": 136
@@ -20,7 +32,8 @@
   "exploratory_extras_per_model": {
     "f4_repeat_intact_extra_tf": 200,
     "double_bos_intact_tf": 100,
-    "double_bos_pairs_forward_only": 3200
+    "double_bos_pairs_forward_only": 3200,
+    "identity_hookleak_extra_tf": 50
   },
   "units": [
     {
@@ -29,7 +42,7 @@
       "role": "exploratory_dev",
       "seed": 42,
       "n_prompts": 50,
-      "tf_passes": 36500,
+      "tf_passes": 36550,
       "gen_passes": 100
     },
     {
@@ -38,7 +51,7 @@
       "role": "exploratory_dev",
       "seed": 43,
       "n_prompts": 50,
-      "tf_passes": 36500,
+      "tf_passes": 36550,
       "gen_passes": 100
     },
     {
@@ -47,7 +60,7 @@
       "role": "exploratory_dev",
       "seed": 44,
       "n_prompts": 50,
-      "tf_passes": 36500,
+      "tf_passes": 36550,
       "gen_passes": 100
     },
     {
@@ -121,26 +134,36 @@
       "n_prompts": 250,
       "tf_passes": 500,
       "gen_passes": 500
+    },
+    {
+      "unit": "confirmatory_identity_integrity_extras",
+      "family": "multi",
+      "role": "integrity_checks",
+      "seed": null,
+      "n_prompts": null,
+      "tf_passes": 280,
+      "gen_passes": 0,
+      "notes": "Mandatory identity/hook-leak TF across 5 l19 + 2 l1523 secondary"
     }
   ],
   "cost_bands_gpu_only": {
     "optimistic_low": {
-      "seconds": 59609.22000000001,
-      "gpu_hours": 16.55811666666667,
-      "usd_modal_per_sec": 18.240421320000003,
-      "usd_repo_1_10_per_hr": 18.21392833333334
+      "seconds": 59635.70800000001,
+      "gpu_hours": 16.565474444444447,
+      "usd_modal_per_sec": 18.248526648000006,
+      "usd_repo_1_10_per_hr": 18.222021888888893
     },
     "planning_mid": {
-      "seconds": 119068.848,
-      "gpu_hours": 33.07468,
-      "usd_modal_per_sec": 36.435067488,
-      "usd_repo_1_10_per_hr": 36.382148
+      "seconds": 119125.19520000002,
+      "gpu_hours": 33.090332000000004,
+      "usd_modal_per_sec": 36.4523097312,
+      "usd_repo_1_10_per_hr": 36.399365200000005
     },
     "conservative_high": {
-      "seconds": 139449.6,
-      "gpu_hours": 38.736000000000004,
-      "usd_modal_per_sec": 42.671577600000006,
-      "usd_repo_1_10_per_hr": 42.60960000000001
+      "seconds": 139514.616,
+      "gpu_hours": 38.75406,
+      "usd_modal_per_sec": 42.691472496,
+      "usd_repo_1_10_per_hr": 42.62946600000001
     }
   },
   "protocol_preserving_optimizations": [

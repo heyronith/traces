@@ -1,6 +1,6 @@
 {
   "artifact": "TRACES_Q1_runtime_lock_preparation",
-  "created_utc": "2026-11-15T03:23:31Z",
+  "created_utc": "2026-11-15T06:30:50Z",
   "direct_pins_verification": {
     "path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/TRACES_Q1_execution_direct_pins_v1_2.txt",
     "sha256": "4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048",
@@ -16,25 +16,35 @@
     "allow_tf32": false,
     "matmul_precision": "highest",
     "inference_mode": true,
-    "grad_enabled": false
+    "grad_enabled": false,
+    "use_deterministic_algorithms": true,
+    "cublas_workspace_config": ":4096:8"
   },
   "pip_freeze_snapshot": {
-    "captured": true,
-    "python": "results/q1_final_cpu_checks/.venv_tf4513/bin/python",
-    "sha256": "0c2f3f7cb3d5e5e47f558da611771cd4e5e4be28eba843b11f26381a91b798e4",
-    "n_lines": 28,
-    "note": "Snapshot only \u2014 normative lock requires wheel hashes from the built scientific image under CPython 3.11.15 + direct pins"
+    "captured": false
   },
   "workload_validation": {
-    "expected_tf": 824400,
-    "expected_gen": 3600,
+    "baseline_scientific_tf_v1": 824400,
+    "baseline_scientific_gen_v1": 3600,
     "expected_loads": 11,
-    "tf_passes": 824400,
+    "tf_passes_total": 824830,
+    "scientific_condition_tf": 824400,
+    "integrity_tf": 430,
+    "f4_double_bos_within_scientific_baseline": 10500,
+    "benchmark_overhead_tf": 0,
     "gen_passes": 3600,
     "n_loads": 11,
-    "tf_matches_readiness_v1": true,
+    "scientific_tf_matches_readiness_v1": true,
     "gen_matches_readiness_v1": true,
     "loads_match_readiness_v1": true,
+    "breakdown": {
+      "scientific_and_prescribed_exploratory_extras": 824400,
+      "identity_integrity_extra": 430,
+      "exploratory_identity": 150,
+      "confirmatory_identity": 280,
+      "f4_and_double_bos_inside_baseline": 10500,
+      "benchmark_proposal_not_included": true
+    },
     "primary_tf_per_prompt": 660,
     "primary_conditions_enumerated": 658,
     "secondary_tf_per_prompt": 136
@@ -47,5 +57,20 @@
     "Confirm attn_implementation=eager and torch_dtype=bfloat16 on load report",
     "Link lock file hash to direct-pins file hash 4a90dd71\u2026"
   ],
-  "no_model_inference_in_this_script": true
+  "no_model_inference_in_this_script": true,
+  "production_image_lock_exists": false,
+  "note": "Do not claim production image lock until generated and verified from the actual intended built image (source=built_image, production_image_lock=True).",
+  "synthetic_fixture_lock": {
+    "generated": true,
+    "path": "results/q1_implementation_prep/runtime_lock_synthetic_fixture.json",
+    "validation": {
+      "ok": true,
+      "failures": [],
+      "n_wheels": 2,
+      "extra_wheels_on_disk": [],
+      "production_image_lock": false,
+      "source": "synthetic_fixture"
+    },
+    "claim_production_lock_exists": false
+  }
 }
