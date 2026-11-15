@@ -737,6 +737,44 @@ def test_s23_lying_within_tolerance_boolean_rejected(tmp_path):
     assert any("within_tolerance=true contradicts" in f or "1e+09" in f or "1e9" in f or "1000000000" in f for f in fails)
 
 
+def test_s23_identity_2_3_6_require_multi_family_comparisons(tmp_path):
+    """v1.3: IDs 2–3 need logits+residual; ID 6 needs activation+residual."""
+    import json
+
+    from traces.q1.empirical_evidence import (
+        IDENTITY_TENSOR_FAMILIES,
+        validate_identity_suite_measurements,
+    )
+
+    assert IDENTITY_TENSOR_FAMILIES[2] == frozenset(
+        {"final_logits", "boundary_residual"}
+    )
+    assert IDENTITY_TENSOR_FAMILIES[6] == frozenset(
+        {"upstream_activation", "boundary_residual"}
+    )
+    path, _ = write_fabricated_identity_artifact(tmp_path / "id.json")
+    payload = json.loads(path.read_text())
+    # Strip residual comparisons from identity 2 — must fail closed
+    for rows in payload["per_model_results"].values():
+        for row in rows:
+            if int(row["identity_id"]) == 2:
+                row["numerical_comparisons"] = [
+                    c
+                    for c in row["numerical_comparisons"]
+                    if c["tensor_family"] == "final_logits"
+                ]
+    fails = validate_identity_suite_measurements(
+        payload,
+        f4_epsilons={
+            "final_logits": 1e-3,
+            "decision_margin": 1e-3,
+            "boundary_residual": 1e-3,
+            "upstream_activation": 1e-3,
+        },
+    )
+    assert any("identity 2 missing required tensor-family" in f for f in fails)
+
+
 def test_s23_identity_auth_rejects_max_abs_diff_1e9_lie(tmp_path):
     path, sha = write_fabricated_identity_artifact(
         tmp_path / "id.json",

@@ -52,15 +52,20 @@ REQUIRED_F4_TENSOR_FAMILIES = frozenset(
     }
 )
 
-# Identity → tensor family for numerical comparisons (1–6, 8)
+# Identity → required tensor families for numerical comparisons (v1.3).
+# IDs 2–3 compare logits and boundary residual; ID 6 compares activation + residual.
+IDENTITY_TENSOR_FAMILIES: dict[int, frozenset[str]] = {
+    1: frozenset({"final_logits"}),
+    2: frozenset({"final_logits", "boundary_residual"}),
+    3: frozenset({"final_logits", "boundary_residual"}),
+    4: frozenset({"boundary_residual"}),
+    5: frozenset({"boundary_residual"}),
+    6: frozenset({"upstream_activation", "boundary_residual"}),
+    8: frozenset({"final_logits"}),
+}
+# Back-compat alias: primary family for single-family identities / fixtures
 IDENTITY_TENSOR_FAMILY: dict[int, str] = {
-    1: "final_logits",
-    2: "final_logits",
-    3: "final_logits",
-    4: "boundary_residual",
-    5: "boundary_residual",
-    6: "upstream_activation",
-    8: "final_logits",
+    iid: sorted(fams)[0] for iid, fams in IDENTITY_TENSOR_FAMILIES.items()
 }
 
 SYNTHETIC_MARKERS = frozenset(
@@ -512,26 +517,30 @@ def _recompute_one_identity(
             failures.append(f"{unit}: identity 9 recomputed hooks={hooks} != 0")
         return failures
 
-    # Numerical identities 1–6, 8
-    fam = IDENTITY_TENSOR_FAMILY.get(iid)
-    if fam is None:
+    # Numerical identities 1–6, 8 (multi-family where protocol requires it)
+    required = IDENTITY_TENSOR_FAMILIES.get(iid)
+    if required is None:
         return [f"{unit}: identity {iid} has no tensor-family mapping"]
     comps = row.get("numerical_comparisons")
     if not isinstance(comps, list) or not comps:
         return [f"{unit}: identity {iid} missing numerical_comparisons"]
 
     all_ok = True
+    seen_families: set[str] = set()
     for c in comps:
         if not isinstance(c, Mapping):
             failures.append(f"{unit}: identity {iid} comparison not mapping")
             all_ok = False
             continue
         tf = str(c.get("tensor_family", ""))
-        if tf != fam:
+        if tf not in required:
             failures.append(
-                f"{unit}: identity {iid} tensor_family {tf!r} != required {fam!r}"
+                f"{unit}: identity {iid} tensor_family {tf!r} not in "
+                f"required {sorted(required)}"
             )
             all_ok = False
+        else:
+            seen_families.add(tf)
         if tf not in f4_epsilons:
             failures.append(
                 f"{unit}: identity {iid} no locked epsilon for tensor family {tf!r}"
@@ -562,13 +571,18 @@ def _recompute_one_identity(
             failures.append(f"{unit}: identity {iid} shape mismatch")
             all_ok = False
 
+    missing_fams = sorted(required - seen_families)
+    if missing_fams:
+        failures.append(
+            f"{unit}: identity {iid} missing required tensor-family "
+            f"comparisons {missing_fams}"
+        )
+        all_ok = False
+
     if row.get("passed") is True and not all_ok:
         failures.append(
             f"{unit}: identity {iid} passed=True contradicts recomputed outcome"
         )
-    if not all_ok:
-        # already recorded
-        pass
     return failures
 
 
@@ -935,7 +949,7 @@ def write_fabricated_identity_artifact(
                     }
                 )
             else:
-                fam = IDENTITY_TENSOR_FAMILY[i]
+                fams = sorted(IDENTITY_TENSOR_FAMILIES[i])
                 wt = (
                     bool(within_tolerance_lie)
                     if within_tolerance_lie is not None
@@ -955,6 +969,7 @@ def write_fabricated_identity_artifact(
                                 "shape_a": [1, 8],
                                 "shape_b": [1, 8],
                             }
+                            for fam in fams
                         ],
                     }
                 )
