@@ -57,17 +57,59 @@ def test_s2_combine_pass_plus_indeterminate():
     assert both["full_H1"] == "H1-pass"
 
 
-def test_r6_unresolved_marginal_descriptor():
-    h = evaluate_h1_direction(
+def test_r6_h1_three_states_and_unresolved_annotation():
+    """R6: three decision states only; unresolved is annotation; marg entirely below → fail."""
+    # Decisive marginal fail (entire interval < 0.1) with rank+share pass → H1-fail + annotation
+    h_fail = evaluate_h1_direction(
         route_class="R-moved",
         direction="forward",
         rank_iv=Interval(1, 2, 1),
         share_iv=Interval(0.55, 0.9, 0.7),
-        marginal_h15_iv=Interval(0.0, 0.05, 0.02),  # fails marginal
+        marginal_h15_iv=Interval(0.0, 0.05, 0.02),
         marginal_h16_iv=Interval(0.15, 0.4, 0.2),
         route_denom_ok=True,
     )
-    assert h["state"] == "H1-unresolved-marginal-contribution"
+    assert h_fail["state"] == "H1-fail"
+    assert h_fail.get("unresolved_marginal_contribution") is True
+
+    # Rank+share pass, marginal straddles 0.1 → H1-indeterminate + annotation
+    h_indet = evaluate_h1_direction(
+        route_class="R-moved",
+        direction="forward",
+        rank_iv=Interval(1, 2, 1),
+        share_iv=Interval(0.55, 0.9, 0.7),
+        marginal_h15_iv=Interval(0.05, 0.15, 0.10),
+        marginal_h16_iv=Interval(0.15, 0.4, 0.2),
+        route_denom_ok=True,
+    )
+    assert h_indet["state"] == "H1-indeterminate"
+    assert h_indet.get("unresolved_marginal_contribution") is True
+    assert h_indet["state"] != "H1-unresolved-marginal-contribution"
+
+    # Full pass
+    h_pass = evaluate_h1_direction(
+        route_class="R-moved",
+        direction="reverse",
+        rank_iv=Interval(1, 2, 1),
+        share_iv=Interval(0.55, 0.9, 0.7),
+        marginal_h15_iv=Interval(0.15, 0.4, 0.2),
+        marginal_h16_iv=Interval(0.15, 0.4, 0.2),
+        route_denom_ok=True,
+    )
+    assert h_pass["state"] == "H1-pass"
+    assert h_pass.get("unresolved_marginal_contribution") is False
+
+    # Rank decisive fail
+    h_rank = evaluate_h1_direction(
+        route_class="R-moved",
+        direction="forward",
+        rank_iv=Interval(4, 10, 5),
+        share_iv=Interval(0.55, 0.9, 0.7),
+        marginal_h15_iv=Interval(0.15, 0.4, 0.2),
+        marginal_h16_iv=Interval(0.15, 0.4, 0.2),
+        route_denom_ok=True,
+    )
+    assert h_rank["state"] == "H1-fail"
 
 
 def test_r3_recipient_verification():
@@ -135,22 +177,57 @@ def test_r8_determinism_and_cublas():
             os.environ["CUBLAS_WORKSPACE_CONFIG"] = CUBLAS_WORKSPACE_CONFIG_VALUE
 
 
-def test_f1_exact_reference_hash_requires_numpy_213():
-    """Exact F1 reference: fe464187… under numpy 2.1.3 (no repeatability-only substitute)."""
+def test_f1_exact_reference_hash_pinned_numpy_213():
+    """Exact F1 SHA under frozen NumPy 2.1.3 — never treat a skip as verification."""
     import hashlib
+    import subprocess
+    import sys
     import numpy as np
 
-    h = hashlib.sha256(draw_f1_resamples(180, 90, 90).full_set.tobytes()).hexdigest()
-    pin = Path("results/q1_implementation_prep/f1_draw_stream_hash_numpy213.txt")
-    if pin.exists():
-        recorded = pin.read_text().strip().split()[-1]
-        assert recorded == F1_REF_HASH, "Pinned venv artifact must store exact F1 hash"
-    if not np.__version__.startswith("2.1.3"):
-        pytest.skip(
-            f"Exact F1 hash assert requires numpy 2.1.3; got {np.__version__} "
-            f"(computed={h}; pin={F1_REF_HASH})"
+    pin_py = Path("results/q1_final_cpu_checks/.venv_tf4513/bin/python")
+    record = Path("results/q1_implementation_prep/f1_draw_stream_hash_numpy213.txt")
+
+    def _hash_now() -> str:
+        return hashlib.sha256(draw_f1_resamples(180, 90, 90).full_set.tobytes()).hexdigest()
+
+    if np.__version__.startswith("2.1.3"):
+        h = _hash_now()
+        assert h == F1_REF_HASH
+        record.parent.mkdir(parents=True, exist_ok=True)
+        record.write_text(
+            f"interpreter {sys.executable}\nnumpy {np.__version__}\nsha256 {h}\n"
         )
-    assert h == F1_REF_HASH
+        return
+
+    # Host is not 2.1.3: execute the assertion inside the pinned venv (fail if missing)
+    assert pin_py.is_file(), (
+        f"Pinned NumPy 2.1.3 interpreter required at {pin_py}; "
+        f"host numpy={np.__version__} cannot verify F1 reference alone"
+    )
+    script = (
+        "import hashlib, sys; sys.path.insert(0, 'src'); "
+        "import numpy as np; "
+        "from traces.q1.stats_f1_f2 import draw_f1_resamples; "
+        "h=hashlib.sha256(draw_f1_resamples(180,90,90).full_set.tobytes()).hexdigest(); "
+        f"assert np.__version__.startswith('2.1.3'), np.__version__; "
+        f"assert h=='{F1_REF_HASH}', h; "
+        "print('interpreter', sys.executable); "
+        "print('numpy', np.__version__); "
+        "print('sha256', h)"
+    )
+    proc = subprocess.run(
+        [str(pin_py), "-c", script],
+        cwd=str(Path.cwd()),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, (
+        f"Pinned F1 hash verification failed:\nstdout={proc.stdout}\nstderr={proc.stderr}"
+    )
+    assert F1_REF_HASH in proc.stdout
+    record.parent.mkdir(parents=True, exist_ok=True)
+    record.write_text(proc.stdout if proc.stdout.endswith("\n") else proc.stdout + "\n")
 
 
 def test_r7_post_load_rejects_mixed_dtypes_and_echo():

@@ -43,12 +43,12 @@ RouteClass = Literal[
     "R-intermediate",
     "Indeterminate",
 ]
+# Decision states for evaluate_h1_direction (exactly three + inapplicable).
+# ``unresolved_marginal_contribution`` is an annotation flag, not a state.
 H1State = Literal[
     "H1-pass",
     "H1-fail",
     "H1-indeterminate",
-    "H1-directional",
-    "H1-unresolved-marginal-contribution",
     "inapplicable",
 ]
 
@@ -274,6 +274,14 @@ def evaluate_h1_direction(
     marginal_h16_iv: Interval,
     route_denom_ok: bool,
 ) -> dict[str, Any]:
+    """H1 directional decision with frozen three-way states only.
+
+    Decision states: ``H1-pass`` / ``H1-fail`` / ``H1-indeterminate`` (or
+    ``inapplicable``). When rank+share pass but marginal contribution does not
+    establish a pass, set annotation ``unresolved_marginal_contribution=True``;
+    that annotation never replaces the decision state. An entire marginal
+    interval below 0.1 is a decisive ``H1-fail``.
+    """
     applicable = False
     if route_class == "R-moved":
         applicable = True
@@ -293,35 +301,35 @@ def evaluate_h1_direction(
     )
     rank_fail = rank_iv.lower > H1_RANK_UPPER
     share_fail = share_iv.upper < H1_SHARE_PARTIAL
+    # Decisive marginal failure: entire interval below threshold on either head
     marg_fail = (
         marginal_h15_iv.upper < H1_MARGINAL or marginal_h16_iv.upper < H1_MARGINAL
     )
+    share_label = "strong" if pass_share_strong else ("partial" if pass_share_partial else None)
+    unresolved = bool(pass_rank and pass_share and not pass_marg)
 
-    # Protocol: if (1)–(2) pass but (3) fails → unresolved (takes precedence over H1-fail)
-    if pass_rank and pass_share and not pass_marg:
-        return {
-            "state": "H1-unresolved-marginal-contribution",
-            "direction": direction,
-            "share": "strong" if pass_share_strong else "partial",
-            "marginal_h15_upper": marginal_h15_iv.upper,
-            "marginal_h16_upper": marginal_h16_iv.upper,
-        }
+    def _annotate(out: dict[str, Any]) -> dict[str, Any]:
+        if unresolved:
+            out["unresolved_marginal_contribution"] = True
+            out["share"] = share_label
+            out["marginal_h15_upper"] = marginal_h15_iv.upper
+            out["marginal_h16_upper"] = marginal_h16_iv.upper
+        return out
 
-    # Substantive failure: rank or share entirely on wrong side
-    if rank_fail or share_fail:
-        return {"state": "H1-fail", "direction": direction}
-    # Marginal-only entire-side failure without (1)–(2) pass already handled; if
-    # rank/share indeterminate but marginal fails hard → still H1-fail when applicable
-    if marg_fail and not (pass_rank and pass_share):
-        return {"state": "H1-fail", "direction": direction}
+    # Decisive failures (rank / share / entire-side marginal)
+    if rank_fail or share_fail or marg_fail:
+        return _annotate({"state": "H1-fail", "direction": direction})
 
-    if pass_rank and pass_marg and pass_share:
+    if pass_rank and pass_share and pass_marg:
         return {
             "state": "H1-pass",
             "direction": direction,
-            "share": "strong" if pass_share_strong else "partial",
+            "share": share_label,
+            "unresolved_marginal_contribution": False,
         }
-    return {"state": "H1-indeterminate", "direction": direction}
+
+    # Not pass, no decisive failure → indeterminate (may carry unresolved annotation)
+    return _annotate({"state": "H1-indeterminate", "direction": direction})
 
 
 def combine_h1_rmoved(fwd: dict[str, Any], rev: dict[str, Any]) -> dict[str, Any]:
@@ -336,14 +344,8 @@ def combine_h1_rmoved(fwd: dict[str, Any], rev: dict[str, Any]) -> dict[str, Any
         return {"full_H1": "H1-fail", "forward": fwd, "reverse": rev}
     if fs == "H1-pass" and rs == "H1-pass":
         return {"full_H1": "H1-pass", "forward": fwd, "reverse": rev}
-    # Pass + indeterminate (or unresolved) → indeterminate; keep directional note
-    if {fs, rs} == {"H1-pass", "H1-indeterminate"} or (
-        "H1-pass" in {fs, rs}
-        and (
-            "H1-indeterminate" in {fs, rs}
-            or "H1-unresolved-marginal-contribution" in {fs, rs}
-        )
-    ):
+    # Pass + indeterminate → full H1-indeterminate; record directional evidence
+    if {fs, rs} == {"H1-pass", "H1-indeterminate"}:
         passing = "forward" if fs == "H1-pass" else "reverse"
         return {
             "full_H1": "H1-indeterminate",
@@ -355,7 +357,6 @@ def combine_h1_rmoved(fwd: dict[str, Any], rev: dict[str, Any]) -> dict[str, Any
             "forward": fwd,
             "reverse": rev,
         }
-    # Pass + something else exotic (e.g. inapplicable) — still not full pass
     if fs == "H1-pass" or rs == "H1-pass":
         passing = "forward" if fs == "H1-pass" else "reverse"
         return {

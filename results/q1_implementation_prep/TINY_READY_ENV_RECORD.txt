@@ -1,0 +1,6 @@
+host_python=/Applications/Xcode.app/Contents/Developer/usr/bin/python3
+host_numpy=2.0.2
+pin_python=/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/results/q1_final_cpu_checks/.venv_tf4513/bin/python
+pin_numpy=2.1.3
+pin_torch=2.5.1
+pin_transformers=4.51.3
