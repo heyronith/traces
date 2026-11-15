@@ -1,6 +1,7 @@
 # TRACES Q1 — Final Phase 2 Internal Corrections (D1–D8)
 
 **Branch:** `q1-impl-audit`  
+**Commit:** `f8fd73ea47c7b9e84f7561bdf77f48ffc86f6425`  
 **Prior HEAD:** `4dab7c2aa2acd703b8c0b82ee3d2be335b678404`  
 **Frozen main:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`
 
