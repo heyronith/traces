@@ -1,0 +1,41 @@
+TRACES Q1 — S2 Final Test Closure — synthetic CPU test record
+==============================================================
+branch=q1-impl-audit
+starting_HEAD=9041baa0b71bece114b8b81b4bba26daf30d0bbe
+starting_tree=86bd71b8a6c581713b0732084bfd21ada0b084fe
+tested_code_commit=122e8b0d6a5f738cb712ec24067e5d7799620b3b
+tested_code_tree=aa5008d540a3d04baabf8f95c61508845295ebfc
+frozen_main=b1e8874f45311678e6fa241f504e7e09d4a7808c
+
+=== BEFORE TEST RUN (working tree had uncommitted test edits later committed as tested_code_commit) ===
+HEAD=9041baa0b71bece114b8b81b4bba26daf30d0bbe
+tree=86bd71b8a6c581713b0732084bfd21ada0b084fe
+status= M tests/test_q1_failclosed_s1_s2.py (+ unrelated untracked results/ bundles)
+
+=== COMMAND ===
+PYTHONPATH=src results/q1_final_cpu_checks/.venv_tf4513/bin/python -m pytest tests/test_q1_*.py -q --tb=line
+
+=== RAW RESULT ===
+exit_code=0
+passed=206
+skipped=12
+failed=0
+
+=== AFTER TEST RUN (pre-commit) ===
+HEAD=9041baa0b71bece114b8b81b4bba26daf30d0bbe
+tree=86bd71b8a6c581713b0732084bfd21ada0b084fe
+status= M tests/test_q1_failclosed_s1_s2.py (+ untracked results/)
+
+=== ENVIRONMENT ===
+python=CPython 3.11.15
+venv=results/q1_final_cpu_checks/.venv_tf4513
+numpy=2.1.3
+torch=2.5.1
+F1_stream_sha256=fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed
+
+scientific_auth=OFF
+PINNED_EMPIRICAL_MANIFEST_SHA256=None
+no_model_forwards=true
+no_pretrained_loads=true
+no_gpu=true
+production_empirical_unlock=BLOCKED
