@@ -46,6 +46,10 @@ Engineering work listed alongside P1–P5 in owner instructions was implemented 
 
 **Do not treat those workstreams as P1–P5 closure.**
 
+### C6 retention (Phase 2 internal audit corrections)
+
+All five findings remain **UNRESOLVED**. No acceptance criteria were invented. Unrelated C1–C5 engineering fixes are **not** mapped onto P1–P5.
+
 ---
 
 ## Required to resolve

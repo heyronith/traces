@@ -159,13 +159,18 @@ def verify_post_load(
 
     adapted_layers = _infer_adapted_layers(adapter_targets, model)
     if expected_adapted_layers is not None:
-        if list(expected_adapted_layers) != adapted_layers:
-            # Soft: inferred from param names; still fail closed if both non-empty mismatch
-            if adapted_layers and list(expected_adapted_layers) != adapted_layers:
-                failures.append(
-                    f"adapted layers inferred {adapted_layers} != expected "
-                    f"{list(expected_adapted_layers)}"
-                )
+        exp_layers = list(expected_adapted_layers)
+        if not exp_layers:
+            failures.append("expected_adapted_layers is empty while required")
+        elif not adapted_layers:
+            failures.append(
+                "adapted-layer inventory absent on model but exact layers required: "
+                f"expected {exp_layers}"
+            )
+        elif adapted_layers != exp_layers:
+            failures.append(
+                f"adapted layers inferred {adapted_layers} != expected {exp_layers}"
+            )
 
     tok_class = type(tokenizer).__name__
     is_fast = bool(getattr(tokenizer, "is_fast", False))
@@ -188,11 +193,8 @@ def verify_post_load(
     has_weight_pins = bool(expected_weight_file_sha256)
 
     def _rev_match(actual: str, expected: str) -> bool:
-        return (
-            actual == expected
-            or expected.startswith(actual)
-            or actual.startswith(expected)
-        )
+        # Exact match only — reject misleading revision-prefix matches
+        return actual == expected
 
     resolved_base: str | None = inferred_base
     if inferred_base is not None:
@@ -260,51 +262,93 @@ def verify_post_load(
 
 
 def verify_adapter_off_behavior(model: Any) -> dict[str, Any]:
-    """Fail-closed check that adapter-off API exists and toggles ``disable`` state.
+    """Fail-closed PEFT 0.19.1-style adapter disable/enable with restore guarantee.
 
-    Uses PEFT ``disable_adapter_layers`` / enable pair when available. Does not
-    run model forwards. Suitable for mock objects in negative tests.
+    Requires ``disable_adapter_layers`` **and** ``enable_adapter_layers``.
+    A disable-only implementation is rejected. Restore runs in ``finally``.
+    Does not run model forwards.
     """
     failures: list[str] = []
     has_disable = hasattr(model, "disable_adapter_layers")
     has_enable = hasattr(model, "enable_adapter_layers")
-    has_ctx = hasattr(model, "disable_adapters")
-    if not has_disable and not has_ctx:
+    if not has_disable:
+        failures.append("model lacks disable_adapter_layers (PEFT 0.19.1 API)")
+    if not has_enable:
         failures.append(
-            "model lacks disable_adapter_layers/disable_adapters; "
-            "adapter-off references cannot be verified"
+            "model lacks enable_adapter_layers; refuse disable-only "
+            "(cannot safely restore adapter state)"
         )
-        return {"ok": False, "failures": failures, "toggled": False}
+    if failures:
+        return {
+            "ok": False,
+            "failures": failures,
+            "toggled": False,
+            "restored": False,
+            "has_disable_adapter_layers": has_disable,
+            "has_enable_adapter_layers": has_enable,
+        }
 
     toggled = False
+    restored = False
     try:
-        if has_disable:
-            model.disable_adapter_layers()
-            toggled = True
-            if has_enable:
-                model.enable_adapter_layers()
-        elif has_ctx:
-            # Context manager form — enter/exit without durable off
-            cm = model.disable_adapters()
-            if hasattr(cm, "__enter__"):
-                cm.__enter__()
-                toggled = True
-                cm.__exit__(None, None, None)
-            else:
-                failures.append(
-                    "disable_adapters() did not return a context manager; "
-                    "refuse ambiguous adapter-off"
-                )
+        model.disable_adapter_layers()
+        toggled = True
     except Exception as e:  # noqa: BLE001
-        failures.append(f"adapter-off toggle raised: {e}")
+        failures.append(f"disable_adapter_layers raised: {e}")
+    finally:
+        try:
+            model.enable_adapter_layers()
+            restored = True
+        except Exception as e:  # noqa: BLE001
+            failures.append(f"enable_adapter_layers restore raised: {e}")
+            restored = False
 
     return {
-        "ok": len(failures) == 0 and toggled,
+        "ok": len(failures) == 0 and toggled and restored,
         "failures": failures,
         "toggled": toggled,
+        "restored": restored,
         "has_disable_adapter_layers": has_disable,
         "has_enable_adapter_layers": has_enable,
+        "peft_api": "disable_adapter_layers/enable_adapter_layers",
     }
+
+
+REQUIRED_WEIGHT_MANIFEST_ROLES = ("base", "adapter")
+
+
+def validate_weight_manifest_roles(
+    expected_weight_file_sha256: Mapping[str, str] | None,
+    *,
+    resolved_base_files: Sequence[str] | None = None,
+    resolved_adapter_files: Sequence[str] | None = None,
+) -> list[str]:
+    """Manifest must cover resolved base/adapter weight files — not arbitrary paths."""
+    failures: list[str] = []
+    if not expected_weight_file_sha256:
+        return ["weight SHA manifest missing"]
+    paths = set(expected_weight_file_sha256.keys())
+    if resolved_base_files is not None:
+        for f in resolved_base_files:
+            if f not in paths:
+                failures.append(f"manifest missing resolved base weight file: {f}")
+    if resolved_adapter_files is not None:
+        for f in resolved_adapter_files:
+            if f not in paths:
+                failures.append(f"manifest missing resolved adapter weight file: {f}")
+    if resolved_base_files is None and resolved_adapter_files is None:
+        # Require role-tagged keys or recognizable names
+        joined = " ".join(paths).lower()
+        if "base" not in joined and "model.safetensors" not in joined:
+            failures.append(
+                "manifest lacks identifiable base weight entries "
+                "(require resolved file list or base-tagged paths)"
+            )
+        if "adapter" not in joined and "adapter_model" not in joined:
+            failures.append(
+                "manifest lacks identifiable adapter weight entries"
+            )
+    return failures
 
 
 def refuse_caller_revision_echo_as_proof(

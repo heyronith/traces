@@ -43,6 +43,7 @@ class RuntimeLockDocument:
     wheels: list[dict[str, Any]] = field(default_factory=list)
     source: str = "synthetic_fixture"  # or "built_image"
     production_image_lock: bool = False
+    intended_image: dict[str, Any] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -238,8 +239,71 @@ def validate_lock_document(
     }
 
 
-def claim_production_lock_exists(doc: Mapping[str, Any] | None) -> bool:
-    """True only when an explicit production image lock document is verified."""
+# Direct-pin packages that a production lock must cover (name prefixes / keys)
+REQUIRED_PRODUCTION_PACKAGES = (
+    "torch",
+    "transformers",
+    "numpy",
+    "peft",
+)
+
+
+def claim_production_lock_exists(
+    doc: Mapping[str, Any] | None,
+    *,
+    wheel_dir: Path | str | None = None,
+    require_rehash: bool = True,
+    intended_image: Mapping[str, Any] | None = None,
+) -> bool:
+    """True only after full validation — flags alone are insufficient.
+
+    Rejects forged ``production_image_lock=True`` / ``source=built_image`` without
+    complete wheel coverage, SHA checks, direct-pin linkage, and image metadata.
+    """
     if not doc:
         return False
-    return bool(doc.get("production_image_lock")) and doc.get("source") == "built_image"
+    if not (bool(doc.get("production_image_lock")) and doc.get("source") == "built_image"):
+        return False
+
+    # Intended-image metadata must be present and non-empty
+    meta = doc.get("intended_image") or intended_image
+    if not isinstance(meta, Mapping):
+        return False
+    for key in ("image_tag", "image_digest", "python_version", "cuda_version"):
+        if not meta.get(key):
+            return False
+
+    # Direct-pin linkage
+    dp = doc.get("direct_pins") or {}
+    if not dp.get("match"):
+        return False
+    if dp.get("expected_sha256") != DIRECT_PINS_SHA256:
+        return False
+
+    wheels = doc.get("wheels") or []
+    if len(wheels) < len(REQUIRED_PRODUCTION_PACKAGES):
+        return False
+    names = {str(w.get("name", "")).lower().replace("-", "_") for w in wheels}
+    for req in REQUIRED_PRODUCTION_PACKAGES:
+        if not any(req in n for n in names):
+            return False
+    for w in wheels:
+        if not w.get("sha256") or not w.get("filename"):
+            return False
+
+    # Structural validation (+ optional on-disk rehash)
+    val = validate_lock_document(
+        doc,
+        wheel_dir=wheel_dir if require_rehash else None,
+        require_production=True,
+        require_direct_pins_match=True,
+    )
+    if not val["ok"]:
+        return False
+
+    # Explicit forge guard: schema + protocol linkage
+    if doc.get("schema_version") != LOCK_SCHEMA_VERSION:
+        return False
+    if doc.get("frozen_scientific_commit") != FROZEN_SCIENTIFIC_COMMIT:
+        return False
+    return True

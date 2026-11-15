@@ -33,6 +33,7 @@ from traces.model_loader import (
 )
 from traces.q1.post_load import (
     refuse_caller_revision_echo_as_proof,
+    validate_weight_manifest_roles,
     verify_adapter_off_behavior,
     verify_post_load,
 )
@@ -90,6 +91,19 @@ def load_q1_scientific_model(
         raise RuntimeError(
             "Q1 scientific load requires expected_weight_file_sha256 pins "
             "(refuse caller-echo-only revision verification)"
+        )
+    if expected_adapter_targets is None:
+        raise RuntimeError(
+            "Q1 production load requires explicit expected_adapter_targets"
+        )
+    if expected_adapted_layers is None:
+        raise RuntimeError(
+            "Q1 production load requires explicit expected_adapted_layers"
+        )
+    manifest_fails = validate_weight_manifest_roles(expected_weight_file_sha256)
+    if manifest_fails:
+        raise RuntimeError(
+            "Q1 weight SHA manifest invalid: " + "; ".join(manifest_fails)
         )
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -206,6 +220,10 @@ def validate_loader_policy_inputs(
     expected_weight_file_sha256: dict[str, str] | None,
     torch_dtype: Any = None,
     attn_implementation: str | None = None,
+    expected_adapter_targets: list[str] | None = None,
+    expected_adapted_layers: list[int] | None = None,
+    resolved_base_files: list[str] | None = None,
+    resolved_adapter_files: list[str] | None = None,
 ) -> list[str]:
     """CPU-safe policy checks for mocks/negative tests (no HF download)."""
     failures: list[str] = []
@@ -213,6 +231,10 @@ def validate_loader_policy_inputs(
         failures.append(f"base_revision {base_revision!r} != pin")
     if adapter_revision != PINNED_ADAPTER_REVISION:
         failures.append(f"adapter_revision {adapter_revision!r} != pin")
+    if expected_adapter_targets is None:
+        failures.append("expected_adapter_targets required for production loading")
+    if expected_adapted_layers is None:
+        failures.append("expected_adapted_layers required for production loading")
     if not expected_weight_file_sha256:
         failures.append("expected_weight_file_sha256 required")
         failures.extend(
@@ -222,6 +244,14 @@ def validate_loader_policy_inputs(
                 inferred_base=None,
                 inferred_adapter=None,
                 has_weight_pins=False,
+            )
+        )
+    else:
+        failures.extend(
+            validate_weight_manifest_roles(
+                expected_weight_file_sha256,
+                resolved_base_files=resolved_base_files,
+                resolved_adapter_files=resolved_adapter_files,
             )
         )
     if torch_dtype is not None and torch_dtype != REQUIRED_TORCH_DTYPE:

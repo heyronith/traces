@@ -40,10 +40,16 @@ from traces.q1.analysis_ext import (
     selection_key,
     top2_heads_from_mean_effects,
 )
+from traces.q1.component_sets import (
+    validate_complete_signed_ranking,
+    validate_head_effect_map,
+    validate_pair_effect_map,
+)
 from traces.q1.patching import NOMINATED_PAIR
-from traces.q1.recording import ConditionRecord, GenerationRecord, ResultSink
+from traces.q1.recording import ConditionRecord, ResultSink
 from traces.q1.stats_f1_f2 import assign_f2_folds
 from traces.q1.tag_position import TagAlignment, derive_tag_alignment
+from traces.q1.workload import N_DEV, N_HO
 
 
 @dataclass
@@ -152,17 +158,20 @@ def _run_crossfit_direction(
     if not denom_ok:
         out["indeterminate"] = True
         out["reason"] = "route-denominator gate failed; refusing route-relative k* claims"
+        out["k_star"] = classify_k_star({}, k_scan_complete=False)
         return out
     if draws.crossfit_indeterminate:
         out["indeterminate"] = True
         out["reason"] = draws.crossfit_reason
+        out["k_star"] = classify_k_star({}, k_scan_complete=False)
         return out
 
     heads_a = _mean_heads(head_effects, fold_a_elig)
     heads_b = _mean_heads(head_effects, fold_b_elig)
     k2_lower: float | None = None
     k10_upper: float | None = None
-    any_indet = False
+    n_el = len(e_route)
+    complete_ks = True
     for k in range(1, 11):
         ev = crossfit_evaluate_topk(
             head_effects_fold_a=heads_a,
@@ -173,9 +182,10 @@ def _run_crossfit_direction(
             eligible_fold_b_idx=fold_b_elig,
             k=k,
             draws=draws,
+            n_eligible=n_el,
         )
         if ev.get("indeterminate"):
-            any_indet = True
+            complete_ks = False
             out["by_k"][k] = ev
             continue
         iv = ev["share_interval_90"]
@@ -192,13 +202,22 @@ def _run_crossfit_direction(
         if k == 10:
             k10_upper = iv.upper
 
+    # Require all k=1..10 present and determinate for definitive concentration
+    if set(out["by_k"].keys()) != set(range(1, 11)):
+        complete_ks = False
+    if any(out["by_k"][k].get("indeterminate") for k in out["by_k"]):
+        complete_ks = False
+
+    out["k_scan_complete"] = complete_ks
     out["k_star"] = classify_k_star(
         {},
-        k2_share_lower=k2_lower,
-        k10_share_upper=k10_upper,
+        k2_share_lower=k2_lower if complete_ks else None,
+        k10_share_upper=k10_upper if complete_ks else None,
+        k_scan_complete=complete_ks,
     )
-    if any_indet and out["k_star"].get("undetermined_concentration"):
-        out["partial_indeterminate_ks"] = True
+    if not complete_ks:
+        out["indeterminate"] = True
+        out["reason"] = out.get("reason") or "incomplete k=1..10 joint-effect evaluations"
     return out
 
 
@@ -320,55 +339,98 @@ def run_model_unit_analysis(
         "k_star": crossfit_fwd.get("k_star") or crossfit_rev.get("k_star"),
     }
 
-    # H2: upper 90% of EVERY upstream single-head AND all 64 pairs (fwd when denom ok)
-    h2_meta: dict[str, Any] = {}
-    if denom_fwd["ok"]:
-        components: dict[Any, np.ndarray] = {}
-        for k, v in unit.head_effects_fwd.items():
-            components[("head",) + k] = v
-        for k, v in unit.pair_effects_fwd.items():
-            components[("pair",) + k] = v
-        share_ivs = component_route_share_intervals(components, unit.e_route_fwd, draws)
-        h2cov = h2_component_coverage(share_ivs)
-        h2_meta = {
-            "coverage": h2cov,
-            "n_heads": len(unit.head_effects_fwd),
-            "n_pairs": len(unit.pair_effects_fwd),
-            "share_intervals": {
-                str(k): {"lower": iv.lower, "upper": iv.upper, "point": iv.point}
-                for k, iv in list(share_ivs.items())[:5]  # sample for payload size
-            },
-        }
-        all_upper_below = bool(h2cov["all_upper_below"])
-    else:
-        h2_meta = {
-            "coverage": {
+    # H2: both directions with appropriate route-denom gates; exact 152+64 identities
+    def _h2_for_direction(
+        denom: dict[str, Any],
+        head_fx: dict[tuple[int, int], np.ndarray],
+        pair_fx: dict[tuple[int, int], np.ndarray],
+        e_route: np.ndarray,
+        direction: str,
+    ) -> dict[str, Any]:
+        if not denom.get("ok"):
+            return {
+                "direction": direction,
                 "all_upper_below": False,
-                "indeterminate": True,
-                "reason": "route-denominator gate failed",
+                "coverage": {
+                    "all_upper_below": False,
+                    "indeterminate": True,
+                    "reason": f"route-denominator gate failed ({direction})",
+                },
             }
+        head_chk = validate_head_effect_map(head_fx, n_eligible=len(e_route))
+        pair_chk = validate_pair_effect_map(pair_fx, n_eligible=len(e_route))
+        if not head_chk["ok"] or not pair_chk["ok"]:
+            return {
+                "direction": direction,
+                "all_upper_below": False,
+                "coverage": {
+                    "all_upper_below": False,
+                    "indeterminate": True,
+                    "reason": "; ".join(head_chk["failures"] + pair_chk["failures"]),
+                    "head_validation": head_chk,
+                    "pair_validation": pair_chk,
+                },
+            }
+        components: dict[Any, np.ndarray] = {}
+        for k, v in head_fx.items():
+            components[("head",) + k] = v
+        for k, v in pair_fx.items():
+            components[("pair",) + k] = v
+        share_ivs = component_route_share_intervals(components, e_route, draws)
+        h2cov = h2_component_coverage(share_ivs)
+        return {
+            "direction": direction,
+            "all_upper_below": bool(h2cov["all_upper_below"]),
+            "coverage": h2cov,
+            "n_heads": head_chk["n_heads"],
+            "n_pairs": pair_chk["n_pairs"],
         }
-        all_upper_below = False
 
-    # H3 conservation from actual top-2 sets (five-seed map) or this unit alone
+    h2_fwd = _h2_for_direction(
+        denom_fwd, unit.head_effects_fwd, unit.pair_effects_fwd, unit.e_route_fwd, "forward"
+    )
+    h2_rev = _h2_for_direction(
+        denom_rev, unit.head_effects_rev, unit.pair_effects_rev, unit.e_route_rev, "reverse"
+    )
+    # Primary H2 support uses forward when applicable; both recorded
+    all_upper_below = bool(h2_fwd.get("all_upper_below"))
+    h2_meta = {"forward": h2_fwd, "reverse": h2_rev}
+
+    # H3: only with validated five-seed map; partial maps cannot support H3a/H3b
     if top2_by_seed is None:
-        local_top2 = top2_heads_from_mean_effects(unit.head_effects_fwd)
-        top2_map = {unit.model_unit: local_top2}
-        h3_note = "single-unit top-2 only; five-seed conservation requires top2_by_seed"
+        h3cons = h3_top2_conservation({}, require_five_seeds=True)
+        h3_note = "no five-seed top2_by_seed supplied; H3 ineligible"
+        h3_count = 0
+        h3_varies = False
     else:
-        top2_map = dict(top2_by_seed)
-        h3_note = None
-    h3cons = h3_top2_conservation(top2_map)
+        validated: dict[Any, frozenset[tuple[int, int]]] = {}
+        for seed_id, fs in top2_by_seed.items():
+            if isinstance(fs, frozenset) and len(fs) == 2:
+                validated[seed_id] = fs
+        h3cons = h3_top2_conservation(validated, require_five_seeds=True)
+        h3_note = h3cons.get("reason")
+        if h3cons.get("H3a_eligible"):
+            h3_count = int(h3cons.get("H3a_count") or 0)
+            h3_varies = bool(h3cons.get("varies"))
+        else:
+            h3_count = 0
+            h3_varies = False
 
     k_star = crossfit.get("k_star") or {}
+    # Refuse H2/H3 support from incomplete k* scans
+    k_le2 = bool(k_star.get("k_star_le_2")) and not k_star.get("definitive_refused")
+    k_gt10 = bool(k_star.get("k_star_gt_10")) and not k_star.get("definitive_refused")
     h2h3 = evaluate_h2_h3(
-        k_star_le_2=bool(k_star.get("k_star_le_2")),
-        k_star_gt_10=bool(k_star.get("k_star_gt_10")),
+        k_star_le_2=k_le2,
+        k_star_gt_10=k_gt10,
         h1_state=str(h1.get("full_H1")),
         all_component_share_upper_below_025=all_upper_below,
-        top2_set_conservation_seeds=int(h3cons.get("H3a_count") or 0),
-        top2_varies_across_seeds=bool(h3cons.get("varies")),
+        top2_set_conservation_seeds=h3_count,
+        top2_varies_across_seeds=h3_varies,
     )
+    if h3cons.get("H3a_eligible") is False:
+        h2h3["H3a"] = None
+        h2h3["H3b"] = None
     h2h3["h2_meta"] = h2_meta
     h2h3["h3_conservation"] = {
         **{k: (sorted(v) if isinstance(v, frozenset) else v) for k, v in h3cons.items()},
@@ -405,43 +467,240 @@ def run_model_unit_analysis(
     )
 
 
+PRIMARY_ROLE = "primary_confirmatory"
+EXPLORATORY_ROLE = "exploratory_dev"
+SECONDARY_ROLE = "secondary_replication"
+ADAPTER_OFF_ROLE = "adapter_off_gates_descriptives"
+INTEGRITY_ROLE = "integrity_checks"
+
+KNOWN_ROLES = frozenset(
+    {PRIMARY_ROLE, EXPLORATORY_ROLE, SECONDARY_ROLE, ADAPTER_OFF_ROLE, INTEGRITY_ROLE}
+)
+
+
+def _analyze_exploratory_unit(unit: ModelUnitInput) -> dict[str, Any]:
+    """Exploratory: development allocation (n=50), descriptive ranks, no H3 five-seed."""
+    n = int(unit.eligible_mask.sum()) if len(unit.eligible_mask) else len(unit.prompt_ids)
+    return {
+        "model_unit": unit.model_unit,
+        "role": EXPLORATORY_ROLE,
+        "family": unit.family,
+        "n_prompts": len(unit.prompt_ids),
+        "n_eligible": n,
+        "allocation_expectation": N_DEV,
+        "allocation_ok": len(unit.prompt_ids) == N_DEV or len(unit.prompt_ids) <= N_DEV,
+        "analysis": "exploratory_descriptive",
+        "gates": {
+            "trigger_asr": unit.trigger_asr,
+            "clean_false_fire": unit.clean_false_fire,
+            "first_token_validity": unit.first_token_validity,
+        },
+    }
+
+
+def _analyze_secondary_unit(
+    unit: ModelUnitInput,
+    held_out_ids: Sequence[str],
+) -> dict[str, Any]:
+    """Secondary l1523 replication: pair criteria vs T, not primary study-level."""
+    from traces.q1.analysis import (
+        bootstrap_core_rank,
+        bootstrap_ratio_of_means,
+        prepare_f1_for_model,
+        secondary_l1523_replication_criteria,
+    )
+
+    elig_ids = [pid for pid, m in zip(unit.prompt_ids, unit.eligible_mask) if m]
+    if len(elig_ids) < 1:
+        return {
+            "model_unit": unit.model_unit,
+            "role": SECONDARY_ROLE,
+            "status": "indeterminate",
+            "reason": "empty eligible set",
+        }
+    draws = prepare_f1_for_model(elig_ids, list(held_out_ids))
+    core = (6, 5)
+    results_dir: dict[str, Any] = {}
+    for direction, pair_fx, head_fx, t_num in (
+        ("forward", unit.pair_effects_fwd, unit.head_effects_fwd, unit.m_TT - unit.m_CC),
+        ("reverse", unit.pair_effects_rev, unit.head_effects_rev, unit.m_TT - unit.m_CC),
+    ):
+        if core not in pair_fx:
+            results_dir[direction] = {"pass": False, "reason": "missing core pair"}
+            continue
+        rank_iv = bootstrap_core_rank(pair_fx, core, draws.full_set)
+        e_pair = pair_fx[core]
+        share = bootstrap_ratio_of_means(e_pair, t_num, draws.full_set)
+        marg15 = bootstrap_ratio_of_means(
+            e_pair - head_fx.get((15, 6), np.zeros_like(e_pair)), t_num, draws.full_set
+        )
+        marg16 = bootstrap_ratio_of_means(
+            e_pair - head_fx.get((16, 5), np.zeros_like(e_pair)), t_num, draws.full_set
+        )
+        crit = secondary_l1523_replication_criteria(
+            rank_upper_90=rank_iv.upper,
+            e_pair_over_T_lower_90=share.lower,
+            marg15_lower_90=marg15.lower,
+            marg16_lower_90=marg16.lower,
+        )
+        results_dir[direction] = crit
+    return {
+        "model_unit": unit.model_unit,
+        "role": SECONDARY_ROLE,
+        "family": unit.family,
+        "n_prompts": len(unit.prompt_ids),
+        "allocation_expectation": N_HO,
+        "directions": results_dir,
+        "enters_primary_study_level": False,
+    }
+
+
+def _analyze_adapter_off_unit(unit: ModelUnitInput) -> dict[str, Any]:
+    from traces.q1.gates import adapter_off_asr_gate_pass
+
+    return {
+        "model_unit": unit.model_unit,
+        "role": ADAPTER_OFF_ROLE,
+        "family": unit.family,
+        "n_prompts": len(unit.prompt_ids),
+        "asr_gate": adapter_off_asr_gate_pass(
+            unit.trigger_asr, unit.clean_false_fire
+        ),
+        "clean_false_fire": unit.clean_false_fire,
+        "first_token_validity": unit.first_token_validity,
+        "descriptive_only": True,
+    }
+
+
 def run_study(
     units: Sequence[ModelUnitInput],
     held_out_ids_allocation_order: Sequence[str],
     *,
     exploratory_single_bos_ranks: Sequence[int] | None = None,
+    development_ids_allocation_order: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    """Full multi-unit orchestration including exploratory stop and study-level."""
-    sink = ResultSink()
-    primary = [u for u in units if u.role == "primary_confirmatory"]
-    # Actual top-2 head sets across primary seeds for H3
-    top2_by_seed: dict[str, frozenset[tuple[int, int]]] = {}
-    for u in primary:
-        top2_by_seed[u.model_unit] = top2_heads_from_mean_effects(u.head_effects_fwd)
+    """Full multi-role orchestration: exploratory → stop → primary/secondary/adapter-off.
 
-    per_unit = []
-    route_labels = []
+    Exploratory stopping is enforced **before** confirmatory primary analysis.
+    Preserves 50-dev / 200-held-out allocation expectations.
+    """
+    sink = ResultSink()
+    by_role: dict[str, list[ModelUnitInput]] = {r: [] for r in KNOWN_ROLES}
+    unknown: list[dict[str, Any]] = []
     for u in units:
-        if u.role == "primary_confirmatory":
-            res = run_model_unit_analysis(
-                u,
-                held_out_ids_allocation_order,
-                top2_by_seed=top2_by_seed if len(top2_by_seed) >= 1 else None,
-            )
-            per_unit.append(res.to_dict())
-            route_labels.append(res.route.get("route_class", "Indeterminate"))
-            sink.add_condition(
-                ConditionRecord(
-                    condition_id="analysis_complete",
-                    instruction_id="*",
-                    model_unit=u.model_unit,
-                    bos_convention="single",
-                    direction=None,
-                    meta={"gates_passed": res.gates.get("passed")},
-                )
-            )
+        if u.role in by_role:
+            by_role[u.role].append(u)
         else:
-            per_unit.append({"model_unit": u.model_unit, "role": u.role, "skipped": "non-primary"})
+            unknown.append({"model_unit": u.model_unit, "role": u.role, "error": "unknown_role"})
+
+    # --- Exploratory phase ---
+    exploratory_results = [_analyze_exploratory_unit(u) for u in by_role[EXPLORATORY_ROLE]]
+    if exploratory_single_bos_ranks is None and by_role[EXPLORATORY_ROLE]:
+        stop = {
+            "triggered": False,
+            "ranks": None,
+            "reason": "exploratory ranks not supplied; confirmatory blocked",
+            "confirmatory_blocked": True,
+        }
+    elif exploratory_single_bos_ranks is not None:
+        triggered = exploratory_stop_triggered(exploratory_single_bos_ranks)
+        stop = {
+            "triggered": triggered,
+            "ranks": list(exploratory_single_bos_ranks),
+            "confirmatory_blocked": triggered,
+        }
+    else:
+        stop = {
+            "triggered": False,
+            "ranks": None,
+            "confirmatory_blocked": False,
+            "reason": "no exploratory units and no ranks",
+        }
+
+    per_unit: list[dict[str, Any]] = list(exploratory_results)
+
+    if stop.get("confirmatory_blocked"):
+        for u in by_role[PRIMARY_ROLE] + by_role[SECONDARY_ROLE]:
+            per_unit.append(
+                {
+                    "model_unit": u.model_unit,
+                    "role": u.role,
+                    "skipped": "exploratory_stop_or_missing_ranks",
+                }
+            )
+        for u in by_role[ADAPTER_OFF_ROLE]:
+            per_unit.append(_analyze_adapter_off_unit(u))
+        for u in by_role[INTEGRITY_ROLE]:
+            per_unit.append({"model_unit": u.model_unit, "role": u.role, "status": "recorded"})
+        return {
+            "per_unit": per_unit + unknown,
+            "study_level": None,
+            "exploratory_stop": stop,
+            "h3_top2_by_seed": {},
+            "allocation": {
+                "held_out_n": len(held_out_ids_allocation_order),
+                "held_out_expected": N_HO,
+                "dev_n": len(development_ids_allocation_order or []),
+                "dev_expected": N_DEV,
+            },
+            "sink": sink.to_dict(),
+            "roles_executed": {
+                EXPLORATORY_ROLE: len(exploratory_results),
+                PRIMARY_ROLE: 0,
+                SECONDARY_ROLE: 0,
+                ADAPTER_OFF_ROLE: len(by_role[ADAPTER_OFF_ROLE]),
+            },
+        }
+
+    # --- Primary confirmatory (after exploratory stop clear) ---
+    primary = by_role[PRIMARY_ROLE]
+    top2_by_seed: dict[str, frozenset[tuple[int, int]]] = {}
+    ranking_ok = True
+    for u in primary:
+        n_el = int(u.eligible_mask.sum())
+        chk = validate_complete_signed_ranking(u.head_effects_fwd, n_eligible=n_el)
+        if not chk["ok"]:
+            ranking_ok = False
+            top2_by_seed = {}
+            break
+        top2_by_seed[u.model_unit] = top2_heads_from_mean_effects(
+            u.head_effects_fwd,
+            require_complete_upstream=True,
+            n_eligible=n_el,
+        )
+
+    route_labels = []
+    for u in primary:
+        res = run_model_unit_analysis(
+            u,
+            held_out_ids_allocation_order,
+            top2_by_seed=top2_by_seed if ranking_ok and len(top2_by_seed) == 5 else None,
+        )
+        d = res.to_dict()
+        d["role"] = PRIMARY_ROLE
+        per_unit.append(d)
+        route_labels.append(res.route.get("route_class", "Indeterminate"))
+        sink.add_condition(
+            ConditionRecord(
+                condition_id="primary_analysis_complete",
+                instruction_id="*",
+                model_unit=u.model_unit,
+                bos_convention="single",
+                direction=None,
+                meta={"gates_passed": res.gates.get("passed")},
+            )
+        )
+
+    # --- Secondary replication ---
+    for u in by_role[SECONDARY_ROLE]:
+        per_unit.append(_analyze_secondary_unit(u, held_out_ids_allocation_order))
+
+    # --- Adapter-off ---
+    for u in by_role[ADAPTER_OFF_ROLE]:
+        per_unit.append(_analyze_adapter_off_unit(u))
+
+    for u in by_role[INTEGRITY_ROLE]:
+        per_unit.append({"model_unit": u.model_unit, "role": u.role, "status": "recorded"})
 
     study = None
     if len(route_labels) == 5:
@@ -449,19 +708,26 @@ def run_study(
     elif len(route_labels) > 0:
         study = {"partial": True, "n": len(route_labels), "labels": route_labels}
 
-    stop = None
-    if exploratory_single_bos_ranks is not None:
-        stop = {
-            "triggered": exploratory_stop_triggered(exploratory_single_bos_ranks),
-            "ranks": list(exploratory_single_bos_ranks),
-        }
-
     return {
-        "per_unit": per_unit,
+        "per_unit": per_unit + unknown,
         "study_level": study,
         "exploratory_stop": stop,
         "h3_top2_by_seed": {k: sorted(v) for k, v in top2_by_seed.items()},
+        "h3_ranking_complete": ranking_ok and len(top2_by_seed) == 5,
+        "allocation": {
+            "held_out_n": len(held_out_ids_allocation_order),
+            "held_out_expected": N_HO,
+            "held_out_ok": len(held_out_ids_allocation_order) == N_HO,
+            "dev_n": len(development_ids_allocation_order or []),
+            "dev_expected": N_DEV,
+        },
         "sink": sink.to_dict(),
+        "roles_executed": {
+            EXPLORATORY_ROLE: len(exploratory_results),
+            PRIMARY_ROLE: len(primary),
+            SECONDARY_ROLE: len(by_role[SECONDARY_ROLE]),
+            ADAPTER_OFF_ROLE: len(by_role[ADAPTER_OFF_ROLE]),
+        },
     }
 
 

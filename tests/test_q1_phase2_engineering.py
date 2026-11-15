@@ -240,7 +240,8 @@ def test_five_seed_conservation_and_exploratory_stop():
         "s4": frozenset([(15, 6), (16, 5)]),
         "s5": frozenset([(10, 1), (11, 2)]),
     }
-    cons = h3_top2_conservation(top2)
+    cons = h3_top2_conservation(top2, require_five_seeds=True)
+    assert cons["H3a_eligible"] is True
     assert cons["H3a_count"] == 4
     assert cons["varies"] is True
     assert exploratory_stop_triggered([11, 12, 1]) is True
@@ -293,12 +294,15 @@ def test_driver_h2_evaluates_heads_and_pairs():
     held = unit.prompt_ids + [f"h{i}" for i in range(160)]
     res = run_model_unit_analysis(unit, held)
     meta = res.h2_h3.get("h2_meta") or {}
-    if meta.get("coverage", {}).get("reason") == "route-denominator gate failed":
-        # Still exercised denom-before-share gate
-        assert meta["coverage"]["indeterminate"] is True
+    fwd = meta.get("forward") or meta
+    cov = fwd.get("coverage") or {}
+    if cov.get("reason") == "route-denominator gate failed" or "denominator" in str(
+        cov.get("reason", "")
+    ):
+        assert cov.get("indeterminate") is True or fwd.get("all_upper_below") is False
     else:
-        assert meta.get("n_pairs") == 64
-        assert meta.get("n_heads", 0) >= 64
+        assert fwd.get("n_pairs") == 64
+        assert fwd.get("n_heads", 0) == 152
 
 
 def test_study_five_seed_top2_actual_sets():
@@ -375,6 +379,8 @@ def test_loader_policy_rejects_missing_weight_pins():
         base_revision="wrong",
         adapter_revision="wrong",
         expected_weight_file_sha256=None,
+        expected_adapter_targets=None,
+        expected_adapted_layers=None,
         torch_dtype=torch.float32,
         attn_implementation="sdpa",
     )
@@ -382,6 +388,7 @@ def test_loader_policy_rejects_missing_weight_pins():
     assert any("dtype" in f.lower() for f in fails)
     assert any("attn" in f.lower() for f in fails)
     assert any("echo" in f.lower() or "caller" in f.lower() for f in fails)
+    assert any("targets" in f for f in fails)
 
 
 def test_refuse_caller_revision_echo():
