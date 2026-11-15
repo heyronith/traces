@@ -1,0 +1,11 @@
+......................................                                   [100%]
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 11 items
+
+tests/test_q1_tiny_gemma_architecture.py .ssssssssss                     [100%]
+
+======================== 1 passed, 10 skipped in 0.03s =========================

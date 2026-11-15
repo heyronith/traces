@@ -28,11 +28,11 @@ import pytest
 
 COVERAGE = [
     "identity_patches_reproduce_intact_logits",
-    "joint_upstream_vs_CT_TC_boundary",
+    "joint_upstream_vs_CT_TC_boundary_logits",
+    "joint_upstream_boundary_residual_vs_hybrid",
     "TT_CC_boundary_vs_intact",
     "pretag_patch_noop",
-    "patch_direction_donors",
-    "o_proj_slice_post_tag_only",
+    "live_o_proj_single_head_locality_fwd_rev",
     "fail_closed_recipient_direction_shape_dtype",
     "clean_reference_and_margin_manual",
     "hook_cleanup_success_and_failure",
@@ -190,6 +190,86 @@ def _logits_close(a, b, atol=FLOAT32_ATOL) -> bool:
     return bool(torch.allclose(a.float(), b.float(), atol=atol, rtol=0.0))
 
 
+def _max_abs_diff(a, b) -> float:
+    import torch
+
+    return float((a.float() - b.float()).abs().max().item())
+
+
+def _extract_hs(args, kwargs):
+    import torch
+
+    if "hidden_states" in kwargs and torch.is_tensor(kwargs["hidden_states"]):
+        return kwargs["hidden_states"]
+    if args and torch.is_tensor(args[0]):
+        return args[0]
+    raise RuntimeError("missing hidden_states / args[0]")
+
+
+def _run_all_upstream_with_boundary_capture(
+    runner,
+    cache,
+    heads,
+    *,
+    direction: str,
+    recipient_ids,
+    recipient_tag: str,
+    expected_full_ids,
+    boundary_layer: int,
+):
+    """All-upstream head patches + capture live boundary layer-input residual."""
+    import torch
+    from traces.q1.direction import resolve_donor_recipient_caches
+    from traces.q1.scoring import teacher_forced_forward
+
+    runner.ensure_hooks_cleared()
+    verified = runner.verify_recipient(
+        recipient_ids,
+        cache.alignment,
+        expected_tag=recipient_tag,  # type: ignore[arg-type]
+        expected_full_ids=expected_full_ids,
+    )
+    donor_tag, _recip, positions = resolve_donor_recipient_caches(
+        cache,
+        direction,  # type: ignore[arg-type]
+        bos_convention=runner.bos_convention,
+        model_unit=runner.model_unit,
+        instruction_id=cache.instruction_id,
+        alignment=cache.alignment,
+        recipient_prompt_tag=verified,
+    )
+    donor_by_layer = {
+        h.layer: cache.get_o_proj_input(donor_tag, h.layer) for h in heads
+    }
+    captured: dict[str, torch.Tensor] = {}
+
+    def boundary_spy(_mod, args, kwargs):
+        x = _extract_hs(args, kwargs)
+        captured["residual"] = x.detach().clone()
+        return args, kwargs
+
+    layers = runner.model.model.layers
+    bound_handle = None
+    try:
+        runner.patch.install_joint_head_patches(
+            heads, donor_by_layer, positions, direction=direction  # type: ignore[arg-type]
+        )
+        bound_handle = layers[boundary_layer].register_forward_pre_hook(
+            boundary_spy, with_kwargs=True
+        )
+        logits = teacher_forced_forward(
+            runner.model, recipient_ids, None, use_cache=False
+        )
+    finally:
+        if bound_handle is not None:
+            bound_handle.remove()
+        runner.patch.clear()
+    runner.ensure_hooks_cleared()
+    if "residual" not in captured:
+        raise RuntimeError("boundary residual spy did not run")
+    return logits, captured["residual"]
+
+
 # ---------------------------------------------------------------------------
 # Gate meta (runs without authorization)
 # ---------------------------------------------------------------------------
@@ -280,16 +360,15 @@ def test_identity1_patches_reproduce_intact(tiny_fp32):
 
 @forward_only
 def test_identity2_3_upstream_vs_boundary(tiny_fp32):
-    """Identities 2–3: all-upstream head patches vs CT/TC boundary — compare logits.
+    """Identities 2–3: boundary residual + logits vs CT/TC.
 
-    Numerical asserts are preserved. Equivalence is a frozen-protocol claim that
-    is **not algebraically guaranteed** under Gemma residual+MLP structure when
-    donors are intact-run o_proj activations (see
-    ``results/q1_implementation_prep/IDENTITIES_2_3_EQUIVALENCE_ASSESSMENT.md``).
-    A failure here is an unresolved scientific-validation risk, not an excuse to
-    weaken the assertion.
+    Mathematical expectation under complete coverage: see
+    ``IDENTITIES_2_3_EQUIVALENCE_ASSESSMENT.md``. This test does **not** claim
+    empirical pass until authorized forwards run; asserts encode the expectation.
     """
+    import torch
     from traces.q1.hook_leak import assert_no_hooks
+    from traces.q1.hybrids import build_hybrid_residual
     from traces.q1.identities import (
         check_identity_2_all_upstream_vs_CT,
         check_identity_3_all_upstream_vs_TC,
@@ -305,15 +384,21 @@ def test_identity2_3_upstream_vs_boundary(tiny_fp32):
     assert heads, "expected upstream heads below boundary"
     assert all(h.layer < TINY_BOUNDARY for h in heads)
 
-    # Forward all-upstream (C→T) vs CT boundary on T recipient
-    logits_up_fwd = runner.run_head_patches(
+    hybrid_ct = build_hybrid_residual(
+        cache.get_residual("T", TINY_BOUNDARY),
+        cache.get_residual("C", TINY_BOUNDARY),
+        al,
+        "CT",
+    )
+    logits_up_fwd, bound_fwd = _run_all_upstream_with_boundary_capture(
+        runner,
         cache,
         heads,
-        "forward",
-        recipient_input_ids=ids_t,
-        recipient_attention_mask=None,
-        recipient_prompt_tag="T",
+        direction="forward",
+        recipient_ids=ids_t,
+        recipient_tag="T",
         expected_full_ids=ids_t[0].tolist(),
+        boundary_layer=TINY_BOUNDARY,
     )
     logits_ct = runner.run_boundary_hybrid(
         cache,
@@ -324,21 +409,39 @@ def test_identity2_3_upstream_vs_boundary(tiny_fp32):
         expected_full_ids=ids_t[0].tolist(),
         layer=TINY_BOUNDARY,
     )
-    r2 = check_identity_2_all_upstream_vs_CT(logits_up_fwd, logits_ct, FLOAT32_ATOL)
-    assert r2.passed, (
-        f"Identity 2 FAILED (preserved): {r2.detail}. "
-        "Do not weaken to shape-only checks. "
-        "If failed: unresolved scientific-validation risk (identities 2–3 assessment)."
+    resid_ok_fwd = torch.allclose(
+        bound_fwd.float(), hybrid_ct.float(), atol=FLOAT32_ATOL, rtol=0.0
     )
+    r2 = check_identity_2_all_upstream_vs_CT(logits_up_fwd, logits_ct, FLOAT32_ATOL)
+    if not resid_ok_fwd or not r2.passed:
+        d_res = _max_abs_diff(bound_fwd, hybrid_ct)
+        d_log = _max_abs_diff(logits_up_fwd, logits_ct)
+        where = (
+            "boundary_residual"
+            if d_res > FLOAT32_ATOL
+            else ("downstream_logits" if d_log > FLOAT32_ATOL else "unknown")
+        )
+        pytest.fail(
+            f"Identity 2 FAILED: resid_ok={resid_ok_fwd} logits_ok={r2.passed}; "
+            f"max_abs_residual={d_res:.6e} max_abs_logits={d_log:.6e}; "
+            f"first_discrepancy={where}. Do not weaken asserts."
+        )
 
-    logits_up_rev = runner.run_head_patches(
+    hybrid_tc = build_hybrid_residual(
+        cache.get_residual("T", TINY_BOUNDARY),
+        cache.get_residual("C", TINY_BOUNDARY),
+        al,
+        "TC",
+    )
+    logits_up_rev, bound_rev = _run_all_upstream_with_boundary_capture(
+        runner,
         cache,
         heads,
-        "reverse",
-        recipient_input_ids=ids_c,
-        recipient_attention_mask=None,
-        recipient_prompt_tag="C",
+        direction="reverse",
+        recipient_ids=ids_c,
+        recipient_tag="C",
         expected_full_ids=ids_c[0].tolist(),
+        boundary_layer=TINY_BOUNDARY,
     )
     logits_tc = runner.run_boundary_hybrid(
         cache,
@@ -349,12 +452,23 @@ def test_identity2_3_upstream_vs_boundary(tiny_fp32):
         expected_full_ids=ids_c[0].tolist(),
         layer=TINY_BOUNDARY,
     )
-    r3 = check_identity_3_all_upstream_vs_TC(logits_up_rev, logits_tc, FLOAT32_ATOL)
-    assert r3.passed, (
-        f"Identity 3 FAILED (preserved): {r3.detail}. "
-        "Do not weaken to shape-only checks. "
-        "If failed: unresolved scientific-validation risk (identities 2–3 assessment)."
+    resid_ok_rev = torch.allclose(
+        bound_rev.float(), hybrid_tc.float(), atol=FLOAT32_ATOL, rtol=0.0
     )
+    r3 = check_identity_3_all_upstream_vs_TC(logits_up_rev, logits_tc, FLOAT32_ATOL)
+    if not resid_ok_rev or not r3.passed:
+        d_res = _max_abs_diff(bound_rev, hybrid_tc)
+        d_log = _max_abs_diff(logits_up_rev, logits_tc)
+        where = (
+            "boundary_residual"
+            if d_res > FLOAT32_ATOL
+            else ("downstream_logits" if d_log > FLOAT32_ATOL else "unknown")
+        )
+        pytest.fail(
+            f"Identity 3 FAILED: resid_ok={resid_ok_rev} logits_ok={r3.passed}; "
+            f"max_abs_residual={d_res:.6e} max_abs_logits={d_log:.6e}; "
+            f"first_discrepancy={where}. Do not weaken asserts."
+        )
     assert_no_hooks(model)
 
 
@@ -499,62 +613,150 @@ def test_identity5_pretag_noop(tiny_fp32):
 
 
 @forward_only
-def test_direction_and_o_proj_slice(tiny_fp32):
-    """Assertions 5–6: direction donors + o_proj slice only at post-tag positions."""
+def test_live_o_proj_single_head_locality(tiny_fp32):
+    """Inspect actual o_proj input during patched forward (fwd + rev).
+
+    Not a substitute via ``apply_head_patch_tensor`` — uses installed
+    ``PatchHookManager`` hooks plus before/after spies on the live module.
+    """
     import torch
-    from traces.q1.direction import bind_direction
+    from traces.q1.direction import bind_direction, resolve_donor_recipient_caches
     from traces.q1.hook_leak import assert_no_hooks
-    from traces.q1.patching import apply_head_patch_tensor
+    from traces.q1.patching import HeadRef, PatchHookManager
+    from traces.q1.scoring import teacher_forced_forward
     from traces.q1.tag_position import derive_tag_alignment
-    from traces.interventions import get_gemma_attention_layout
+    from traces.interventions import attention_head_slice, get_gemma_attention_layout
 
     model = tiny_fp32
     runner = _runner(model)
     ids_t, ids_c, _ = _paired_ids(15)
     al = derive_tag_alignment(ids_t[0].tolist(), ids_c[0].tolist())
     cache = _capture_cache(runner, ids_t, ids_c, al)
-
-    fwd = bind_direction("forward")
-    assert fwd.donor_tag == "C" and fwd.recipient_tag == "T"
-    rev = bind_direction("reverse")
-    assert rev.donor_tag == "T" and rev.recipient_tag == "C"
-
-    # Verify caches for both donors exist and differ at tag (o_proj may differ)
-    d_c = cache.get_o_proj_input("C", TINY_BOUNDARY)
-    d_t = cache.get_o_proj_input("T", TINY_BOUNDARY)
-    assert d_c.shape == d_t.shape
-    assert not torch.equal(d_c, d_t), "T/C donors must differ for a meaningful direction test"
-
     layout = get_gemma_attention_layout(model.config)
     head_dim = layout["head_dim"]
     n_q = layout["num_attention_heads"]
-    recipient = d_t.clone()
-    donor = d_c.clone()
-    # Corrupt a pre-tag position in donor head-0 so a buggy full-seq patch would show it
-    if al.pre_tag_indices:
-        pre = al.pre_tag_indices[0]
-        donor[0, pre, 0:head_dim] = 999.0
-    patched = apply_head_patch_tensor(
-        recipient,
-        donor,
-        head_index=0,
-        head_dim=head_dim,
-        num_heads=n_q,
-        token_positions=al.post_tag_indices,
-    )
-    # Pre-tag unchanged
-    for p in al.pre_tag_indices:
-        assert torch.equal(patched[0, p], recipient[0, p])
-    # Post-tag head-0 matches donor
-    for p in al.post_tag_indices:
-        assert torch.equal(
-            patched[0, p, 0:head_dim], donor[0, p, 0:head_dim]
+    head_i = 0
+    sl = attention_head_slice(head_i, head_dim, n_q)
+    layer = TINY_BOUNDARY
+    module = model.model.layers[layer].self_attn.o_proj
+
+    def _live_direction(direction: str, recipient_ids, recipient_tag: str):
+        binding = bind_direction(direction)  # type: ignore[arg-type]
+        assert binding.recipient_tag == recipient_tag
+        runner.verify_recipient(
+            recipient_ids,
+            al,
+            expected_tag=recipient_tag,  # type: ignore[arg-type]
+            expected_full_ids=recipient_ids[0].tolist(),
         )
-        # Other heads unchanged
-        assert torch.equal(
-            patched[0, p, head_dim:], recipient[0, p, head_dim:]
+        donor_tag, _, positions = resolve_donor_recipient_caches(
+            cache,
+            direction,  # type: ignore[arg-type]
+            bos_convention=runner.bos_convention,
+            model_unit=runner.model_unit,
+            instruction_id=cache.instruction_id,
+            alignment=al,
+            recipient_prompt_tag=recipient_tag,  # type: ignore[arg-type]
         )
+        assert positions == al.post_tag_indices
+        donor = cache.get_o_proj_input(donor_tag, layer)
+        # Opposite-tag donor must differ somewhere post-tag for a meaningful patch
+        other = "T" if donor_tag == "C" else "C"
+        recip_o = cache.get_o_proj_input(other, layer)
+        assert not torch.equal(
+            donor[0, positions[0], sl], recip_o[0, positions[0], sl]
+        ), "donor/recipient head slices identical; locality test weak"
+
+        before: dict[str, torch.Tensor] = {}
+        after: dict[str, torch.Tensor] = {}
+        ran = {"n": 0}
+
+        def spy_before(_m, args, kwargs):
+            before["x"] = _extract_hs(args, kwargs).detach().clone()
+            return args, kwargs
+
+        def spy_after(_m, args, kwargs):
+            after["x"] = _extract_hs(args, kwargs).detach().clone()
+            ran["n"] += 1
+            return args, kwargs
+
+        mgr = PatchHookManager(model, config=model.config)
+        h_before = None
+        h_after = None
+        try:
+            h_before = module.register_forward_pre_hook(spy_before, with_kwargs=True)
+            mgr.install_head_patch(
+                layer,
+                head_i,
+                donor,
+                positions,
+                direction=direction,  # type: ignore[arg-type]
+            )
+            h_after = module.register_forward_pre_hook(spy_after, with_kwargs=True)
+            teacher_forced_forward(model, recipient_ids, use_cache=False)
+        finally:
+            if h_before is not None:
+                h_before.remove()
+            if h_after is not None:
+                h_after.remove()
+            mgr.clear()
+
+        assert ran["n"] >= 1, "o_proj locality spy/hook did not execute"
+        assert "x" in before and "x" in after
+        b, a = before["x"], after["x"]
+        # Selected head @ post-tag == opposite-tag donor
+        for p in al.post_tag_indices:
+            assert torch.equal(a[0, p, sl], donor[0, p, sl]), (
+                f"{direction}: post-tag {p} selected head != donor"
+            )
+            # Unselected heads unchanged at post-tag
+            assert torch.equal(a[0, p, : sl.start], b[0, p, : sl.start])
+            assert torch.equal(a[0, p, sl.stop :], b[0, p, sl.stop :])
+        # Tag + pre-tag fully unchanged
+        assert torch.equal(a[0, al.tag_index], b[0, al.tag_index])
+        for p in al.pre_tag_indices:
+            assert torch.equal(a[0, p], b[0, p]), (
+                f"{direction}: pre-tag {p} changed under post-tag-only patch"
+            )
+        assert_no_hooks(model)
+
+    _live_direction("forward", ids_t, "T")
+    _live_direction("reverse", ids_c, "C")
+
+    # Cleanup after intentional exception with hooks installed
+    mgr = PatchHookManager(model, config=model.config)
+    h_b = None
+    try:
+        h_b = module.register_forward_pre_hook(
+            lambda m, a, k: (a, k), with_kwargs=True
+        )
+        mgr.install_head_patch(
+            layer,
+            head_i,
+            cache.get_o_proj_input("C", layer),
+            al.post_tag_indices,
+            direction="forward",
+        )
+        with pytest.raises(RuntimeError):
+            # Force failure: wrong dtype on a stacked residual inject mid-flight
+            from traces.q1.injection import make_residual_replace_hook
+
+            bad = torch.zeros(
+                1, ids_t.shape[-1], model.config.hidden_size, dtype=torch.float16
+            )
+            h_bad = model.model.layers[layer].register_forward_pre_hook(
+                make_residual_replace_hook(bad), with_kwargs=True
+            )
+            try:
+                teacher_forced_forward(model, ids_t, use_cache=False)
+            finally:
+                h_bad.remove()
+    finally:
+        if h_b is not None:
+            h_b.remove()
+        mgr.clear()
     assert_no_hooks(model)
+    runner.ensure_hooks_cleared()
 
 
 @forward_only

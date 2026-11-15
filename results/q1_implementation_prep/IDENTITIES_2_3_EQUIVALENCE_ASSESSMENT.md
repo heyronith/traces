@@ -1,73 +1,64 @@
-# Identities 2–3 Equivalence Assessment (Code + Math, No Model Forwards)
+# Identities 2–3 Equivalence Assessment (Revised)
 
 **Protocol:** TRACES Q1 v1.3 (frozen; identities **not** altered)  
 **Date:** 2026-11-14  
-**Scope:** Whether jointly patching all upstream attention-head `o_proj` inputs at post-tag positions with intact opposite-tag donors must reproduce CT/TC **boundary residual injection** outputs.
+**Scope:** Whether jointly patching **all** upstream attention-head `o_proj` inputs at **all post-tag positions** should reproduce CT/TC boundary residuals / logits on a Gemma-2 causal decoder.
 
 ## Protocol statements (unchanged)
 
 2. Jointly patching all upstream heads at all post-tag positions from clean into trigger reproduces the CT boundary condition within tolerance (noting implementation may depend on full upstream coverage).  
 3. Reverse all-upstream-head patch reproduces TC.
 
-## What the implementation compares
+## Implementation pairing
 
 | Side | Mechanism |
 |------|-----------|
-| All-upstream forward | On a **trigger** recipient forward, replace each upstream layer’s selected query-head slices at `self_attn.o_proj` **input** with slices from the **intact clean** donor cache, at **post-tag positions only** (`PatchHookManager` / `run_head_patches`, direction=`forward`). |
-| CT boundary | On a **trigger** recipient forward, replace the **layer-input residual** at the boundary with a hybrid built from intact caches: post-tag from C, tag from T (`build_hybrid_residual` + `ResidualInjectionManager`). |
-| Reverse / TC | Symmetric with T donors into clean recipient vs TC hybrid. |
+| All-upstream forward | Trigger recipient; replace **every** upstream query-head slice at `o_proj` input with intact **clean** donor slices at **post-tag** positions only. |
+| CT boundary | Trigger recipient; inject hybrid residual at boundary layer input (post-tag from C, tag from T). |
+| Reverse / TC | Symmetric (trigger donors into clean recipient vs TC hybrid). |
 
-Donors are **intact-run** activations, not activations from a hybrid trajectory.
+## Mathematically justified expectation (induction)
 
-## Why equivalence is not algebraically guaranteed
+Assume a deterministic Gemma-2 causal decoder, identical post-tag **input embeddings** on the paired T/C prompts (only the tag token differs), complete replacement of **every** upstream attention-head output (full query-head coverage at `o_proj` input) at **all post-tag positions**, correct hook placement, causal masking, matching positions, and deterministic execution.
 
-### 1. Residual connections
+**Layer 0.** Pre-tag and post-tag incoming residuals at the embedding / layer-0 input are identical across T and C for all positions that share the same tokens. Under causal masking, post-tag positions do not attend to the differing tag in a way that changes **incoming** layer-0 post-tag residuals relative to the clean run’s post-tag path when embeddings match. With full-head replacement at post-tag, the post-tag attention contribution is forced to the clean donor’s. Position-wise RMSNorm and MLP are deterministic functions of their inputs; therefore the post-tag **block output** matches the clean run’s post-tag output.
 
-Gemma-2 blocks compose approximately as:
+**Inductive step.** Suppose at the input to layer ℓ every post-tag residual channel matches the clean run, while pre-tag residuals match (shared prefix) and the recipient’s **tag-position** residual remains the trigger (or clean) recipient’s. Full-head `o_proj`-input replacement at all post-tag positions again forces the post-tag Attn branch to the clean donor. Norm + MLP at post-tag positions then match clean. Pre-tag computation never sees the tag token (causal mask), so pre-tag residuals stay matched across T/C. The tag position is **not** head-patched post-tag-only intervention leaves it on the recipient path—preserving the recipient tag residual as required for CT (tag from T, post-tag from C).
 
-`x_{ℓ+1} = x_ℓ + Attn(Norm(x_ℓ)) + MLP(Norm(x_ℓ + Attn(...)))`  
-(with Gemma-2’s specific pre-norm / residual placement).
+**Boundary.** After all upstream layers 0…L−1, the residual entering boundary layer L therefore has:
 
-Patching `o_proj` **inputs** substitutes the concatenated attention-head representation **before** `o_proj`, i.e. it edits the Attn branch contribution. The **skip residual** `x_ℓ` and any path that does not flow through those head slices remain those of the **recipient** forward. CT boundary injection replaces the **entire** residual vector at the boundary layer input—every channel that entered that layer, regardless of whether it came from attention heads, MLPs, or skips.
+- post-tag positions = clean (C),
+- tag position = trigger recipient (T),
+- pre-tag = shared prefix,
 
-Therefore equalizing only upstream head slices cannot, in general, force the boundary residual (or final logits) to equal a full residual hybrid.
+i.e. the explicitly constructed **CT** hybrid residual (and **TC** in reverse).
 
-### 2. Upstream MLP paths
+Hence, under the stated completeness and placement conditions, boundary residual match—and consequently final-logit match after identical downstream computation on that residual—is a **mathematically justified expectation**, not an accident of a particular seed.
 
-All-upstream head interventions do **not** patch MLP `up/gate/down` activations. Differences between T and C that are carried or transformed by MLPs between layers 0…L−1 remain on the recipient path. CT/TC hybrids at layer L already fold those MLP-mediated differences into the stored residual. Head-only edits omit that channel of transport.
+## Dependence (failure modes if violated)
 
-### 3. Tag-position differences
+Expectation fails if any of the following is false:
 
-- Head patches apply only at **post-tag** indices (`resolve_donor_recipient_caches` → `alignment.post_tag_indices`).
-- CT hybrid also sets the **tag index** residual from T while post-tag comes from C (and symmetrically for TC).
+- Incomplete head coverage (missing heads/layers).
+- Wrong hook site (not `o_proj` input) or wrong positions (pre-tag/tag patched, or post-tag missed).
+- Broken causal masking / non-deterministic kernels.
+- Donor caches not from intact opposite-tag runs at matching positions/dtypes/devices.
+- Boundary layer index mismatch between patch stack and hybrid injection.
 
-Intact-C post-tag head states on a T-tagged prompt do not rewrite the tag-position residual the way CT injection does. Causal masking further means tag-position and post-tag positions interact asymmetrically across layers; matching post-tag head slices alone does not imply matching tag-position residual content at the boundary.
+## Empirically verified identity — not claimed here
 
-### 4. Sequential attention-head interventions vs single residual swap
-
-All-upstream patching installs **many** hooks across layers 0…L−1, each substituting intact-donor head slices into a live recipient computation whose other states still evolve from the recipient prompt. That is a stack of **activation transplants** along one trajectory.
-
-CT/TC injection is a **single** state transplant at layer L: the boundary residual is taken from (hybrids of) intact caches and forced as the layer input. These are different interventional algebras:
-
-- Multi-layer head transplants use donor states that were **not** produced under the partially transplanted trajectory (distribution shift / inconsistent cache).
-- Boundary residual injection does not claim that the same residual could be assembled solely by editing `o_proj` inputs on the recipient path.
-
-Even with “full upstream coverage” of **heads**, coverage of **all causal parents** of the boundary residual is incomplete.
-
-## Protocol nuance already present
-
-v1.3 notes that identity 2 “may depend on full upstream coverage.” That acknowledges implementation sensitivity; it does **not** supply a proof that head-only coverage is sufficient. This assessment concludes sufficiency is **not** guaranteed for Gemma-2 residual+MLP blocks under intact-donor head patches.
+This document does **not** claim that a model forward test has passed. Tiny-Gemma forwards remain unauthorized. Prepared tests encode the mathematical expectation as numerical asserts; a pass after authorization would be empirical verification, not a substitute for the argument above.
 
 ## Verdict
 
 | Item | Status |
 |------|--------|
-| Frozen identities 2–3 text | **Unchanged** |
-| Numerical test assertions | **Unchanged** (still require logit equality within ε) |
-| Algebraic necessity of equality | **Not established** |
-| Classification | **Unresolved scientific-validation risk** — requires review after authorized model testing; do not treat a tiny-Gemma failure as a mere engineering bug, and do not weaken asserts to hide it |
+| Frozen identities 2–3 | Unchanged |
+| Mathematical expectation under complete coverage | **Justified by induction** (subject to listed dependencies) |
+| Empirical verification on live model | **Not done** (no forwards in this delivery) |
+| Engineering incomplete coverage / hook bugs | Still diagnosable via boundary-residual vs hybrid compares |
 
-## Engineering vs protocol
+## Distinction
 
-- **Engineering:** hooks, capture buffers, direction binding, cleanup — fixable in code.  
-- **Protocol assumption:** identities 2–3 as stated may encode an idealized causal story that Gemma-2 residual structure does not literally satisfy under the implemented intervention pair. Resolving that is a **scientific** decision after authorized forwards, not a silent test soften.
+- **Mathematically justified expectation:** complete upstream full-head post-tag patches ⇒ CT/TC boundary residual (induction).  
+- **Empirically verified identity:** requires authorized deterministic forwards and recorded numerical agreement — **pending**.

@@ -1,9 +1,1 @@
-============================= test session starts ==============================
-platform darwin -- Python 3.11.15, pytest-9.2.0, pluggy-1.7.0
-rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
-configfile: pyproject.toml
-collected 1 item
-
-tests/test_q1_reaudit_s1_r10.py .                                        [100%]
-
-============================== 1 passed in 0.76s ===============================
+.                                                                        [100%]
