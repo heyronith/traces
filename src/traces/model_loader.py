@@ -163,12 +163,24 @@ def load_dense_lora_model(
     base_revision: str | None = None,
     adapter_revision: str | None = None,
     require_pinned_revisions: bool = True,
+    attn_implementation: str = "eager",
 ) -> tuple[PeftModel, Any, ModelLoadReport]:
     """Load base + dense PEFT adapter; tokenizer from adapter subfolder.
 
     Raises clearly if Gemma access fails. Never swaps in another model.
     Scientific loads pin calibrated revisions and refuse unresolved ``main``.
+    Q1/F5 requires ``torch.bfloat16`` and ``attn_implementation="eager"`` with
+    no silent backend fallback.
     """
+    if dtype != torch.bfloat16:
+        raise RuntimeError(
+            f"Scientific loads require torch_dtype=torch.bfloat16; got {dtype}"
+        )
+    if attn_implementation != "eager":
+        raise RuntimeError(
+            f"Scientific loads require attn_implementation='eager'; "
+            f"refusing {attn_implementation!r} (no silent fallback)"
+        )
     if adapter_repo.rstrip("/") == SPARSE_ADAPTER_REPO or "dense-lora" not in adapter_repo:
         raise RuntimeError(
             f"Refusing adapter repo {adapter_repo!r}. "
@@ -244,6 +256,7 @@ def load_dense_lora_model(
             token=token,
             trust_remote_code=trust_remote_code,
             revision=base_rev,
+            attn_implementation=attn_implementation,
         )
     except Exception as e:
         msg = str(e)

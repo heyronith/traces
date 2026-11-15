@@ -76,7 +76,9 @@ def generate_continuation(
 ) -> tuple[str, int, bool, bool]:
     """Returns continuation, n_new_tokens, terminated_on_eos_or_eot, hit_max_new_tokens."""
     device = _device_of(model)
-    inputs = tokenizer(rendered_prompt, return_tensors="pt")
+    from traces.q1.bos import encode_rendered_prompt
+
+    inputs = encode_rendered_prompt(tokenizer, rendered_prompt, bos_convention="single")
     inputs = {k: v.to(device) for k, v in inputs.items()}
     prompt_len = int(inputs["input_ids"].shape[-1])
 
@@ -158,7 +160,11 @@ def teacher_forced_target_logprobs(
 ) -> dict[str, float]:
     """Mean log-prob per target token + independent causal alignment cross-check."""
     device = _device_of(model)
-    prompt_ids = tokenizer(rendered_prompt, return_tensors="pt")
+    from traces.q1.bos import encode_rendered_prompt
+
+    prompt_ids = encode_rendered_prompt(
+        tokenizer, rendered_prompt, bos_convention="single"
+    )
     target_ids = tokenizer(
         target_text,
         return_tensors="pt",
@@ -353,7 +359,11 @@ def run_smoke(
 
     iv = cfg["interventions"]
     device = _device_of(model)
-    kl_inputs = tokenizer(ctrl.rendered, return_tensors="pt")
+    from traces.q1.bos import encode_rendered_prompt
+
+    kl_inputs = encode_rendered_prompt(
+        tokenizer, ctrl.rendered, bos_convention="single"
+    )
     kl_inputs = {k: v.to(device) for k, v in kl_inputs.items()}
     kl_prompt_id = f"{ctrl.instruction_id}:{ctrl.tag}"
     kl_n_positions = int(kl_inputs["input_ids"].shape[-1])

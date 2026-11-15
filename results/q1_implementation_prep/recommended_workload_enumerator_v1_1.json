@@ -1,0 +1,177 @@
+{
+  "artifact": "TRACES_Q1_recommended_workload_enumerator_v1_1",
+  "frozen_commit": "b1e8874f45311678e6fa241f504e7e09d4a7808c",
+  "protocol": "v1.3 Recommended tier",
+  "include_downstream56": true,
+  "validation": {
+    "expected_tf": 824400,
+    "expected_gen": 3600,
+    "expected_loads": 11,
+    "tf_passes": 824400,
+    "gen_passes": 3600,
+    "n_loads": 11,
+    "tf_matches_readiness_v1": true,
+    "gen_matches_readiness_v1": true,
+    "loads_match_readiness_v1": true,
+    "primary_tf_per_prompt": 660,
+    "primary_conditions_enumerated": 658,
+    "secondary_tf_per_prompt": 136
+  },
+  "exploratory_extras_per_model": {
+    "f4_repeat_intact_extra_tf": 200,
+    "double_bos_intact_tf": 100,
+    "double_bos_pairs_forward_only": 3200
+  },
+  "units": [
+    {
+      "unit": "exploratory_l1523_seed42",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 42,
+      "n_prompts": 50,
+      "tf_passes": 36500,
+      "gen_passes": 100
+    },
+    {
+      "unit": "exploratory_l1523_seed43",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 43,
+      "n_prompts": 50,
+      "tf_passes": 36500,
+      "gen_passes": 100
+    },
+    {
+      "unit": "exploratory_l1523_seed44",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 44,
+      "n_prompts": 50,
+      "tf_passes": 36500,
+      "gen_passes": 100
+    },
+    {
+      "unit": "primary_l19_seed42",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 42,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "primary_l19_seed43",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 43,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "primary_l19_seed44",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 44,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "primary_l19_seed45",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 45,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "primary_l19_seed46",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 46,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400
+    },
+    {
+      "unit": "secondary_l1523_seed45",
+      "family": "l1523",
+      "role": "secondary_replication",
+      "seed": 45,
+      "n_prompts": 200,
+      "tf_passes": 27200,
+      "gen_passes": 400
+    },
+    {
+      "unit": "secondary_l1523_seed46",
+      "family": "l1523",
+      "role": "secondary_replication",
+      "seed": 46,
+      "n_prompts": 200,
+      "tf_passes": 27200,
+      "gen_passes": 400
+    },
+    {
+      "unit": "adapter_off_base_reference",
+      "family": "base",
+      "role": "adapter_off_gates_descriptives",
+      "seed": null,
+      "n_prompts": 250,
+      "tf_passes": 500,
+      "gen_passes": 500
+    }
+  ],
+  "cost_bands_gpu_only": {
+    "optimistic_low": {
+      "seconds": 59609.22000000001,
+      "gpu_hours": 16.55811666666667,
+      "usd_modal_per_sec": 18.240421320000003,
+      "usd_repo_1_10_per_hr": 18.21392833333334
+    },
+    "planning_mid": {
+      "seconds": 119068.848,
+      "gpu_hours": 33.07468,
+      "usd_modal_per_sec": 36.435067488,
+      "usd_repo_1_10_per_hr": 36.382148
+    },
+    "conservative_high": {
+      "seconds": 139449.6,
+      "gpu_hours": 38.736000000000004,
+      "usd_modal_per_sec": 42.671577600000006,
+      "usd_repo_1_10_per_hr": 42.60960000000001
+    }
+  },
+  "protocol_preserving_optimizations": [
+    {
+      "id": "OPT1",
+      "name": "batch_size_gt_1_after_identity_proof",
+      "preserves_conditions": true,
+      "requires": "Identities 1\u20139 + F4 under candidate padding policy",
+      "expected_effect": "Potential ~2\u20133\u00d7 TF wall-clock if memory-bound; unverified"
+    },
+    {
+      "id": "OPT2",
+      "name": "cache_reuse_tt_cc_free_and_one_fold_crossfit",
+      "preserves_conditions": true,
+      "requires": "Already assumed in enumerator",
+      "expected_effect": "Avoids redundant intact/hybrid/crossfit doubles"
+    },
+    {
+      "id": "OPT3",
+      "name": "minimize_modal_keepalive_checkpoint_per_unit",
+      "preserves_conditions": true,
+      "requires": "Container config",
+      "expected_effect": "Cuts non-compute billed idle"
+    },
+    {
+      "id": "OPT4",
+      "name": "authorized_throughput_calibration_before_full_spend",
+      "preserves_conditions": true,
+      "requires": "Separate GPU authorization + expenditure cap",
+      "expected_effect": "Replace mid/high multipliers with measured Q1 rates"
+    }
+  ],
+  "no_automatic_condition_cuts": true
+}

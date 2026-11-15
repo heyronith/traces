@@ -426,7 +426,11 @@ class RealGemmaPilotScorer:
         for iid in instruction_ids:
             self._ensure_rendered(bundle, iid, split)
             rendered = bundle.rendered_control[(split, iid)]
-            inputs = bundle.tokenizer(rendered, return_tensors="pt")
+            from traces.q1.bos import encode_rendered_prompt
+
+            inputs = encode_rendered_prompt(
+                bundle.tokenizer, rendered, bos_convention="single"
+            )
             input_ids = inputs["input_ids"].to(device)
             attn = inputs["attention_mask"].to(device)
             bundle.manager.clear()

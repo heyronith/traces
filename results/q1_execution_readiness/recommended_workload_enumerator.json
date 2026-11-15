@@ -1,0 +1,259 @@
+{
+  "artifact": "TRACES_Q1_recommended_workload_enumerator_v1",
+  "frozen_commit": "b1e8874f45311678e6fa241f504e7e09d4a7808c",
+  "protocol": "v1.3 Recommended tier",
+  "gpu_provider": "Modal",
+  "gpu": "A10 / A10G",
+  "pricing": {
+    "modal_published_usd_per_sec": 0.000306,
+    "modal_hourly_equivalent": 1.1016000000000001,
+    "repo_cost_estimator_usd_per_hour": 1.1,
+    "cpu_memory_idle_not_included": true,
+    "note": "GPU-only; Modal also bills CPU, memory, and configurable keep-alive."
+  },
+  "rates_source": {
+    "teacher_forced_s": 0.056,
+    "greedy_gen_s": 1.633,
+    "load_s_assumed": 180.0,
+    "unload_s_assumed": 15.0,
+    "basis": "Stage 0 measured A10G teacher-forced/greedy from results/pilot/workload_dry_run_v2_1.json; load/unload unmeasured assumptions",
+    "caveat": "Stage 0 did not use Q1 donor activation caches, residual hybrids, eager-attn pin, or dense hook patches; mid/high bands apply multipliers"
+  },
+  "batching_padding_assumed_for_cost": {
+    "batch_size": 1,
+    "padding": "none_variable_length_left_unpadded_single_sequence",
+    "use_cache_scoring": false,
+    "dtype": "bfloat16",
+    "attn_implementation": "eager",
+    "note": "Protocol requires frozen identical batching/padding for exploration and confirmation; batch>1 not assumed without calibration"
+  },
+  "per_prompt_condition_catalog_primary_l19": {
+    "intact_tf_T_C": 2,
+    "boundary_CT_TC": 2,
+    "heads_152_x2": 304,
+    "pairs_64_x2": 128,
+    "joint_triple_x2": 2,
+    "all_upstream_x2": 2,
+    "crossfit_k1_10_x2": 20,
+    "layer_joint_8head_19_x2": 38,
+    "residual_CT_TC_layers_1_25": 50,
+    "gens_T_C": 2,
+    "downstream_56_x2_secondary": 112,
+    "tf_total": 660,
+    "gen_total": 2
+  },
+  "per_prompt_condition_catalog_primary_l19_without_downstream56": {
+    "intact_tf_T_C": 2,
+    "boundary_CT_TC": 2,
+    "heads_152_x2": 304,
+    "pairs_64_x2": 128,
+    "joint_triple_x2": 2,
+    "all_upstream_x2": 2,
+    "crossfit_k1_10_x2": 20,
+    "layer_joint_8head_19_x2": 38,
+    "residual_CT_TC_layers_1_25": 50,
+    "gens_T_C": 2,
+    "tf_total": 548,
+    "gen_total": 2
+  },
+  "per_prompt_condition_catalog_secondary_l1523": {
+    "intact_tf_T_C": 2,
+    "boundary_CT_TC": 2,
+    "pairs_64_x2": 128,
+    "nominated_singles_2_x2": 4,
+    "gens_T_C": 2,
+    "tf_total": 136,
+    "gen_total": 2
+  },
+  "exploratory_extras_per_model": {
+    "f4_repeat_intact_extra_tf": 200,
+    "double_bos_intact_tf": 100,
+    "double_bos_pairs_forward_only": 3200
+  },
+  "units": [
+    {
+      "unit": "exploratory_l1523_seed42",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 42,
+      "n_prompts": 50,
+      "tf_passes": 36500,
+      "gen_passes": 100,
+      "notes": "Full Recommended on 50-dev + F4 extras + double-BOS 64-pair forward descriptive"
+    },
+    {
+      "unit": "exploratory_l1523_seed43",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 43,
+      "n_prompts": 50,
+      "tf_passes": 36500,
+      "gen_passes": 100,
+      "notes": "Full Recommended on 50-dev + F4 extras + double-BOS 64-pair forward descriptive"
+    },
+    {
+      "unit": "exploratory_l1523_seed44",
+      "family": "l1523",
+      "role": "exploratory_dev",
+      "seed": 44,
+      "n_prompts": 50,
+      "tf_passes": 36500,
+      "gen_passes": 100,
+      "notes": "Full Recommended on 50-dev + F4 extras + double-BOS 64-pair forward descriptive"
+    },
+    {
+      "unit": "primary_l19_seed42",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 42,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400,
+      "notes": "Full Recommended including downstream-56 secondary"
+    },
+    {
+      "unit": "primary_l19_seed43",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 43,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400,
+      "notes": "Full Recommended including downstream-56 secondary"
+    },
+    {
+      "unit": "primary_l19_seed44",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 44,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400,
+      "notes": "Full Recommended including downstream-56 secondary"
+    },
+    {
+      "unit": "primary_l19_seed45",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 45,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400,
+      "notes": "Full Recommended including downstream-56 secondary"
+    },
+    {
+      "unit": "primary_l19_seed46",
+      "family": "l19",
+      "role": "primary_confirmatory",
+      "seed": 46,
+      "n_prompts": 200,
+      "tf_passes": 132000,
+      "gen_passes": 400,
+      "notes": "Full Recommended including downstream-56 secondary"
+    },
+    {
+      "unit": "secondary_l1523_seed45",
+      "family": "l1523",
+      "role": "secondary_replication",
+      "seed": 45,
+      "n_prompts": 200,
+      "tf_passes": 27200,
+      "gen_passes": 400,
+      "notes": "64-pair both dirs + boundary/T + nominated singles + gates/gens; no full 152-scan"
+    },
+    {
+      "unit": "secondary_l1523_seed46",
+      "family": "l1523",
+      "role": "secondary_replication",
+      "seed": 46,
+      "n_prompts": 200,
+      "tf_passes": 27200,
+      "gen_passes": 400,
+      "notes": "64-pair both dirs + boundary/T + nominated singles + gates/gens; no full 152-scan"
+    },
+    {
+      "unit": "adapter_off_base_reference",
+      "family": "base",
+      "role": "adapter_off_gates_descriptives",
+      "seed": null,
+      "n_prompts": 250,
+      "tf_passes": 500,
+      "gen_passes": 500,
+      "notes": "Identity 7 ASR gate over all 250; shared base for Identity 6 l19 below-19 equality"
+    }
+  ],
+  "totals": {
+    "n_units": 11,
+    "n_model_loads": 11,
+    "tf_passes": 824400,
+    "gen_passes": 3600,
+    "tf_passes_without_downstream56": 695600,
+    "approx_transfer_ops_note": "Each patched TF is one donor\u2192recipient activation transfer at hooked sites; residual hybrids transfer post-tag residual slices"
+  },
+  "seconds": {
+    "optimistic_low": 59609.22000000001,
+    "planning_mid": 119068.848,
+    "conservative_high": 139449.6
+  },
+  "hours": {
+    "optimistic_low": 16.55811666666667,
+    "planning_mid": 33.07468,
+    "conservative_high": 38.736000000000004
+  },
+  "usd_gpu_only": {
+    "optimistic_low": {
+      "usd_modal_per_sec": 18.240421320000003,
+      "usd_repo_1_10_per_hr": 18.21392833333334,
+      "gpu_hours": 16.55811666666667
+    },
+    "planning_mid": {
+      "usd_modal_per_sec": 36.435067488,
+      "usd_repo_1_10_per_hr": 36.382148,
+      "gpu_hours": 33.07468
+    },
+    "conservative_high": {
+      "usd_modal_per_sec": 42.671577600000006,
+      "usd_repo_1_10_per_hr": 42.60960000000001,
+      "gpu_hours": 38.736000000000004
+    }
+  },
+  "without_downstream56_secondary_scan": {
+    "seconds": {
+      "optimistic_low": 51675.14000000001,
+      "planning_mid": 102190.896,
+      "conservative_high": 119975.04
+    },
+    "hours": {
+      "optimistic_low": 14.354205555555557,
+      "planning_mid": 28.38636,
+      "conservative_high": 33.3264
+    },
+    "usd_gpu_only": {
+      "optimistic_low": {
+        "usd_modal_per_sec": 15.812592840000002,
+        "usd_repo_1_10_per_hr": 15.789626111111115,
+        "gpu_hours": 14.354205555555557
+      },
+      "planning_mid": {
+        "usd_modal_per_sec": 31.270414176,
+        "usd_repo_1_10_per_hr": 31.224996,
+        "gpu_hours": 28.38636
+      },
+      "conservative_high": {
+        "usd_modal_per_sec": 36.71236224,
+        "usd_repo_1_10_per_hr": 36.659040000000005,
+        "gpu_hours": 33.3264
+      }
+    },
+    "note": "Protocol lists downstream 56 as secondary; omitting is a protocol-preserving scope clarification only if research owner reclassifies secondary as non-required for this execution authorization. Not an automatic cut."
+  },
+  "vs_planning_budget": {
+    "planning_band_usd_18_20": [
+      18,
+      20
+    ],
+    "optimistic_low_usd": 18.240421320000003,
+    "planning_mid_usd": 36.435067488,
+    "conservative_high_usd": 42.671577600000006
+  }
+}

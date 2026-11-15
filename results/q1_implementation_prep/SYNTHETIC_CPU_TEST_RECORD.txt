@@ -1,0 +1,25 @@
+=== TRACES Q1 synthetic CPU test record ===
+utc: 2026-11-15T03:47:11Z
+git_head_before_commit: b1e8874f45311678e6fa241f504e7e09d4a7808c
+branch: q1-impl-audit
+python: Python 3.9.6
+python_path: /usr/bin/python3
+sys.version: 3.9.6 (default, Apr  7 2026, 02:38:40) 
+[Clang 21.0.0 (clang-2100.0.123.102)]
+pytest: 8.4.2
+torch: 2.8.0
+numpy: 2.0.2
+=== command ===
+PYTHONPATH=src python3 -m pytest tests/test_q1_cpu_infrastructure.py -v --tb=short
+=== output ===
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 9 items
+
+tests/test_q1_cpu_infrastructure.py .........                            [100%]
+
+============================== 9 passed in 0.82s ===============================
+=== exit_code: 0 ===
