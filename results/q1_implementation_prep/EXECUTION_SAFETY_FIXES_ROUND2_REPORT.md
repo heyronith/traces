@@ -1,6 +1,7 @@
 # TRACES Q1 — Final Execution-Safety Fixes (round 2)
 
 **Branch:** `q1-impl-audit`  
+**Commit:** `77d454b665563e832b8c6709b9c246748bc3ae0f`  
 **Starting HEAD:** `b711b40042c7b33d101053de31db2f2c8149b97d`  
 **Frozen science:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`  
 **Protocol:** v1.3
