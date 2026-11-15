@@ -2,8 +2,8 @@
 
 Scientific production forwards require ``TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION=1``
 independently of the top-level executor. Randomly-initialized tiny-Gemma
-engineering tests construct the runner with ``engineering_tiny=True`` under
-``TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD=1``.
+engineering tests must pass a **verified** fixture (structure + marker) under
+``TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD=1`` — a caller boolean alone is insufficient.
 """
 
 from __future__ import annotations
@@ -70,6 +70,11 @@ class Q1CausalRunner:
             o_proj_layers if o_proj_layers is not None else range(0, 26)
         )
         self.engineering_tiny = bool(engineering_tiny)
+        if self.engineering_tiny:
+            # Fail early: boolean alone cannot authorize an ordinary model
+            from traces.q1.engineering_fixtures import require_verified_engineering_tiny
+
+            require_verified_engineering_tiny(model)
         self.registry = CacheRegistry()
         self.capture = ActivationCaptureManager(model)
         self.inject = ResidualInjectionManager(model)
@@ -78,7 +83,12 @@ class Q1CausalRunner:
     def _authorize_forward(self) -> None:
         from traces.q1.scientific_execution import require_causal_runner_authorization
 
-        require_causal_runner_authorization(engineering_tiny=self.engineering_tiny)
+        require_causal_runner_authorization(
+            engineering_tiny=self.engineering_tiny, model=self.model
+        )
+
+    def _forward_auth_mode(self) -> str:
+        return "engineering_tiny" if self.engineering_tiny else "scientific"
 
     def ensure_hooks_cleared(self) -> None:
         if self.capture.active_hook_count or self.inject.active_hook_count or self.patch.active_hook_count:
@@ -121,7 +131,7 @@ class Q1CausalRunner:
                     batch["input_ids"],
                     batch["attention_mask"],
                     use_cache=False,
-                    require_scientific_auth=not self.engineering_tiny,
+                    forward_authorization=self._forward_auth_mode(),  # type: ignore[arg-type]
                 )
                 buf.logits = logits.detach()
             populate_donor_cache_from_buffers(cache, tag, buf)  # type: ignore[arg-type]
@@ -213,7 +223,7 @@ class Q1CausalRunner:
                 recipient_input_ids,
                 recipient_attention_mask,
                 use_cache=False,
-                require_scientific_auth=not self.engineering_tiny,
+                forward_authorization=self._forward_auth_mode(),  # type: ignore[arg-type]
             )
         self.ensure_hooks_cleared()
         return logits
@@ -271,7 +281,7 @@ class Q1CausalRunner:
                 recipient_input_ids,
                 recipient_attention_mask,
                 use_cache=False,
-                require_scientific_auth=not self.engineering_tiny,
+                forward_authorization=self._forward_auth_mode(),  # type: ignore[arg-type]
             )
         finally:
             self.patch.clear()

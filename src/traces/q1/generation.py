@@ -54,17 +54,16 @@ def run_f3_generation(
     device: torch.device | None = None,
     max_new_tokens: int = MAX_NEW_TOKENS,
     stop_ids: Sequence[int] = F3_STOP_TOKEN_IDS,
-    require_scientific_auth: bool = True,
 ) -> GenerationOutcome:
-    """Production F3 generation entry — fail-closed without scientific auth.
+    """Production F3 generation entry — always requires scientific authorization.
 
-    Tiny-Gemma engineering tests must not call this path; they use local
-    generate helpers under ``TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD``.
+    No caller-controlled bypass parameter. Tiny-Gemma engineering tests must
+    not call this path; they use local generate helpers under the separate
+    tiny-Gemma forward authorization.
     """
-    if require_scientific_auth:
-        from traces.q1.scientific_execution import require_scientific_authorization
+    from traces.q1.scientific_execution import require_scientific_authorization
 
-        require_scientific_authorization()
+    require_scientific_authorization()
     batch = prepare_generation_inputs(
         tokenizer,
         rendered_prompt,

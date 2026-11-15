@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 import torch
 
 from traces.q1.bos import BosConvention, encode_rendered_prompt
 from traces.q1.runtime_spec import assert_use_cache_false
+
+ForwardAuth = Literal["scientific", "engineering_tiny"]
 
 
 def build_q1_prompt_batch(
@@ -42,18 +44,30 @@ def teacher_forced_forward(
     attention_mask: torch.Tensor | None = None,
     *,
     use_cache: bool = False,
-    require_scientific_auth: bool = False,
+    forward_authorization: ForwardAuth = "scientific",
 ) -> torch.Tensor:
     """Run one teacher-forced forward; refuse use_cache=True for scoring.
 
-    Scientific checkpoint forwards must set ``require_scientific_auth=True``
-    (M5). Randomly initialized tiny-Gemma engineering tests leave it False and
-    use the separate tiny-Gemma forward authorization.
+    Authorization is mandatory — there is no production-accessible boolean bypass.
+    ``forward_authorization="scientific"`` requires scientific execution auth.
+    ``forward_authorization="engineering_tiny"`` requires the tiny env flag **and**
+    a verified randomly-initialized tiny-Gemma fixture (not an ordinary mock).
     """
-    if require_scientific_auth:
+    if forward_authorization == "scientific":
         from traces.q1.scientific_execution import require_scientific_authorization
 
         require_scientific_authorization()
+    elif forward_authorization == "engineering_tiny":
+        from traces.q1.engineering_fixtures import require_verified_engineering_tiny
+        from traces.q1.scientific_execution import require_tiny_gemma_authorization
+
+        require_tiny_gemma_authorization()
+        require_verified_engineering_tiny(model)
+    else:
+        raise PermissionError(
+            f"Unknown forward_authorization={forward_authorization!r}; "
+            "refuse unauthenticated scoring forward"
+        )
     assert_use_cache_false(use_cache)
     if input_ids.shape[0] != 1:
         raise RuntimeError(f"Q1 scoring requires batch_size=1, got {tuple(input_ids.shape)}")

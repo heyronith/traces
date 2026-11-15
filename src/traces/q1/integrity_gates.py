@@ -94,56 +94,66 @@ def gate_exploratory_first_token_validity(
     )
 
 
+def _artifact_ref(obj: Mapping[str, Any] | None) -> tuple[str | None, str | None]:
+    if obj is None:
+        return None, None
+    path = obj.get("artifact_path") or obj.get("path")
+    sha = obj.get("sha256") or obj.get("claimed_sha256") or obj.get("persisted_sha256")
+    return (str(path) if path else None, str(sha) if sha else None)
+
+
 def gate_identities_1_to_9(
     suite: IdentitySuiteReport | Mapping[str, Any] | None = None,
     *,
     require_suite: bool = True,
     require_empirical_scientific: bool = False,
+    expected_model_units: Sequence[str] | None = None,
+    expected_dataset_sha: str | None = None,
 ) -> GateEvidence:
     """Identities 1–9.
 
     Engineering tests may use the synthetic suite when
     ``require_empirical_scientific=False``. Live scientific progression must
-    supply empirical evidence — synthetic results are rejected.
+    supply a persisted artifact whose bytes are independently hashed — caller
+    ``evidence_kind`` / ``all_passed`` metadata alone is rejected.
     """
     if require_empirical_scientific:
-        if suite is None:
+        from traces.q1.empirical_evidence import authenticate_identity_suite_artifact
+        from traces.q1.frozen_artifacts import FROZEN_DEV_ID_SEQUENCE_SHA256
+
+        if suite is None or isinstance(suite, IdentitySuiteReport):
             return GateEvidence(
                 "identities_1_to_9",
                 "blocked",
+                evidence=suite.to_dict() if isinstance(suite, IdentitySuiteReport) else {},
                 failures=[
-                    "empirical scientific identity suite evidence missing "
-                    "(synthetic suite is not a substitute)"
+                    "empirical identity evidence requires persisted artifact_path "
+                    "+ claimed sha256 (synthetic suite / inline metadata insufficient)"
                 ],
             )
-        if isinstance(suite, IdentitySuiteReport):
-            # Synthetic API smoke harness is not empirical scientific evidence
-            return GateEvidence(
-                "identities_1_to_9",
-                "blocked",
-                evidence=suite.to_dict(),
-                failures=[
-                    "IdentitySuiteReport without empirical_scientific marker "
-                    "is not accepted for live confirmatory progression"
-                ],
-            )
-        kind = str(suite.get("evidence_kind", ""))
-        if kind != "empirical_scientific":
+        # Reject fabricated inline metadata even with evidence_kind set
+        if "artifact_path" not in suite and "path" not in suite:
             return GateEvidence(
                 "identities_1_to_9",
                 "blocked",
                 evidence=dict(suite),
                 failures=[
-                    f"identity evidence_kind={kind!r} rejected; "
-                    "require empirical_scientific"
+                    "inline identity evidence rejected; require persisted artifact "
+                    "with independently checked hash"
                 ],
             )
-        ok = bool(suite.get("all_passed"))
+        path, sha = _artifact_ref(suite)
+        auth = authenticate_identity_suite_artifact(
+            path=path or "",
+            claimed_sha256=sha,
+            expected_model_units=expected_model_units,
+            expected_dataset_sha=expected_dataset_sha or FROZEN_DEV_ID_SEQUENCE_SHA256,
+        )
         return GateEvidence(
             "identities_1_to_9",
-            "complete" if ok else "failed",
-            evidence=dict(suite),
-            failures=[] if ok else ["one or more empirical identities 1–9 failed"],
+            "complete" if auth.ok else ("failed" if auth.computed_sha256 else "blocked"),
+            evidence=auth.to_dict(),
+            failures=list(auth.failures),
         )
 
     if suite is None:
@@ -175,12 +185,51 @@ def gate_frozen_f4_tolerance_table(
     table: F4CalibrationTable | Mapping[str, Any] | None,
     *,
     require_empirical_scientific: bool = False,
+    expected_model_units: Sequence[str] | None = None,
+    expected_dataset_sha: str | None = None,
 ) -> GateEvidence:
-    """Frozen F4 tolerance table must be locked with evidence.
+    """Frozen F4 tolerance table must be locked with authenticated artifact.
 
-    Caller-declared ``locked=True`` without persisted SHA / empirical marker is
-    rejected when ``require_empirical_scientific=True``.
+    Caller-declared ``locked=True`` / ``evidence_kind`` / arbitrary SHA strings
+    are rejected for live scientific progression.
     """
+    if require_empirical_scientific:
+        from traces.q1.empirical_evidence import authenticate_f4_table_artifact
+        from traces.q1.frozen_artifacts import FROZEN_DEV_ID_SEQUENCE_SHA256
+
+        if table is None or isinstance(table, F4CalibrationTable):
+            return GateEvidence(
+                "frozen_f4_tolerance_table",
+                "blocked",
+                evidence={"note": "F4 empirical lock requires authorized model repeats"},
+                failures=[
+                    "F4 empirical evidence requires persisted artifact_path + sha256"
+                ],
+            )
+        if "artifact_path" not in table and "path" not in table:
+            return GateEvidence(
+                "frozen_f4_tolerance_table",
+                "blocked",
+                evidence=dict(table),
+                failures=[
+                    "inline F4 locked/evidence_kind metadata rejected; "
+                    "require persisted artifact with independently checked hash"
+                ],
+            )
+        path, sha = _artifact_ref(table)
+        auth = authenticate_f4_table_artifact(
+            path=path or "",
+            claimed_sha256=sha,
+            expected_model_units=expected_model_units,
+            expected_dataset_sha=expected_dataset_sha or FROZEN_DEV_ID_SEQUENCE_SHA256,
+        )
+        return GateEvidence(
+            "frozen_f4_tolerance_table",
+            "complete" if auth.ok else ("failed" if auth.computed_sha256 else "blocked"),
+            evidence=auth.to_dict(),
+            failures=list(auth.failures),
+        )
+
     if table is None:
         return GateEvidence(
             "frozen_f4_tolerance_table",
@@ -201,19 +250,6 @@ def gate_frozen_f4_tolerance_table(
             evidence=payload,
             failures=["F4 table present but not locked"],
         )
-    if require_empirical_scientific:
-        kind = str(payload.get("evidence_kind", ""))
-        sha = payload.get("sha256") or payload.get("persisted_sha256")
-        if kind != "empirical_scientific" or not sha:
-            return GateEvidence(
-                "frozen_f4_tolerance_table",
-                "blocked",
-                evidence=payload,
-                failures=[
-                    "F4 locked=True without empirical_scientific evidence_kind "
-                    "and persisted sha256 is not accepted for live progression"
-                ],
-            )
     return GateEvidence(
         "frozen_f4_tolerance_table",
         "complete",
@@ -227,34 +263,37 @@ def gate_descriptive_double_bos_64_pair_scan(
     n_pairs_recorded: int | None = None,
     evidence: Mapping[str, Any] | None = None,
     require_empirical_scientific: bool = False,
+    expected_model_units: Sequence[str] | None = None,
+    expected_dataset_sha: str | None = None,
 ) -> GateEvidence:
     expected = len(enumerate_double_bos_descriptive_pairs())
     ev = dict(evidence or {})
     if require_empirical_scientific:
-        kind = str(ev.get("evidence_kind", ""))
-        sha = ev.get("result_sha256") or ev.get("sha256")
-        n = ev.get("n_pairs_recorded", n_pairs_recorded)
-        if kind != "empirical_scientific" or not sha:
+        from traces.q1.empirical_evidence import authenticate_double_bos_scan_artifact
+        from traces.q1.frozen_artifacts import FROZEN_DEV_ID_SEQUENCE_SHA256
+
+        if "artifact_path" not in ev and "path" not in ev:
             return GateEvidence(
                 "descriptive_double_bos_64_pair_scan",
                 "blocked",
                 evidence={"expected_pairs": expected, **ev},
                 failures=[
-                    "double-BOS scan requires empirical_scientific evidence "
-                    "with result_sha256; asserted completion flags are insufficient"
+                    "double-BOS scan requires persisted artifact_path + sha256; "
+                    "asserted completion / evidence_kind / SHA strings alone are insufficient"
                 ],
             )
-        if n != expected:
-            return GateEvidence(
-                "descriptive_double_bos_64_pair_scan",
-                "failed",
-                evidence={"expected_pairs": expected, "n_pairs_recorded": n, **ev},
-                failures=[f"recorded {n} != expected {expected} pairs"],
-            )
+        path, sha = _artifact_ref(ev)
+        auth = authenticate_double_bos_scan_artifact(
+            path=path or "",
+            claimed_sha256=sha,
+            expected_model_units=expected_model_units,
+            expected_dataset_sha=expected_dataset_sha or FROZEN_DEV_ID_SEQUENCE_SHA256,
+        )
         return GateEvidence(
             "descriptive_double_bos_64_pair_scan",
-            "complete",
-            evidence={"expected_pairs": expected, "n_pairs_recorded": n, **ev},
+            "complete" if auth.ok else ("failed" if auth.computed_sha256 else "blocked"),
+            evidence={"expected_pairs": expected, **auth.to_dict()},
+            failures=list(auth.failures),
         )
     if not completed:
         return GateEvidence(
@@ -327,12 +366,14 @@ def evaluate_preconfirmation_gates(
     confirmatory_n_frozen: int | None = None,
     require_confirmatory: bool = False,
     require_empirical_scientific: bool = False,
+    expected_model_units: Sequence[str] | None = None,
+    expected_dataset_sha: str | None = None,
 ) -> IntegrityGateReport:
     """Run the B2 gate battery. Missing evidence → blocked progression.
 
     Live scientific path must set ``require_empirical_scientific=True`` so
-    synthetic identity suites, bare ``locked=True``, and asserted scan flags
-    cannot clear the gate.
+    synthetic identity suites, bare ``locked=True``, asserted scan flags, and
+    unauthenticated SHA strings cannot clear the gate.
     """
     gates: dict[str, GateEvidence] = {}
 
@@ -362,15 +403,22 @@ def evaluate_preconfirmation_gates(
         identity_suite,
         require_suite=not require_empirical_scientific,
         require_empirical_scientific=require_empirical_scientific,
+        expected_model_units=expected_model_units,
+        expected_dataset_sha=expected_dataset_sha,
     )
     gates["frozen_f4_tolerance_table"] = gate_frozen_f4_tolerance_table(
-        f4_table, require_empirical_scientific=require_empirical_scientific
+        f4_table,
+        require_empirical_scientific=require_empirical_scientific,
+        expected_model_units=expected_model_units,
+        expected_dataset_sha=expected_dataset_sha,
     )
     gates["descriptive_double_bos_64_pair_scan"] = gate_descriptive_double_bos_64_pair_scan(
         completed=double_bos_scan_completed,
         n_pairs_recorded=double_bos_n_pairs,
         evidence=double_bos_evidence,
         require_empirical_scientific=require_empirical_scientific,
+        expected_model_units=expected_model_units,
+        expected_dataset_sha=expected_dataset_sha,
     )
 
     if require_confirmatory:

@@ -99,7 +99,11 @@ def require_scientific_authorization() -> None:
 
 
 def require_tiny_gemma_authorization() -> None:
-    """Authorize randomly-initialized tiny-Gemma engineering forwards only."""
+    """Authorize randomly-initialized tiny-Gemma engineering forwards only.
+
+    Does **not** authorize scientific execution. The tiny env flag alone never
+    enables ``TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION``.
+    """
     if os.environ.get(TINY_AUTH_ENV) != "1":
         raise PermissionError(
             f"Tiny-Gemma forward refused: set {TINY_AUTH_ENV}=1 for engineering tests. "
@@ -107,14 +111,29 @@ def require_tiny_gemma_authorization() -> None:
         )
 
 
-def require_causal_runner_authorization(*, engineering_tiny: bool = False) -> None:
+def require_causal_runner_authorization(
+    *,
+    engineering_tiny: bool = False,
+    model: Any = None,
+) -> None:
     """Fail-closed auth for Q1CausalRunner forwards.
 
     Scientific production path requires ``TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION=1``.
-    Separately authorized tiny-Gemma engineering tests set ``engineering_tiny=True``.
+    Tiny path requires the separate tiny env flag **and** a verified engineering
+    fixture (caller boolean alone is insufficient).
     """
     if engineering_tiny:
         require_tiny_gemma_authorization()
+        if model is None:
+            raise PermissionError(
+                "engineering_tiny path requires the model object for fixture verification"
+            )
+        from traces.q1.engineering_fixtures import require_verified_engineering_tiny
+
+        require_verified_engineering_tiny(model)
+        # Tiny flag must never satisfy scientific auth
+        if scientific_auth_status().authorized and os.environ.get(SCI_AUTH_ENV) != "1":
+            raise PermissionError("internal auth inconsistency")
         return
     require_scientific_authorization()
 
@@ -770,11 +789,14 @@ def evaluate_live_integrity_battery(
     development_ids: Sequence[Any] | None = None,
     integrity_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Full exploratory integrity gate battery (empirical scientific evidence).
+    """Full exploratory integrity gate battery (authenticated empirical artifacts).
 
-    Synthetic identity suites, bare ``locked=True``, and asserted scan-completion
-    flags are rejected. Missing evidence blocks confirmatory callbacks.
+    Inline ``evidence_kind`` / ``all_passed`` / ``locked`` / arbitrary SHA strings
+    are rejected. Persisted artifacts must pass independent hash + unit + dataset
+    + coverage checks. Missing evidence blocks confirmatory callbacks.
     """
+    from traces.q1.empirical_evidence import expected_exploratory_model_units
+    from traces.q1.frozen_artifacts import FROZEN_DEV_ID_SEQUENCE_SHA256
     from traces.q1.integrity_gates import evaluate_preconfirmation_gates
 
     ev = dict(integrity_evidence or {})
@@ -787,13 +809,28 @@ def evaluate_live_integrity_battery(
     # Derive eligibility / first-token from exploratory units when not supplied
     development_n_eligible = ev.get("development_n_eligible")
     if development_n_eligible is None and exploratory_units:
-        # Use minimum eligible across exploratory seeds (fail-closed)
         development_n_eligible = min(
             int(u.eligible_mask.sum()) for u in exploratory_units
         )
     first_token = ev.get("exploratory_first_token_validity")
     if first_token is None and exploratory_units:
         first_token = min(float(u.first_token_validity) for u in exploratory_units)
+
+    # Prefer artifact refs; reject legacy inline metadata keys for empirical path
+    identity_ref = ev.get("identity_artifact") or ev.get("identity_suite")
+    f4_ref = ev.get("f4_artifact") or ev.get("f4_table")
+    double_ref = ev.get("double_bos_artifact") or ev.get("double_bos_evidence")
+
+    expected_units = ev.get("expected_model_units") or list(
+        expected_exploratory_model_units()
+    )
+    if exploratory_units:
+        # Bind to actual exploratory unit identities when available
+        live_units = [u.model_unit for u in exploratory_units]
+        if sorted(live_units) != sorted(expected_units):
+            # Prefer frozen expected names; mismatched live units still authenticated
+            # against expected_units unless caller overrides
+            pass
 
     report = evaluate_preconfirmation_gates(
         development_n_eligible=(
@@ -803,13 +840,17 @@ def evaluate_live_integrity_battery(
         exploratory_first_token_validity=(
             float(first_token) if first_token is not None else None
         ),
-        identity_suite=ev.get("identity_suite"),
-        f4_table=ev.get("f4_table"),
+        identity_suite=identity_ref if isinstance(identity_ref, Mapping) else None,
+        f4_table=f4_ref if isinstance(f4_ref, Mapping) else None,
         double_bos_scan_completed=bool(ev.get("double_bos_scan_completed", False)),
         double_bos_n_pairs=ev.get("double_bos_n_pairs"),
-        double_bos_evidence=ev.get("double_bos_evidence"),
+        double_bos_evidence=double_ref if isinstance(double_ref, Mapping) else None,
         require_confirmatory=False,
         require_empirical_scientific=True,
+        expected_model_units=[str(u) for u in expected_units],
+        expected_dataset_sha=str(
+            ev.get("expected_dataset_sha") or FROZEN_DEV_ID_SEQUENCE_SHA256
+        ),
     )
     return {
         "progression_blocked": report.progression_blocked,

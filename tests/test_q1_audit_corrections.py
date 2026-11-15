@@ -207,7 +207,8 @@ def test_patch_hooks_cleanup():
     assert_no_hooks(model)
 
 
-def test_use_cache_false_enforced():
+def test_use_cache_false_enforced(monkeypatch):
+    monkeypatch.setenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", "1")
     model = _FakeModel()
     ids = torch.randint(0, 10, (1, 5))
     logits = teacher_forced_forward(model, ids, use_cache=False)

@@ -201,6 +201,8 @@ def _make_gemma(*, seed: int, dtype, n_layers: int = TINY_N_LAYERS):
     import torch
     from transformers import Gemma2Config, Gemma2ForCausalLM
 
+    from traces.q1.engineering_fixtures import mark_verified_engineering_tiny
+
     torch.manual_seed(seed)
     cfg = Gemma2Config(
         vocab_size=128,
@@ -222,7 +224,7 @@ def _make_gemma(*, seed: int, dtype, n_layers: int = TINY_N_LAYERS):
     model.to(dtype=dtype)
     model.eval()
     _assert_eager(model)
-    return model
+    return mark_verified_engineering_tiny(model)
 
 
 def _paired_ids(seed: int, seq: int = 8):
@@ -289,7 +291,7 @@ def _capture_cache(runner, ids_t, ids_c, alignment, instruction_id: str = "tiny0
             residual_layers=runner.residual_layers,
             o_proj_layers=runner.o_proj_layers,
         ) as buf:
-            logits = teacher_forced_forward(runner.model, ids, use_cache=False)
+            logits = teacher_forced_forward(runner.model, ids, use_cache=False, forward_authorization="engineering_tiny")
             buf.logits = logits.detach()
         populate_donor_cache_from_buffers(cache, tag, buf)
         assert runner.capture.active_hook_count == 0
@@ -382,7 +384,11 @@ def _run_all_upstream_with_boundary_capture(
             boundary_spy, with_kwargs=True
         )
         logits = teacher_forced_forward(
-            runner.model, recipient_ids, None, use_cache=False
+            runner.model,
+            recipient_ids,
+            None,
+            use_cache=False,
+            forward_authorization="engineering_tiny",
         )
     finally:
         if bound_handle is not None:
@@ -540,7 +546,7 @@ def test_t1_eager_and_capture_buffer_api(tiny_fp32):
     with runner.capture.capturing(
         residual_layers=[TINY_BOUNDARY], o_proj_layers=[TINY_BOUNDARY]
     ) as buf:
-        teacher_forced_forward(model, ids_t, use_cache=False)
+        teacher_forced_forward(model, ids_t, use_cache=False, forward_authorization="engineering_tiny")
         assert TINY_BOUNDARY in buf.residuals_by_layer
         assert TINY_BOUNDARY in buf.o_proj_input_by_layer
         assert not hasattr(buf, "residual") or not isinstance(
@@ -577,13 +583,13 @@ def test_identity1_patches_reproduce_intact(tiny_fp32):
         mgr.install_joint_head_patches(
             heads, donor_t, al.post_tag_indices, direction="forward"
         )
-        patch_tt = teacher_forced_forward(model, ids_t, use_cache=False)
+        patch_tt = teacher_forced_forward(model, ids_t, use_cache=False, forward_authorization="engineering_tiny")
         mgr.clear()
         donor_c = {TINY_BOUNDARY: cache.get_o_proj_input("C", TINY_BOUNDARY)}
         mgr.install_joint_head_patches(
             heads, donor_c, al.post_tag_indices, direction="forward"
         )
-        patch_cc = teacher_forced_forward(model, ids_c, use_cache=False)
+        patch_cc = teacher_forced_forward(model, ids_c, use_cache=False, forward_authorization="engineering_tiny")
     finally:
         mgr.clear()
     result = check_identity_1_identity_patches(
@@ -832,7 +838,7 @@ def test_identity5_pretag_noop(tiny_fp32):
         try:
             h = module.register_forward_pre_hook(spy, with_kwargs=True)
             mgr._active.handles.append(h)
-            patched = teacher_forced_forward(model, recipient_ids, use_cache=False)
+            patched = teacher_forced_forward(model, recipient_ids, use_cache=False, forward_authorization="engineering_tiny")
         finally:
             mgr.clear()
         assert position_ok["checked"] is True
@@ -928,7 +934,7 @@ def test_live_o_proj_single_head_locality(tiny_fp32):
                 direction=direction,  # type: ignore[arg-type]
             )
             h_after = module.register_forward_pre_hook(spy_after, with_kwargs=True)
-            teacher_forced_forward(model, recipient_ids, use_cache=False)
+            teacher_forced_forward(model, recipient_ids, use_cache=False, forward_authorization="engineering_tiny")
         finally:
             if h_before is not None:
                 h_before.remove()
@@ -983,7 +989,7 @@ def test_live_o_proj_single_head_locality(tiny_fp32):
                 make_residual_replace_hook(bad), with_kwargs=True
             )
             try:
-                teacher_forced_forward(model, ids_t, use_cache=False)
+                teacher_forced_forward(model, ids_t, use_cache=False, forward_authorization="engineering_tiny")
             finally:
                 h_bad.remove()
     finally:
@@ -1122,7 +1128,7 @@ def test_fail_closed_and_hook_cleanup(tiny_fp32):
     )
     try:
         with pytest.raises(RuntimeError, match="dtype"):
-            teacher_forced_forward(model, ids_t, use_cache=False)
+            teacher_forced_forward(model, ids_t, use_cache=False, forward_authorization="engineering_tiny")
     finally:
         h_dtype.remove()
     assert_no_hooks(model)
@@ -1138,7 +1144,7 @@ def test_fail_closed_and_hook_cleanup(tiny_fp32):
     try:
         runner.inject.install_layer_input_replacement(TINY_BOUNDARY, wrong_shape)
         with pytest.raises(RuntimeError, match="shape"):
-            teacher_forced_forward(model, ids_t, use_cache=False)
+            teacher_forced_forward(model, ids_t, use_cache=False, forward_authorization="engineering_tiny")
     finally:
         runner.inject.clear()
     assert_no_hooks(model)
@@ -1174,7 +1180,7 @@ def test_o_proj_head_patch_dtype_mismatch_cleanup(tiny_fp32):
         )
         assert mgr.active_hook_count >= 1
         with pytest.raises(RuntimeError, match="dtype"):
-            teacher_forced_forward(model, ids_t, use_cache=False)
+            teacher_forced_forward(model, ids_t, use_cache=False, forward_authorization="engineering_tiny")
     finally:
         mgr.clear()
     assert mgr.active_hook_count == 0
@@ -1201,7 +1207,7 @@ def test_clean_reference_and_margin_manual(tiny_fp32):
     runner = _runner(model)
     ids_t, ids_c, _ = _paired_ids(17)
     al = derive_tag_alignment(ids_t[0].tolist(), ids_c[0].tolist())
-    logits_c = teacher_forced_forward(model, ids_c, use_cache=False)
+    logits_c = teacher_forced_forward(model, ids_c, use_cache=False, forward_authorization="engineering_tiny")
     last = last_prompt_logits(logits_c, ids_c.shape[-1])
     ref = clean_reference_token(
         last,
@@ -1282,7 +1288,7 @@ def test_identity6_adapter_boundary(tiny_fp32):
 
     cap_on = ActivationCaptureManager(pm)
     with cap_on.capturing(residual_layers=layers_cap, o_proj_layers=[]):
-        on_logits = teacher_forced_forward(pm, ids_t, use_cache=False)
+        on_logits = teacher_forced_forward(pm, ids_t, use_cache=False, forward_authorization="engineering_tiny")
         on_buf = {L: cap_on.buffers.residuals_by_layer[L].clone() for L in layers_cap}
 
     if not hasattr(pm, "disable_adapter"):
@@ -1290,7 +1296,7 @@ def test_identity6_adapter_boundary(tiny_fp32):
     cap_off = ActivationCaptureManager(pm)
     with pm.disable_adapter():
         with cap_off.capturing(residual_layers=layers_cap, o_proj_layers=[]):
-            off_logits = teacher_forced_forward(pm, ids_t, use_cache=False)
+            off_logits = teacher_forced_forward(pm, ids_t, use_cache=False, forward_authorization="engineering_tiny")
             off_buf = {
                 L: cap_off.buffers.residuals_by_layer[L].clone() for L in layers_cap
             }
@@ -1328,7 +1334,7 @@ def test_bf16_path_separately_labeled(tiny_bf16):
     runner = _runner(model, seed_unit="tiny/bf16")
     ids_t, ids_c, _ = _paired_ids(20)
     with runner.capture.capturing(residual_layers=[1], o_proj_layers=[1]) as buf:
-        teacher_forced_forward(model, ids_t, use_cache=False)
+        teacher_forced_forward(model, ids_t, use_cache=False, forward_authorization="engineering_tiny")
         assert 1 in buf.residuals_by_layer
         assert buf.residuals_by_layer[1].dtype == torch.bfloat16
     assert_no_hooks(model)

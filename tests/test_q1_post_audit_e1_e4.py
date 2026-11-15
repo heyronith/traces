@@ -44,24 +44,23 @@ def _frozen_held_out():
     )
 
 
-def _empirical_integrity_evidence() -> dict[str, Any]:
+def _empirical_integrity_evidence(tmp_path=None) -> dict[str, Any]:
+    """Persisted fabricated artifacts with independently checkable hashes."""
+    from traces.q1.empirical_evidence import (
+        write_fabricated_double_bos_artifact,
+        write_fabricated_f4_artifact,
+        write_fabricated_identity_artifact,
+    )
+
+    root = Path(tmp_path) if tmp_path is not None else Path("/tmp/traces_q1_e2_fixtures")
+    root.mkdir(parents=True, exist_ok=True)
+    id_p, id_s = write_fabricated_identity_artifact(root / "identity.json")
+    f4_p, f4_s = write_fabricated_f4_artifact(root / "f4.json")
+    db_p, db_s = write_fabricated_double_bos_artifact(root / "double_bos.json")
     return {
-        "identity_suite": {
-            "evidence_kind": "empirical_scientific",
-            "all_passed": True,
-            "n_identities": 9,
-        },
-        "f4_table": {
-            "locked": True,
-            "evidence_kind": "empirical_scientific",
-            "sha256": "a" * 64,
-            "families": {"l1523": {"epsilon_family": 1e-3}},
-        },
-        "double_bos_evidence": {
-            "evidence_kind": "empirical_scientific",
-            "result_sha256": "b" * 64,
-            "n_pairs_recorded": 64,
-        },
+        "identity_artifact": {"artifact_path": str(id_p), "sha256": id_s},
+        "f4_artifact": {"artifact_path": str(f4_p), "sha256": f4_s},
+        "double_bos_artifact": {"artifact_path": str(db_p), "sha256": db_s},
     }
 
 
@@ -304,7 +303,7 @@ def test_e1_rejects_wrong_direction_and_invalid_heads():
 
 @pytest.mark.parametrize(
     "drop_key",
-    ["identity_suite", "f4_table", "double_bos_evidence"],
+    ["identity_artifact", "f4_artifact", "double_bos_artifact"],
 )
 def test_e2_spy_zero_confirmatory_per_failed_integrity_prerequisite(
     tmp_path, monkeypatch, drop_key
@@ -313,18 +312,27 @@ def test_e2_spy_zero_confirmatory_per_failed_integrity_prerequisite(
     hooks, calls = _spy_hooks(
         nominated_effect_by_seed={42: 2.0, 43: 2.0, 44: 2.0}
     )
-    ev = _empirical_integrity_evidence()
+    ev = _empirical_integrity_evidence(tmp_path)
     del ev[drop_key]
     # Adversarial stubs that must NOT clear the gate
-    if drop_key == "identity_suite":
+    if drop_key == "identity_artifact":
         from traces.q1.identities import run_synthetic_identity_suite
 
         ev["identity_suite"] = run_synthetic_identity_suite()
-    elif drop_key == "f4_table":
-        ev["f4_table"] = {"locked": True, "families": {"l1523": {}}}
-    elif drop_key == "double_bos_evidence":
+    elif drop_key == "f4_artifact":
+        ev["f4_table"] = {
+            "locked": True,
+            "evidence_kind": "empirical_scientific",
+            "sha256": "a" * 64,
+        }
+    elif drop_key == "double_bos_artifact":
         ev["double_bos_scan_completed"] = True
         ev["double_bos_n_pairs"] = 64
+        ev["double_bos_evidence"] = {
+            "evidence_kind": "empirical_scientific",
+            "result_sha256": "b" * 64,
+            "n_pairs_recorded": 64,
+        }
 
     out = run_live_scientific_pipeline(
         repo_root=REPO,
@@ -352,7 +360,7 @@ def test_e2_empirical_clear_allows_confirmatory(tmp_path, monkeypatch):
         development_ids=_frozen_dev(),
         hooks=hooks,
         out_dir=tmp_path / "e2_clear",
-        integrity_evidence=_empirical_integrity_evidence(),
+        integrity_evidence=_empirical_integrity_evidence(tmp_path),
     )
     assert out["confirmatory_executed"] is True
     assert out["integrity_gates"]["confirmatory_blocked"] is False
@@ -414,14 +422,15 @@ def test_e3_tiny_engineering_auth_separate(monkeypatch):
 
     from traces.q1.causal_runner import Q1CausalRunner
 
-    class M(nn.Module):
+    class Ordinary(nn.Module):
         pass
 
-    tiny = Q1CausalRunner(
-        M(), tokenizer=None, model_unit="tiny/test", engineering_tiny=True
-    )
-    tiny._authorize_forward()  # must not raise
-    sci = Q1CausalRunner(M(), tokenizer=None, model_unit="sci/test")
+    # Ordinary mock + engineering_tiny boolean must fail (S1)
+    with pytest.raises(PermissionError):
+        Q1CausalRunner(
+            Ordinary(), tokenizer=None, model_unit="tiny/test", engineering_tiny=True
+        )
+    sci = Q1CausalRunner(Ordinary(), tokenizer=None, model_unit="sci/test")
     with pytest.raises(PermissionError):
         sci._authorize_forward()
 
@@ -442,7 +451,6 @@ def test_e3_generation_and_scoring_reject_without_auth(monkeypatch):
         teacher_forced_forward(
             object(),
             torch.ones(1, 2, dtype=torch.long),
-            require_scientific_auth=True,
         )
 
 
