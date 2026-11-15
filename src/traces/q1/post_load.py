@@ -232,16 +232,25 @@ def verify_post_load(
 
     weight_hashes: dict[str, str] = {}
     if expected_weight_file_sha256:
-        for path_str, expected in expected_weight_file_sha256.items():
-            p = Path(path_str)
+        # Normalize role-tagged keys before filesystem access; keep role attribution
+        try:
+            normalized = normalize_weight_manifest_entries(expected_weight_file_sha256)
+        except ValueError as e:
+            failures.append(str(e))
+            normalized = {}
+        for role_key, (fs_path, expected) in normalized.items():
+            p = Path(fs_path)
             if not p.is_file():
-                failures.append(f"weight file missing for hash check: {path_str}")
+                failures.append(
+                    f"weight file missing for hash check: {role_key} -> {fs_path}"
+                )
                 continue
             digest = hashlib.sha256(p.read_bytes()).hexdigest()
-            weight_hashes[path_str] = digest
+            weight_hashes[role_key] = digest
             if digest != expected:
                 failures.append(
-                    f"weight SHA mismatch {path_str}: {digest} != {expected}"
+                    f"weight SHA mismatch {role_key} ({fs_path}): "
+                    f"{digest} != {expected}"
                 )
 
     return PostLoadReport(
@@ -315,6 +324,45 @@ def verify_adapter_off_behavior(model: Any) -> dict[str, Any]:
 
 
 REQUIRED_WEIGHT_MANIFEST_ROLES = ("base", "adapter")
+
+
+def normalize_weight_manifest_entries(
+    expected_weight_file_sha256: Mapping[str, str],
+) -> dict[str, tuple[str, str]]:
+    """Map manifest keys to (filesystem_path, expected_sha256).
+
+    ``base:<path>`` / ``adapter:<path>`` are normalized to the path after the
+    first colon for filesystem access while preserving role attribution in the
+    returned key. Plain paths are kept as-is with role ``path``.
+    Rejects empty paths, duplicate filesystem targets under conflicting roles,
+    and ambiguous duplicate keys.
+    """
+    out: dict[str, tuple[str, str]] = {}
+    seen_fs: dict[str, str] = {}
+    seen_keys: set[str] = set()
+    for key, expected in expected_weight_file_sha256.items():
+        if key in seen_keys:
+            raise ValueError(f"ambiguous duplicate manifest key: {key}")
+        seen_keys.add(key)
+        if key.startswith("base:") or key.startswith("adapter:"):
+            role, _, rest = key.partition(":")
+            fs_path = rest
+            if not fs_path:
+                raise ValueError(f"empty path after role tag in {key!r}")
+            role_key = f"{role}:{fs_path}"
+        else:
+            fs_path = key
+            role_key = f"path:{fs_path}"
+        # Resolve for duplicate detection but keep original string for open()
+        resolved = str(Path(fs_path))
+        if resolved in seen_fs and seen_fs[resolved] != role_key.split(":", 1)[0]:
+            raise ValueError(
+                f"ambiguous duplicate filesystem path {fs_path} under roles "
+                f"{seen_fs[resolved]} and {role_key.split(':', 1)[0]}"
+            )
+        seen_fs[resolved] = role_key.split(":", 1)[0]
+        out[role_key] = (fs_path, expected)
+    return out
 
 
 def validate_weight_manifest_roles(

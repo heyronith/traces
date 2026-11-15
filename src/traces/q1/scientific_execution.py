@@ -22,12 +22,19 @@ from traces.q1 import FROZEN_PROTOCOL_VERSION, FROZEN_SCIENTIFIC_COMMIT
 from traces.q1.conditions import enumerate_primary_l19_conditions
 from traces.q1.driver import ModelUnitInput, dump_driver_result, run_study
 from traces.q1.recording import ConditionRecord, ResultSink
-from traces.q1.frozen_artifacts import verify_frozen_artifacts
+from traces.q1.analysis import exploratory_stop_triggered
+from traces.q1.frozen_artifacts import (
+    REQUIRED_EXPLORATORY_SEEDS,
+    verify_frozen_artifacts,
+    verify_runtime_allocation_ids,
+)
+from traces.model_loader import PINNED_ADAPTER_REVISION, PINNED_BASE_REVISION
 from traces.q1.runtime_lock import claim_production_lock_exists, load_lock_document
 from traces.q1.runtime_spec import (
     DEFAULT_BATCHING,
     DEFAULT_DETERMINISM,
     DIRECT_PINS_SHA256,
+    REQUIRED_ATTN_IMPLEMENTATION,
     verify_direct_pins_file,
 )
 from traces.q1.stats_f1_f2 import assign_f2_folds, enforce_production_held_out_size
@@ -314,7 +321,8 @@ class PreflightReport:
 def run_scientific_preflight(
     repo_root: Path | str,
     *,
-    held_out_ids: Sequence[str] | None = None,
+    held_out_ids: Sequence[Any] | None = None,
+    development_ids: Sequence[Any] | None = None,
     production_lock_path: Path | str | None = None,
     production_wheel_dir: Path | str | None = None,
     require_sci_auth: bool = True,
@@ -403,13 +411,13 @@ def run_scientific_preflight(
     else:
         checks["weight_manifest_n"] = len(expected_weight_manifest)
 
-    if held_out_ids is not None:
-        try:
-            enforce_production_held_out_size(len(held_out_ids), expected=N_HO)
-            checks["held_out"] = {"n": len(held_out_ids), "ok": True}
-        except RuntimeError as e:
-            failures.append(str(e))
-            checks["held_out"] = {"n": len(held_out_ids), "ok": False}
+    if held_out_ids is not None or development_ids is not None:
+        alloc = verify_runtime_allocation_ids(
+            root, held_out_ids=held_out_ids, development_ids=development_ids
+        )
+        checks["allocation_binding"] = alloc
+        if not alloc["ok"]:
+            failures.extend(alloc["failures"])
 
     return PreflightReport(ok=len(failures) == 0, failures=failures, checks=checks)
 
@@ -458,15 +466,81 @@ def build_pipeline_plan(
 
 
 def verify_held_out_allocation(
-    held_out_ids: Sequence[Any], *, expected: int = N_HO
+    held_out_ids: Sequence[Any],
+    *,
+    expected: int = N_HO,
+    repo_root: Path | str | None = None,
+    development_ids: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
+    """Size + fold structure; when ``repo_root`` given, bind to frozen dolly_ids."""
     enforce_production_held_out_size(len(held_out_ids), expected=expected)
     folds = assign_f2_folds(list(held_out_ids))
-    return {
+    out: dict[str, Any] = {
         "n": len(held_out_ids),
         "fold_a_n": len(folds.fold_a_ids),
         "fold_b_n": len(folds.fold_b_ids),
         "allocation_order_preserved": True,
+    }
+    if repo_root is not None:
+        bound = verify_runtime_allocation_ids(
+            repo_root,
+            held_out_ids=held_out_ids,
+            development_ids=development_ids,
+        )
+        out["frozen_binding"] = bound
+        if not bound["ok"]:
+            raise RuntimeError(
+                "held-out/development IDs do not match frozen allocation: "
+                + "; ".join(bound["failures"])
+            )
+    return out
+
+
+def evaluate_live_exploratory_gate(
+    *,
+    exploratory_specs: Sequence[UnitSpec],
+    exploratory_ranks: Sequence[int] | None,
+) -> dict[str, Any]:
+    """Evaluate frozen exploratory stop **before** confirmatory model callbacks.
+
+    Requires exact seeds 42–44 and three provenance-supplied ranks. Never
+    fabricates default passing ranks.
+    """
+    seeds = [s.seed for s in exploratory_specs]
+    seeds_ok = (
+        list(seeds) == list(REQUIRED_EXPLORATORY_SEEDS)
+        and all(s.family == "l1523" for s in exploratory_specs)
+        and all(s.role == "exploratory_dev" for s in exploratory_specs)
+    )
+    ranks_ok = (
+        exploratory_ranks is not None
+        and len(list(exploratory_ranks)) == 3
+        and all(isinstance(r, (int, np.integer)) for r in exploratory_ranks)
+        and all(int(r) >= 1 for r in exploratory_ranks)
+    )
+    if not seeds_ok or not ranks_ok:
+        return {
+            "triggered": False,
+            "confirmatory_blocked": True,
+            "ranks": list(exploratory_ranks) if exploratory_ranks is not None else None,
+            "seeds": seeds,
+            "fabricated_ranks": False,
+            "reason": (
+                "exploratory gate incomplete: require seeds "
+                f"{list(REQUIRED_EXPLORATORY_SEEDS)} and three ranks; "
+                f"seeds_ok={seeds_ok} ranks_ok={ranks_ok}"
+            ),
+        }
+    ranks = [int(r) for r in exploratory_ranks]  # type: ignore[arg-type]
+    triggered = exploratory_stop_triggered(ranks)
+    return {
+        "triggered": triggered,
+        "confirmatory_blocked": triggered,
+        "ranks": ranks,
+        "seeds": seeds,
+        "fabricated_ranks": False,
+        "criterion": ">=2 of 3 ranks worse than 10",
+        "reason": "stop triggered" if triggered else "exploratory clear",
     }
 
 
@@ -525,6 +599,69 @@ def expected_frozen_unit_specs() -> list[UnitSpec]:
         )
     )
     return specs
+
+
+CONFIRMATORY_ROLES = frozenset({"primary_confirmatory", "secondary_replication"})
+
+
+def verify_unit_load_provenance(
+    spec: UnitSpec,
+    prov: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Per-unit provenance — never reuse another unit's validation result."""
+    failures: list[str] = []
+    for field in ("model_unit", "family", "role", "seed"):
+        if field not in prov:
+            failures.append(f"missing provenance field {field}")
+        elif prov[field] != getattr(spec, field):
+            failures.append(
+                f"{field} {prov.get(field)!r} != spec {getattr(spec, field)!r}"
+            )
+    if prov.get("base_revision") != PINNED_BASE_REVISION:
+        failures.append(f"base_revision {prov.get('base_revision')!r} != pin")
+    if spec.family != "base":
+        if prov.get("adapter_revision") != PINNED_ADAPTER_REVISION:
+            failures.append(
+                f"adapter_revision {prov.get('adapter_revision')!r} != pin"
+            )
+    if prov.get("attn_implementation") != REQUIRED_ATTN_IMPLEMENTATION:
+        failures.append("attn_implementation != eager")
+    dtype = str(prov.get("torch_dtype", "")).lower()
+    if "bfloat16" not in dtype and "bf16" not in dtype:
+        failures.append("torch_dtype not bfloat16")
+    weights = prov.get("weight_file_sha256")
+    if not isinstance(weights, Mapping) or not weights:
+        failures.append("weight_file_sha256 missing for unit")
+    return {
+        "ok": len(failures) == 0,
+        "failures": failures,
+        "model_unit": spec.model_unit,
+        "family": spec.family,
+        "role": spec.role,
+        "seed": spec.seed,
+    }
+
+
+def verify_unit_donor_evidence(
+    spec: UnitSpec, donors: Mapping[str, Any]
+) -> dict[str, Any]:
+    failures: list[str] = []
+    for key in ("n_donor_caches", "clean_references_frozen", "instruction_ids"):
+        if key not in donors:
+            failures.append(f"donor evidence missing {key}")
+    if donors.get("clean_references_frozen") is not True:
+        failures.append("clean_references_frozen must be True")
+    n = donors.get("n_donor_caches")
+    if not isinstance(n, (int, np.integer)) or int(n) < 1:
+        failures.append("n_donor_caches must be positive int")
+    ids = donors.get("instruction_ids")
+    if not isinstance(ids, Sequence) or isinstance(ids, (str, bytes)) or len(ids) < 1:
+        failures.append("instruction_ids must be non-empty sequence")
+    return {
+        "ok": len(failures) == 0,
+        "failures": failures,
+        "model_unit": spec.model_unit,
+    }
 
 
 @dataclass
@@ -629,7 +766,11 @@ class ScientificPipelineExecutor:
         self.plan = build_pipeline_plan(self.repo_root)
 
     def stage1_catalog_and_bos(
-        self, *, held_out_ids: Sequence[str], development_ids: Sequence[str] | None = None
+        self,
+        *,
+        held_out_ids: Sequence[Any],
+        development_ids: Sequence[Any] | None = None,
+        bind_frozen_allocation: bool = False,
     ) -> StageResult:
         catalog = enumerate_primary_l19_conditions(include_downstream56=True)
         if not catalog:
@@ -637,7 +778,7 @@ class ScientificPipelineExecutor:
                 PIPELINE_STAGES[0], "failed", error="empty primary catalog"
             )
         else:
-            alloc = {
+            alloc: dict[str, Any] = {
                 "held_out_n": len(held_out_ids),
                 "held_out_expected": N_HO,
                 "dev_n": len(development_ids or []),
@@ -646,6 +787,22 @@ class ScientificPipelineExecutor:
                 if len(held_out_ids) == N_HO
                 else {"note": "non-production size (synthetic)"},
             }
+            if bind_frozen_allocation:
+                bound = verify_runtime_allocation_ids(
+                    self.repo_root,
+                    held_out_ids=held_out_ids,
+                    development_ids=development_ids,
+                )
+                alloc["frozen_binding"] = bound
+                if not bound["ok"]:
+                    st = StageResult(
+                        PIPELINE_STAGES[0],
+                        "failed",
+                        error="; ".join(bound["failures"]),
+                        evidence={"allocation": alloc},
+                    )
+                    self.stages[PIPELINE_STAGES[0]] = st
+                    return st
             st = StageResult(
                 PIPELINE_STAGES[0],
                 "complete",
@@ -941,30 +1098,139 @@ def run_typed_pipeline_from_bundle(
     }
 
 
+def _execute_live_unit(
+    *,
+    ex: ScientificPipelineExecutor,
+    hooks: LiveForwardHooks,
+    spec: UnitSpec,
+    per_unit_audits: list[dict[str, Any]],
+) -> ModelUnitInput:
+    """Load → per-unit provenance → donors → conditions for one unit.
+
+    Never reuses another unit's provenance validation result.
+    """
+    loaded = hooks.load_model_for_unit(spec)  # type: ignore[misc]
+    if not isinstance(loaded, Mapping) or "model" not in loaded:
+        raise RuntimeError(
+            f"{spec.model_unit}: load_model_for_unit must return mapping with model"
+        )
+    prov = _require_mapping_evidence(
+        loaded,
+        stage=f"load:{spec.model_unit}",
+        required_keys=(
+            "base_revision",
+            "adapter_revision",
+            "weight_file_sha256",
+            "attn_implementation",
+            "torch_dtype",
+            "model",
+            "model_unit",
+            "family",
+            "role",
+            "seed",
+        ),
+    )
+    unit_prov = verify_unit_load_provenance(spec, prov)
+    if not unit_prov["ok"]:
+        raise RuntimeError(
+            f"{spec.model_unit}: provenance failed: "
+            + "; ".join(unit_prov["failures"])
+        )
+
+    donors = hooks.capture_donors_for_unit(spec, prov["model"])  # type: ignore[misc]
+    donor_ev = _require_mapping_evidence(
+        donors,
+        stage=f"donors:{spec.model_unit}",
+        required_keys=(
+            "n_donor_caches",
+            "clean_references_frozen",
+            "instruction_ids",
+        ),
+    )
+    donor_check = verify_unit_donor_evidence(spec, donor_ev)
+    if not donor_check["ok"]:
+        raise RuntimeError(
+            f"{spec.model_unit}: donor validation failed: "
+            + "; ".join(donor_check["failures"])
+        )
+
+    pair = hooks.execute_unit(spec, prov["model"], donors)  # type: ignore[misc]
+    if (
+        not isinstance(pair, tuple)
+        or len(pair) != 2
+        or not isinstance(pair[0], ConditionOutputBundle)
+        or not isinstance(pair[1], ConditionOutputBundle)
+    ):
+        raise RuntimeError(
+            f"{spec.model_unit}: execute_unit must return "
+            "(boundary_bundle, intervention_bundle)"
+        )
+    boundary, intervention = pair
+    if boundary.model_unit != spec.model_unit or intervention.model_unit != spec.model_unit:
+        raise RuntimeError(
+            f"{spec.model_unit}: bundle model_unit does not match UnitSpec"
+        )
+    merged = reconcile_boundary_intervention(boundary, intervention)
+    if not merged.catalog_condition_ids:
+        raise RuntimeError(
+            f"{spec.model_unit}: missing catalog condition records on bundle"
+        )
+    if merged.family != spec.family or merged.role != spec.role:
+        raise RuntimeError(
+            f"{spec.model_unit}: condition bundle family/role mismatch vs UnitSpec"
+        )
+
+    ex.stage4_boundaries(merged)
+    st5 = ex.stage5_interventions(merged)
+    st5.require_complete()
+    st6, unit = ex.stage6_assemble(merged)
+    st6.require_complete()
+    assert unit is not None
+
+    audit = {
+        "model_unit": spec.model_unit,
+        "family": spec.family,
+        "role": spec.role,
+        "seed": spec.seed,
+        "provenance": unit_prov,
+        "donors": donor_check,
+        "n_catalog_conditions": len(merged.catalog_condition_ids),
+        "condition_validation": "ok",
+        "weight_file_sha256": dict(prov["weight_file_sha256"]),
+        "base_revision": prov["base_revision"],
+        "adapter_revision": prov.get("adapter_revision"),
+        "attn_implementation": prov["attn_implementation"],
+        "torch_dtype": prov["torch_dtype"],
+    }
+    per_unit_audits.append(audit)
+    return unit
+
+
 def run_live_scientific_pipeline(
     *,
     repo_root: Path | str,
-    held_out_ids_allocation_order: Sequence[str],
+    held_out_ids_allocation_order: Sequence[Any],
     hooks: LiveForwardHooks,
     out_dir: Path | str,
     production_lock_path: Path | str | None = None,
     production_wheel_dir: Path | str | None = None,
     expected_weight_manifest: Mapping[str, str] | None = None,
     exploratory_ranks: Sequence[int] | None = None,
-    development_ids: Sequence[str] | None = None,
+    development_ids: Sequence[Any] | None = None,
     unit_specs: Sequence[UnitSpec] | None = None,
 ) -> dict[str, Any]:
     """Multi-unit live path via Q1CausalRunner adapters — auth + preflight required.
 
-    Aggregates exploratory (3) + primary (5) + secondary (2) + adapter-off.
-    Boundary and intervention bundles are reconciled per unit. Completeness of
-    the eight-stage path is **not** claimed until these checks pass.
-    Default: unauthorized (env gate OFF).
+    Exploratory seeds 42–44 are loaded/executed first. Primary/secondary
+    confirmatory model callbacks run only after the frozen stopping rule is
+    evaluated and clear. Missing/invalid ranks never fabricate defaults.
+    Each loaded model gets its own provenance/donor/condition audit.
     """
     require_scientific_authorization()
     pre = run_scientific_preflight(
         repo_root,
         held_out_ids=held_out_ids_allocation_order,
+        development_ids=development_ids,
         production_lock_path=production_lock_path,
         production_wheel_dir=production_wheel_dir,
         expected_weight_manifest=expected_weight_manifest,
@@ -980,6 +1246,13 @@ def run_live_scientific_pipeline(
             "and execute_unit (Q1CausalRunner adapters)"
         )
 
+    # Bind IDs to frozen allocation before any model callback
+    verify_held_out_allocation(
+        held_out_ids_allocation_order,
+        repo_root=repo_root,
+        development_ids=development_ids,
+    )
+
     specs = list(unit_specs) if unit_specs is not None else expected_frozen_unit_specs()
     expected = expected_frozen_unit_specs()
     if [s.model_unit for s in specs] != [s.model_unit for s in expected]:
@@ -988,94 +1261,135 @@ def run_live_scientific_pipeline(
             "secondary/adapter-off identities"
         )
 
+    exploratory_specs = [s for s in specs if s.role == "exploratory_dev"]
+    confirmatory_specs = [s for s in specs if s.role in CONFIRMATORY_ROLES]
+    other_specs = [
+        s for s in specs if s.role not in CONFIRMATORY_ROLES and s.role != "exploratory_dev"
+    ]
+
     ex = ScientificPipelineExecutor(repo_root, out_dir)
     ex.stage1_catalog_and_bos(
         held_out_ids=held_out_ids_allocation_order,
         development_ids=development_ids,
+        bind_frozen_allocation=True,
     ).require_complete()
 
     units: list[ModelUnitInput] = []
-    per_unit_records: list[dict[str, Any]] = []
-    first_prov: dict[str, Any] | None = None
-    donor_ok = False
+    per_unit_audits: list[dict[str, Any]] = []
 
-    for spec in specs:
-        loaded = hooks.load_model_for_unit(spec)  # type: ignore[misc]
-        if not isinstance(loaded, Mapping) or "model" not in loaded:
-            raise RuntimeError(
-                f"{spec.model_unit}: load_model_for_unit must return mapping with model"
+    # --- Exploratory first (before any confirmatory load) ---
+    for spec in exploratory_specs:
+        units.append(
+            _execute_live_unit(
+                ex=ex, hooks=hooks, spec=spec, per_unit_audits=per_unit_audits
             )
-        prov = _require_mapping_evidence(
-            loaded,
-            stage=f"load:{spec.model_unit}",
-            required_keys=(
-                "base_revision",
-                "adapter_revision",
-                "weight_file_sha256",
-                "attn_implementation",
-                "torch_dtype",
-                "model",
+        )
+
+    # Stage 2/3 evidence: complete audit across exploratory units so far
+    ex.stages[PIPELINE_STAGES[1]] = StageResult(
+        PIPELINE_STAGES[1],
+        "complete",
+        evidence={
+            "n_units_audited": len(per_unit_audits),
+            "per_unit_provenance": [
+                {
+                    "model_unit": a["model_unit"],
+                    "ok": a["provenance"]["ok"],
+                    "base_revision": a["base_revision"],
+                    "adapter_revision": a["adapter_revision"],
+                }
+                for a in per_unit_audits
+            ],
+            "note": "each unit validated independently; first-unit result not reused",
+        },
+    )
+    ex.stages[PIPELINE_STAGES[2]] = StageResult(
+        PIPELINE_STAGES[2],
+        "complete",
+        evidence={
+            "n_units_with_donors": len(per_unit_audits),
+            "per_unit_donors": [a["donors"] for a in per_unit_audits],
+        },
+    )
+
+    gate = evaluate_live_exploratory_gate(
+        exploratory_specs=exploratory_specs,
+        exploratory_ranks=exploratory_ranks,
+    )
+    if gate["confirmatory_blocked"]:
+        # Persist exploratory-only analysis path; zero confirmatory callbacks
+        st7, analysis = ex.stage7_analyze(
+            units,
+            [str(x) for x in held_out_ids_allocation_order],
+            exploratory_ranks=exploratory_ranks,
+            development_ids=(
+                [str(x) for x in development_ids] if development_ids is not None else None
             ),
         )
-        if first_prov is None:
-            first_prov = prov
-            ex.stage2_provenance(prov).require_complete()
-
-        donors = hooks.capture_donors_for_unit(spec, prov["model"])  # type: ignore[misc]
-        donor_ev = _require_mapping_evidence(
-            donors,
-            stage=f"donors:{spec.model_unit}",
-            required_keys=(
-                "n_donor_caches",
-                "clean_references_frozen",
-                "instruction_ids",
+        st7.require_complete()
+        assert analysis is not None
+        ex.stage8_persist(analysis).require_complete()
+        if ex.stages[PIPELINE_STAGES[3]].status != "complete":
+            ex.stages[PIPELINE_STAGES[3]] = StageResult(
+                PIPELINE_STAGES[3],
+                "complete",
+                evidence={"n_units": len(units), "exploratory_only": True},
+            )
+        return {
+            "stages": {k: asdict(v) for k, v in ex.stages.items()},
+            "analysis": analysis,
+            "preflight": asdict(pre),
+            "n_units": len(units),
+            "per_unit": per_unit_audits,
+            "exploratory_gate": gate,
+            "confirmatory_executed": False,
+            "eight_stage_ready": False,
+            "note": (
+                "confirmatory model callbacks suppressed: "
+                + str(gate.get("reason"))
             ),
-        )
-        if not donor_ok:
-            ex.stage3_donors(donor_ev).require_complete()
-            donor_ok = True
+        }
 
-        pair = hooks.execute_unit(spec, prov["model"], donors)  # type: ignore[misc]
-        if (
-            not isinstance(pair, tuple)
-            or len(pair) != 2
-            or not isinstance(pair[0], ConditionOutputBundle)
-            or not isinstance(pair[1], ConditionOutputBundle)
-        ):
-            raise RuntimeError(
-                f"{spec.model_unit}: execute_unit must return "
-                "(boundary_bundle, intervention_bundle)"
+    # --- Confirmatory + adapter-off only after gate clear ---
+    for spec in confirmatory_specs + other_specs:
+        units.append(
+            _execute_live_unit(
+                ex=ex, hooks=hooks, spec=spec, per_unit_audits=per_unit_audits
             )
-        boundary, intervention = pair
-        if boundary.model_unit != spec.model_unit or intervention.model_unit != spec.model_unit:
-            raise RuntimeError(
-                f"{spec.model_unit}: bundle model_unit does not match UnitSpec"
-            )
-        merged = reconcile_boundary_intervention(boundary, intervention)
-        if not merged.catalog_condition_ids:
-            raise RuntimeError(
-                f"{spec.model_unit}: missing catalog condition records on bundle"
-            )
-        ex.stage4_boundaries(merged)
-        ex.stage5_interventions(merged).require_complete()
-        st6, unit = ex.stage6_assemble(merged)
-        st6.require_complete()
-        assert unit is not None
-        units.append(unit)
-        per_unit_records.append(
-            {
-                "model_unit": spec.model_unit,
-                "role": spec.role,
-                "n_catalog_conditions": len(merged.catalog_condition_ids),
-            }
         )
 
-    # Mark stage4 complete after all units (last boundary evidence retained)
+    # Refresh stage2/3 with full per-unit audits
+    ex.stages[PIPELINE_STAGES[1]] = StageResult(
+        PIPELINE_STAGES[1],
+        "complete",
+        evidence={
+            "n_units_audited": len(per_unit_audits),
+            "per_unit_provenance": [
+                {
+                    "model_unit": a["model_unit"],
+                    "ok": a["provenance"]["ok"],
+                    "base_revision": a["base_revision"],
+                    "adapter_revision": a["adapter_revision"],
+                }
+                for a in per_unit_audits
+            ],
+            "note": "each unit validated independently; first-unit result not reused",
+        },
+    )
+    ex.stages[PIPELINE_STAGES[2]] = StageResult(
+        PIPELINE_STAGES[2],
+        "complete",
+        evidence={
+            "n_units_with_donors": len(per_unit_audits),
+            "per_unit_donors": [a["donors"] for a in per_unit_audits],
+        },
+    )
+
     if ex.stages[PIPELINE_STAGES[3]].status != "complete":
         ex.stages[PIPELINE_STAGES[3]] = StageResult(
             PIPELINE_STAGES[3],
             "complete",
-            evidence={"n_units": len(units), "per_unit": per_unit_records},
+            evidence={"n_units": len(units), "per_unit": per_unit_audits},
         )
 
     if len(units) != len(expected):
@@ -1083,9 +1397,11 @@ def run_live_scientific_pipeline(
 
     st7, analysis = ex.stage7_analyze(
         units,
-        held_out_ids_allocation_order,
+        [str(x) for x in held_out_ids_allocation_order],
         exploratory_ranks=exploratory_ranks,
-        development_ids=development_ids,
+        development_ids=(
+            [str(x) for x in development_ids] if development_ids is not None else None
+        ),
     )
     st7.require_complete()
     assert analysis is not None
@@ -1097,7 +1413,9 @@ def run_live_scientific_pipeline(
         "analysis": analysis,
         "preflight": asdict(pre),
         "n_units": len(units),
-        "per_unit": per_unit_records,
+        "per_unit": per_unit_audits,
+        "exploratory_gate": gate,
+        "confirmatory_executed": True,
         "eight_stage_ready": pipeline_ready,
         "note": (
             "eight_stage_ready reflects enforceable checks for this authorized run; "

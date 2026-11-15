@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence  # Any used by coerce/verify_runtime
 
 # File-byte SHA-256 (freeze record + recomputed for freeze/auth documents)
 FROZEN_FILE_SHA256: dict[str, str] = {
@@ -152,3 +152,105 @@ def parse_direct_pin_requirements(pins_text: str) -> dict[str, str]:
             name, ver = line.split("==", 1)
             out[name.strip().lower().replace("_", "-")] = ver.strip()
     return out
+
+
+def coerce_frozen_dolly_id(value: Any) -> int:
+    """Coerce a runtime ID to the authoritative frozen ``dolly_id`` (int).
+
+    Accepts ``int`` or an exact decimal digit string with no sign/whitespace.
+    Rejects UUIDs, instruction text, prefixed IDs, and other interchangeable
+    lookalikes — dolly_id strings and arbitrary instruction IDs are **not**
+    treated as interchangeable.
+    """
+    if isinstance(value, bool):
+        raise ValueError("boolean is not a frozen dolly_id")
+    if isinstance(value, int):
+        if value < 0:
+            raise ValueError(f"negative dolly_id {value}")
+        return value
+    if isinstance(value, str):
+        if not value.isdigit() or value != str(int(value)):
+            # reject "07077", "id:7077", "7077a", etc.
+            raise ValueError(
+                f"runtime ID {value!r} is not an exact decimal dolly_id string"
+            )
+        return int(value)
+    raise ValueError(f"runtime ID type {type(value).__name__} not a frozen dolly_id")
+
+
+def verify_runtime_allocation_ids(
+    repo_root: Path | str,
+    *,
+    held_out_ids: Sequence[Any] | None = None,
+    development_ids: Sequence[Any] | None = None,
+) -> dict[str, Any]:
+    """Compare supplied allocation ID sequences to frozen ordered dolly_ids.
+
+    Length alone is insufficient: reordered, substituted, duplicated, or
+    truncated sequences fail.
+    """
+    root = Path(repo_root)
+    failures: list[str] = []
+    checks: dict[str, Any] = {}
+
+    def _check(
+        label: str,
+        rel: str,
+        supplied: Sequence[Any] | None,
+        expected_n: int,
+        expected_seq_sha: str,
+    ) -> None:
+        if supplied is None:
+            failures.append(f"{label}: allocation IDs not supplied")
+            checks[label] = {"ok": False, "reason": "missing"}
+            return
+        path = root / rel
+        frozen = load_ordered_dolly_ids(path)
+        try:
+            got = [coerce_frozen_dolly_id(x) for x in supplied]
+        except ValueError as e:
+            failures.append(f"{label}: {e}")
+            checks[label] = {"ok": False, "reason": str(e)}
+            return
+        if len(got) != expected_n:
+            failures.append(f"{label}: n={len(got)} != frozen {expected_n}")
+        if len(got) != len(set(got)):
+            failures.append(f"{label}: duplicate IDs")
+        if got != frozen:
+            failures.append(
+                f"{label}: ID sequence does not match frozen allocation order "
+                f"(reorder/substitution/truncation)"
+            )
+        seq = ordered_id_sequence_sha256(got)
+        ok = (
+            len(got) == expected_n
+            and len(got) == len(set(got))
+            and got == frozen
+            and seq == expected_seq_sha
+        )
+        checks[label] = {
+            "ok": ok,
+            "n": len(got),
+            "sequence_sha256": seq,
+            "expected_sequence_sha256": expected_seq_sha,
+        }
+        if not ok and seq != expected_seq_sha and got == frozen:
+            failures.append(f"{label}: sequence SHA mismatch")
+
+    _check(
+        "held_out",
+        "results/q1_selection/held_out_instructions.json",
+        held_out_ids,
+        EXPECTED_N_HELD_OUT,
+        FROZEN_HELD_OUT_ID_SEQUENCE_SHA256,
+    )
+    if development_ids is not None:
+        _check(
+            "development",
+            "results/q1_selection/development_instructions.json",
+            development_ids,
+            EXPECTED_N_DEV,
+            FROZEN_DEV_ID_SEQUENCE_SHA256,
+        )
+
+    return {"ok": len(failures) == 0, "failures": failures, "checks": checks}
