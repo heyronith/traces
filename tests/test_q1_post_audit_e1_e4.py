@@ -349,7 +349,8 @@ def test_e2_spy_zero_confirmatory_per_failed_integrity_prerequisite(
     assert out["integrity_gates"]["confirmatory_blocked"] is True
 
 
-def test_e2_empirical_clear_allows_confirmatory(tmp_path, monkeypatch):
+def test_e2_fabricated_empirical_fixtures_block_confirmatory(tmp_path, monkeypatch):
+    """Synthetic/hash-only fixtures must not clear live confirmatory progression."""
     _pass_preflight(monkeypatch)
     hooks, calls = _spy_hooks(
         nominated_effect_by_seed={42: 2.0, 43: 2.0, 44: 2.0}
@@ -362,9 +363,11 @@ def test_e2_empirical_clear_allows_confirmatory(tmp_path, monkeypatch):
         out_dir=tmp_path / "e2_clear",
         integrity_evidence=_empirical_integrity_evidence(tmp_path),
     )
-    assert out["confirmatory_executed"] is True
-    assert out["integrity_gates"]["confirmatory_blocked"] is False
-    assert _confirmatory_units().issubset(set(calls["load"]))
+    assert out["confirmatory_executed"] is False
+    assert out["integrity_gates"]["confirmatory_blocked"] is True
+    conf = _confirmatory_units()
+    assert not conf.intersection(calls["load"])
+    assert not conf.intersection(calls["execute"])
 
 
 def test_e2_empirical_gates_reject_synthetic_and_locked_stub():

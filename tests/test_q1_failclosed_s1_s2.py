@@ -295,19 +295,20 @@ def test_s2_all_passed_true_with_failed_identity_rejected(tmp_path):
     path, sha = write_fabricated_identity_artifact(
         tmp_path / "id.json", all_passed=False
     )
-    # Forge all_passed=True while results failed
+    import hashlib
     import json
 
     payload = json.loads(path.read_text())
     payload["all_passed"] = True
+    # Also flip claims to try to look real — still must fail substantive + provenance
+    payload["claims_real_experiment"] = True
+    payload.pop("fixture_purpose", None)
     raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
     path.write_bytes(raw)
-    import hashlib
-
     forged_sha = hashlib.sha256(raw).hexdigest()
     auth = authenticate_identity_suite_artifact(path=path, claimed_sha256=forged_sha)
     assert auth.ok is False
-    assert any("all_passed=True contradicts" in f or "not all passed" in f for f in auth.failures)
+    assert auth.production_blocked is True
 
 
 def test_s2_incomplete_double_bos_coverage_rejected(tmp_path):
@@ -316,10 +317,12 @@ def test_s2_incomplete_double_bos_coverage_rejected(tmp_path):
     )
     auth = authenticate_double_bos_scan_artifact(path=path, claimed_sha256=sha)
     assert auth.ok is False
-    assert any("pair coverage" in f for f in auth.failures)
+    joined = " ".join(auth.failures)
+    assert "distinct" in joined or "prescribed" in joined or "claims_real" in joined
 
 
-def test_s2_valid_fabricated_artifacts_authenticate(tmp_path):
+def test_s2_synthetic_fixtures_rejected_for_production(tmp_path):
+    """Fabricated fixtures must never authenticate as production empirical evidence."""
     units = list(expected_exploratory_model_units())
     assert units == [
         "exploratory_l1523_seed42",
@@ -329,10 +332,33 @@ def test_s2_valid_fabricated_artifacts_authenticate(tmp_path):
     id_p, id_s = write_fabricated_identity_artifact(tmp_path / "id.json")
     f4_p, f4_s = write_fabricated_f4_artifact(tmp_path / "f4.json")
     db_p, db_s = write_fabricated_double_bos_artifact(tmp_path / "db.json")
-    assert authenticate_identity_suite_artifact(path=id_p, claimed_sha256=id_s).ok
-    assert authenticate_f4_table_artifact(path=f4_p, claimed_sha256=f4_s).ok
-    assert authenticate_double_bos_scan_artifact(path=db_p, claimed_sha256=db_s).ok
+    for auth in (
+        authenticate_identity_suite_artifact(path=id_p, claimed_sha256=id_s),
+        authenticate_f4_table_artifact(path=f4_p, claimed_sha256=f4_s),
+        authenticate_double_bos_scan_artifact(path=db_p, claimed_sha256=db_s),
+    ):
+        assert auth.ok is False
+        assert auth.production_blocked is True
+        assert any(
+            "claims_real_experiment" in f or "synthetic" in f or "provenance" in f
+            for f in auth.failures
+        )
     assert FROZEN_DEV_ID_SEQUENCE_SHA256
+
+
+def test_s2_caller_expected_units_cannot_override_frozen_constants(tmp_path):
+    path, sha = write_fabricated_identity_artifact(
+        tmp_path / "id.json",
+        model_units=["adversarial_override_seed1"],
+    )
+    # Even if caller passes "matching" expected_model_units, frozen constants win
+    auth = authenticate_identity_suite_artifact(
+        path=path,
+        claimed_sha256=sha,
+        expected_model_units=["adversarial_override_seed1"],
+    )
+    assert auth.ok is False
+    assert any("frozen exploratory" in f or "model_units" in f for f in auth.failures)
 
 
 def test_s2_spy_zero_confirmatory_on_fabricated_metadata(tmp_path, monkeypatch):
@@ -363,6 +389,7 @@ def test_s2_spy_zero_confirmatory_on_fabricated_metadata(tmp_path, monkeypatch):
     )
     assert out["confirmatory_executed"] is False
     assert not _confirmatory().intersection(calls["load"])
+    assert not _confirmatory().intersection(calls["execute"])
 
 
 def test_s2_spy_zero_confirmatory_on_hash_mismatch(tmp_path, monkeypatch):
@@ -380,9 +407,11 @@ def test_s2_spy_zero_confirmatory_on_hash_mismatch(tmp_path, monkeypatch):
     )
     assert out["confirmatory_executed"] is False
     assert not _confirmatory().intersection(calls["load"])
+    assert not _confirmatory().intersection(calls["execute"])
 
 
-def test_s2_authenticated_artifacts_allow_confirmatory(tmp_path, monkeypatch):
+def test_s2_fabricated_fixtures_never_clear_live_confirmatory(tmp_path, monkeypatch):
+    """Regression: prior clear-path used fabricated artifacts — must stay BLOCKED."""
     _pass_preflight(monkeypatch)
     hooks, calls = _spy_hooks()
     out = run_live_scientific_pipeline(
@@ -390,9 +419,34 @@ def test_s2_authenticated_artifacts_allow_confirmatory(tmp_path, monkeypatch):
         held_out_ids_allocation_order=_frozen_held_out(),
         development_ids=_frozen_dev(),
         hooks=hooks,
-        out_dir=tmp_path / "ok",
+        out_dir=tmp_path / "synth_block",
         integrity_evidence=_persisted_integrity_evidence(tmp_path),
     )
-    assert out["confirmatory_executed"] is True
-    assert out["integrity_gates"]["confirmatory_blocked"] is False
-    assert _confirmatory().issubset(set(calls["load"]))
+    assert out["confirmatory_executed"] is False
+    assert out["integrity_gates"]["confirmatory_blocked"] is True
+    assert not _confirmatory().intersection(calls["load"])
+    assert not _confirmatory().intersection(calls["execute"])
+    assert any(
+        "provenance" in r or "claims_real" in r or "synthetic" in r
+        for r in out["integrity_gates"]["blocked_reasons"]
+    )
+
+
+def test_s2_claims_real_without_provenance_still_blocked(tmp_path):
+    import hashlib
+    import json
+
+    path, _sha = write_fabricated_identity_artifact(tmp_path / "id.json")
+    payload = json.loads(path.read_text())
+    payload["claims_real_experiment"] = True
+    payload.pop("fixture_purpose", None)
+    # Strip synthetic markers from nested details
+    for rows in payload.get("per_model_results", {}).values():
+        for row in rows:
+            row["detail"] = "attempted_real"
+    raw = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+    path.write_bytes(raw)
+    sha = hashlib.sha256(raw).hexdigest()
+    auth = authenticate_identity_suite_artifact(path=path, claimed_sha256=sha)
+    assert auth.ok is False
+    assert any("provenance" in f for f in auth.failures)

@@ -119,8 +119,8 @@ def gate_identities_1_to_9(
     """
     if require_empirical_scientific:
         from traces.q1.empirical_evidence import authenticate_identity_suite_artifact
-        from traces.q1.frozen_artifacts import FROZEN_DEV_ID_SEQUENCE_SHA256
 
+        _ = (expected_model_units, expected_dataset_sha)  # ignored — frozen constants only
         if suite is None or isinstance(suite, IdentitySuiteReport):
             return GateEvidence(
                 "identities_1_to_9",
@@ -146,8 +146,6 @@ def gate_identities_1_to_9(
         auth = authenticate_identity_suite_artifact(
             path=path or "",
             claimed_sha256=sha,
-            expected_model_units=expected_model_units,
-            expected_dataset_sha=expected_dataset_sha or FROZEN_DEV_ID_SEQUENCE_SHA256,
         )
         return GateEvidence(
             "identities_1_to_9",
@@ -195,8 +193,8 @@ def gate_frozen_f4_tolerance_table(
     """
     if require_empirical_scientific:
         from traces.q1.empirical_evidence import authenticate_f4_table_artifact
-        from traces.q1.frozen_artifacts import FROZEN_DEV_ID_SEQUENCE_SHA256
 
+        _ = (expected_model_units, expected_dataset_sha)  # ignored — frozen constants only
         if table is None or isinstance(table, F4CalibrationTable):
             return GateEvidence(
                 "frozen_f4_tolerance_table",
@@ -220,8 +218,6 @@ def gate_frozen_f4_tolerance_table(
         auth = authenticate_f4_table_artifact(
             path=path or "",
             claimed_sha256=sha,
-            expected_model_units=expected_model_units,
-            expected_dataset_sha=expected_dataset_sha or FROZEN_DEV_ID_SEQUENCE_SHA256,
         )
         return GateEvidence(
             "frozen_f4_tolerance_table",
@@ -270,8 +266,8 @@ def gate_descriptive_double_bos_64_pair_scan(
     ev = dict(evidence or {})
     if require_empirical_scientific:
         from traces.q1.empirical_evidence import authenticate_double_bos_scan_artifact
-        from traces.q1.frozen_artifacts import FROZEN_DEV_ID_SEQUENCE_SHA256
 
+        _ = (expected_model_units, expected_dataset_sha)  # ignored — frozen constants only
         if "artifact_path" not in ev and "path" not in ev:
             return GateEvidence(
                 "descriptive_double_bos_64_pair_scan",
@@ -286,8 +282,6 @@ def gate_descriptive_double_bos_64_pair_scan(
         auth = authenticate_double_bos_scan_artifact(
             path=path or "",
             claimed_sha256=sha,
-            expected_model_units=expected_model_units,
-            expected_dataset_sha=expected_dataset_sha or FROZEN_DEV_ID_SEQUENCE_SHA256,
         )
         return GateEvidence(
             "descriptive_double_bos_64_pair_scan",

@@ -318,7 +318,8 @@ def _empirical_integrity_evidence(tmp_path: Path) -> dict[str, Any]:
     }
 
 
-def test_bound_ranks_clear_allows_confirmatory(tmp_path, monkeypatch):
+def test_bound_ranks_clear_but_integrity_provenance_still_blocks(tmp_path, monkeypatch):
+    """Ranks may clear from exploratory results; fabricated integrity still BLOCKS."""
     _pass_preflight(monkeypatch)
     hooks, calls = _spy_hooks(
         nominated_effect_by_seed={42: 2.0, 43: 2.0, 44: 2.0}
@@ -331,12 +332,15 @@ def test_bound_ranks_clear_allows_confirmatory(tmp_path, monkeypatch):
         out_dir=tmp_path / "clear",
         integrity_evidence=_empirical_integrity_evidence(tmp_path),
     )
-    assert out["confirmatory_executed"] is True
     assert out["exploratory_gate"]["triggered"] is False
     assert out["exploratory_gate"]["ranks"] == [1, 1, 1]
-    assert out["integrity_gates"]["confirmatory_blocked"] is False
-    assert _confirmatory_units().issubset(set(calls["load"]))
-    assert all("exploratory" in u for u in calls["load"][:3])
+    assert out["integrity_gates"]["confirmatory_blocked"] is True
+    assert out["confirmatory_executed"] is False
+    conf = _confirmatory_units()
+    assert not conf.intersection(calls["load"])
+    assert not conf.intersection(calls["execute"])
+    assert all("exploratory" in u for u in calls["load"])
+    assert len(calls["load"]) == 3
 
 
 # --- 2. PEFT 0.19.1 adapter-off ---

@@ -791,47 +791,55 @@ def evaluate_live_integrity_battery(
 ) -> dict[str, Any]:
     """Full exploratory integrity gate battery (authenticated empirical artifacts).
 
-    Inline ``evidence_kind`` / ``all_passed`` / ``locked`` / arbitrary SHA strings
-    are rejected. Persisted artifacts must pass independent hash + unit + dataset
-    + coverage checks. Missing evidence blocks confirmatory callbacks.
+    Developmental eligibility / first-token gates are **derived from exploratory
+    result records** — external summaries cannot override them. Empirical
+    artifacts must pass provenance + frozen bindings; synthetic fixtures never
+    clear production progression.
     """
-    from traces.q1.empirical_evidence import expected_exploratory_model_units
-    from traces.q1.frozen_artifacts import FROZEN_DEV_ID_SEQUENCE_SHA256
+    from traces.q1.frozen_artifacts import (
+        FROZEN_DEV_ID_SEQUENCE_SHA256,
+        ordered_id_sequence_sha256,
+    )
     from traces.q1.integrity_gates import evaluate_preconfirmation_gates
 
     ev = dict(integrity_evidence or {})
-    n_frozen = (
-        len(list(development_ids))
-        if development_ids is not None
-        else (int(exploratory_units[0].n_frozen) if exploratory_units else N_DEV)
-    )
+    extra_failures: list[str] = []
 
-    # Derive eligibility / first-token from exploratory units when not supplied
-    development_n_eligible = ev.get("development_n_eligible")
-    if development_n_eligible is None and exploratory_units:
+    # Frozen development denominator from allocation IDs when provided
+    if development_ids is not None:
+        n_frozen = len(list(development_ids))
+        try:
+            seq_sha = ordered_id_sequence_sha256([int(x) for x in development_ids])
+        except (TypeError, ValueError):
+            seq_sha = None
+        if seq_sha is not None and seq_sha != FROZEN_DEV_ID_SEQUENCE_SHA256:
+            extra_failures.append(
+                "development_ids sequence SHA != FROZEN_DEV_ID_SEQUENCE_SHA256"
+            )
+    else:
+        n_frozen = int(exploratory_units[0].n_frozen) if exploratory_units else N_DEV
+
+    # Derive developmental gates strictly from exploratory records
+    if not exploratory_units:
+        development_n_eligible = None
+        first_token = None
+        extra_failures.append(
+            "exploratory result records required to derive eligibility/first-token"
+        )
+    else:
         development_n_eligible = min(
             int(u.eligible_mask.sum()) for u in exploratory_units
         )
-    first_token = ev.get("exploratory_first_token_validity")
-    if first_token is None and exploratory_units:
         first_token = min(float(u.first_token_validity) for u in exploratory_units)
+        # External summaries may be checked but never override derived values
+        _ = ev.get("development_n_eligible")
+        _ = ev.get("exploratory_first_token_validity")
 
-    # Prefer artifact refs; reject legacy inline metadata keys for empirical path
     identity_ref = ev.get("identity_artifact") or ev.get("identity_suite")
     f4_ref = ev.get("f4_artifact") or ev.get("f4_table")
     double_ref = ev.get("double_bos_artifact") or ev.get("double_bos_evidence")
 
-    expected_units = ev.get("expected_model_units") or list(
-        expected_exploratory_model_units()
-    )
-    if exploratory_units:
-        # Bind to actual exploratory unit identities when available
-        live_units = [u.model_unit for u in exploratory_units]
-        if sorted(live_units) != sorted(expected_units):
-            # Prefer frozen expected names; mismatched live units still authenticated
-            # against expected_units unless caller overrides
-            pass
-
+    # Caller-supplied expected_model_units / expected_dataset_sha are ignored
     report = evaluate_preconfirmation_gates(
         development_n_eligible=(
             int(development_n_eligible) if development_n_eligible is not None else None
@@ -847,19 +855,18 @@ def evaluate_live_integrity_battery(
         double_bos_evidence=double_ref if isinstance(double_ref, Mapping) else None,
         require_confirmatory=False,
         require_empirical_scientific=True,
-        expected_model_units=[str(u) for u in expected_units],
-        expected_dataset_sha=str(
-            ev.get("expected_dataset_sha") or FROZEN_DEV_ID_SEQUENCE_SHA256
-        ),
     )
+    blocked_reasons = list(report.blocked_reasons) + extra_failures
+    progression_blocked = bool(report.progression_blocked) or bool(extra_failures)
     return {
-        "progression_blocked": report.progression_blocked,
-        "blocked_reasons": list(report.blocked_reasons),
+        "progression_blocked": progression_blocked,
+        "blocked_reasons": blocked_reasons,
         "gates": report.to_dict()["gates"],
-        "confirmatory_blocked": report.progression_blocked,
+        "confirmatory_blocked": progression_blocked,
+        "developmental_gates_source": "exploratory_result_records",
         "reason": (
-            "integrity battery blocked: " + "; ".join(report.blocked_reasons)
-            if report.progression_blocked
+            "integrity battery blocked: " + "; ".join(blocked_reasons)
+            if progression_blocked
             else "integrity battery clear"
         ),
     }
