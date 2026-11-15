@@ -1,11 +1,14 @@
-"""Production scientific pipeline adapters (B1).
+"""Production scientific pipeline adapters (B1 / E1).
 
 Connects ``Q1CausalRunner`` condition machinery to typed
 ``ConditionOutputBundle`` / ``ModelUnitInput`` assembly.
 
-Effects are calculated from raw per-prompt model-condition records — never
-accepted as unverified external arrays. Mock runners exercise the wiring
-without model forwards. Real Gemma forwards remain authorization-gated.
+Intervention **effects** are frozen signed contrasts against intact baselines:
+  forward:  m_TT − m_patched   (trigger recipient, clean patch)
+  reverse:  m_patched − m_CC   (clean recipient, trigger patch)
+
+Raw patched margins are never stored as effects. Absent effects are never
+replaced with zeros. Mock runners exercise wiring without model forwards.
 """
 
 from __future__ import annotations
@@ -15,13 +18,9 @@ from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
 
+from traces.q1.analysis import pair_effect_forward, pair_effect_reverse
 from traces.q1.analysis_ext import selection_key
-from traces.q1.component_sets import (
-    EXPECTED_L15_L16_PAIRS,
-    EXPECTED_UPSTREAM_HEADS,
-    validate_head_effect_map,
-    validate_pair_effect_map,
-)
+from traces.q1.component_sets import EXPECTED_L15_L16_PAIRS, EXPECTED_UPSTREAM_HEADS
 from traces.q1.frozen_artifacts import coerce_frozen_dolly_id
 from traces.q1.scientific_execution import (
     ConditionOutputBundle,
@@ -32,7 +31,11 @@ from traces.q1.scientific_execution import (
 
 @dataclass
 class PromptConditionRecord:
-    """Raw per-prompt condition outcome (one instruction × one condition)."""
+    """Raw per-prompt condition outcome (one instruction × one condition).
+
+    For intervention kinds (head/pair/joint), ``margin`` is the **patched**
+    decision margin — not the signed effect. Effects are computed at assemble.
+    """
 
     instruction_id: str
     condition_id: str
@@ -45,7 +48,7 @@ class PromptConditionRecord:
     family: str = ""
     model_unit: str = ""
     role: str = ""
-    kind: str = ""  # intact_T|intact_C|boundary|head|pair|joint
+    kind: str = ""  # intact_TT|intact_CC|boundary_*|head|pair|joint
     heads: tuple[tuple[int, int], ...] = ()
     meta: dict[str, Any] = field(default_factory=dict)
 
@@ -58,7 +61,7 @@ class FoldTopKSelection:
     k: int
     selected_heads: tuple[tuple[int, int], ...]
     joint_key: tuple[tuple[int, int], ...]
-    selection_source: str  # opposite-fold mean effects
+    selection_source: str
 
 
 def compute_fold_topk_selections(
@@ -99,10 +102,64 @@ def _eligible_only(
     eligible_mask: np.ndarray,
 ) -> np.ndarray:
     mask = np.asarray(eligible_mask, dtype=bool)
+    missing = [pid for pid, m in zip(prompt_ids, mask) if m and pid not in values_by_id]
+    if missing:
+        raise ValueError(f"incomplete prompt records for eligible IDs: {missing[:5]}")
     return np.asarray(
         [float(values_by_id[pid]) for pid, m in zip(prompt_ids, mask) if m],
         dtype=np.float64,
     )
+
+
+def _find_bound_condition(
+    by_cond: Mapping[str, Mapping[str, PromptConditionRecord]], name: str
+) -> str:
+    for cid, mp in by_cond.items():
+        sample = next(iter(mp.values()))
+        if sample.kind in {f"intact_{name}", f"boundary_{name}"}:
+            return cid
+        if cid == name or cid.endswith(f"|{name}"):
+            return cid
+    raise KeyError(f"missing intact/boundary records for {name}")
+
+
+def _validate_intervention_heads(
+    kind: str, heads: tuple[tuple[int, int], ...], direction: str | None
+) -> None:
+    if direction not in {"forward", "reverse"}:
+        raise ValueError(f"invalid intervention direction {direction!r}")
+    if kind == "pair":
+        if len(heads) != 2:
+            raise ValueError(f"pair requires two heads, got {heads}")
+        if heads[0][0] != 15 or heads[1][0] != 16:
+            raise ValueError(f"pair heads must be L15×L16, got {heads}")
+        key = (heads[0][1], heads[1][1])
+        if key not in EXPECTED_L15_L16_PAIRS:
+            raise ValueError(f"invalid pair head indices {key}")
+    elif kind in {"head", "nominated_single", "single_head"}:
+        if len(heads) != 1:
+            raise ValueError(f"single-head requires one head, got {heads}")
+        if heads[0] not in EXPECTED_UPSTREAM_HEADS and heads[0] not in {
+            (15, 6),
+            (16, 5),
+        }:
+            # Allow any (layer, head) with non-neg ints in plausible range
+            L, h = heads[0]
+            if not (isinstance(L, int) and isinstance(h, int) and L >= 0 and 0 <= h < 8):
+                raise ValueError(f"invalid head identity {heads[0]}")
+    elif kind in {"joint", "crossfit_topk", "joint_set"}:
+        if not heads:
+            raise ValueError("joint set requires non-empty heads")
+        for h in heads:
+            if not (
+                isinstance(h, tuple)
+                and len(h) == 2
+                and isinstance(h[0], int)
+                and isinstance(h[1], int)
+            ):
+                raise ValueError(f"invalid joint head identity {h}")
+    else:
+        raise ValueError(f"unsupported intervention kind {kind!r}")
 
 
 def assemble_bundles_from_condition_records(
@@ -119,9 +176,8 @@ def assemble_bundles_from_condition_records(
 ) -> tuple[ConditionOutputBundle, ConditionOutputBundle]:
     """Build boundary + intervention bundles from raw per-prompt records.
 
-    Effects are derived from the records. External unverified effect arrays are
-    not accepted. When ``allocation_ids`` is provided, prompt order must match
-    the frozen allocation (M1).
+    Intervention effects use frozen signed contrasts vs intact TT/CC baselines.
+    Never stores raw patched margins as effects; never fabricates zero effects.
     """
     ids = [str(x) for x in prompt_ids]
     if allocation_ids is not None:
@@ -132,72 +188,76 @@ def assemble_bundles_from_condition_records(
             )
 
     by_cond: dict[str, dict[str, PromptConditionRecord]] = {}
+    seen_keys: set[tuple[str, str]] = set()
     for r in records:
         if r.model_unit and r.model_unit != model_unit:
             raise ValueError(
                 f"record model_unit {r.model_unit!r} != bundle {model_unit!r}"
             )
+        key = (r.condition_id, str(r.instruction_id))
+        if key in seen_keys:
+            raise ValueError(
+                f"duplicate condition record for {r.condition_id!r} / {r.instruction_id!r}"
+            )
+        seen_keys.add(key)
         by_cond.setdefault(r.condition_id, {})[str(r.instruction_id)] = r
 
-    # Eligibility from intact clean-reference identity (a != b_i)
+    # Eligibility from intact records
     eligible_mask = np.ones(len(ids), dtype=bool)
-    intact_keys = [k for k in by_cond if "intact" in k.lower() or k.endswith("|T") or k.endswith("|C")]
-    # Prefer explicit eligible flags on TT/CC intact margins when present
     for i, pid in enumerate(ids):
-        flags = [
-            rec.eligible
-            for cond in by_cond.values()
-            for iid, rec in cond.items()
-            if iid == pid
+        intact_flags = [
+            by_cond[c][pid].eligible
+            for c in by_cond
+            if pid in by_cond[c] and by_cond[c][pid].kind.startswith("intact")
         ]
-        if flags:
-            # Ineligible if any intact record marks ineligible
-            eligible_mask[i] = all(
-                by_cond[c][pid].eligible
-                for c in by_cond
-                if pid in by_cond[c] and by_cond[c][pid].kind.startswith("intact")
-            ) if any(
-                by_cond[c][pid].kind.startswith("intact")
-                for c in by_cond
-                if pid in by_cond[c]
-            ) else all(flags)
+        if intact_flags:
+            eligible_mask[i] = all(intact_flags)
 
     def _margin_map(condition_id: str) -> dict[str, float]:
         if condition_id not in by_cond:
             raise KeyError(f"missing condition records for {condition_id}")
-        return {pid: float(by_cond[condition_id][pid].margin) for pid in ids if pid in by_cond[condition_id]}
+        mp = by_cond[condition_id]
+        # Require complete coverage of all prompt_ids for boundary/intact
+        missing = [pid for pid in ids if pid not in mp]
+        if missing:
+            raise ValueError(
+                f"incomplete prompt records for {condition_id}: missing {missing[:5]}"
+            )
+        return {pid: float(mp[pid].margin) for pid in ids}
 
-    # Boundary margins TT/CT/TC/CC — require presence
-    required_bounds = ("TT", "CT", "TC", "CC")
-    bound_maps: dict[str, dict[str, float]] = {}
+    # Intact TT/CC required for effect contrasts; CT/TC for route/boundary
+    bound_ids: dict[str, str] = {}
     catalog_ids: list[str] = []
-    for name in required_bounds:
-        # Accept either exact key or suffix match
-        match = None
-        for cid in by_cond:
-            if cid == name or cid.endswith(f"|{name}") or cid.endswith(f"/{name}") or name in cid.split("|"):
-                if cid.endswith(name) or cid == name or f"|{name}" in f"|{cid}|":
-                    match = cid
-                    break
-        if match is None:
-            # Try kind-based
-            for cid, mp in by_cond.items():
-                sample = next(iter(mp.values()))
-                if sample.kind == f"boundary_{name}" or sample.kind == f"intact_{name}":
-                    match = cid
-                    break
-        if match is None:
-            raise KeyError(f"missing boundary/intact records for {name}")
-        bound_maps[name] = _margin_map(match)
-        catalog_ids.append(match)
+    for name in ("TT", "CT", "TC", "CC"):
+        cid = _find_bound_condition(by_cond, name)
+        bound_ids[name] = cid
+        catalog_ids.append(cid)
 
+    bound_maps = {name: _margin_map(cid) for name, cid in bound_ids.items()}
     m_TT = _eligible_only(bound_maps["TT"], ids, eligible_mask)
     m_CT = _eligible_only(bound_maps["CT"], ids, eligible_mask)
     m_TC = _eligible_only(bound_maps["TC"], ids, eligible_mask)
     m_CC = _eligible_only(bound_maps["CC"], ids, eligible_mask)
+    if not np.all(np.isfinite(m_TT)) or not np.all(np.isfinite(m_CC)):
+        raise ValueError("nonfinite intact TT/CC margins")
     e_route_fwd = m_TT - m_CT
     e_route_rev = m_TC - m_CC
     n_elig = int(eligible_mask.sum())
+    if n_elig < 1:
+        raise ValueError("no eligible prompts after intact filtering")
+
+    # Per-eligible-prompt intact baselines (aligned with eligible-only arrays)
+    tt_by_elig = {
+        pid: float(bound_maps["TT"][pid])
+        for pid, m in zip(ids, eligible_mask)
+        if m
+    }
+    cc_by_elig = {
+        pid: float(bound_maps["CC"][pid])
+        for pid, m in zip(ids, eligible_mask)
+        if m
+    }
+    elig_ids = [pid for pid, m in zip(ids, eligible_mask) if m]
 
     pair_fwd: dict[tuple[int, int], np.ndarray] = {}
     pair_rev: dict[tuple[int, int], np.ndarray] = {}
@@ -206,33 +266,78 @@ def assemble_bundles_from_condition_records(
     joint_fwd: dict[tuple[tuple[int, int], ...], np.ndarray] = {}
     joint_rev: dict[tuple[tuple[int, int], ...], np.ndarray] = {}
 
+    intervention_kinds = {
+        "pair",
+        "head",
+        "nominated_single",
+        "single_head",
+        "joint",
+        "crossfit_topk",
+        "joint_set",
+    }
+    seen_effect_keys: set[tuple[str, str, Any]] = set()
+
     for cid, mp in by_cond.items():
         sample = next(iter(mp.values()))
-        vals = {pid: float(mp[pid].margin) for pid in ids if pid in mp}
-        arr = _eligible_only(vals, ids, eligible_mask)
-        if len(arr) != n_elig:
+        if sample.kind not in intervention_kinds:
             continue
-        direction = sample.direction or "forward"
-        if sample.kind == "pair" and len(sample.heads) == 2:
-            key = (sample.heads[0][1], sample.heads[1][1])  # (h15, h16) indices
-            # Prefer (layer, head) pairs stored as layer-matched L15/L16
-            if sample.heads[0][0] == 15 and sample.heads[1][0] == 16:
-                key = (sample.heads[0][1], sample.heads[1][1])
-            target = pair_fwd if direction == "forward" else pair_rev
-            target[key] = arr
-            catalog_ids.append(cid)
-        elif sample.kind in {"head", "nominated_single", "single_head"} and len(sample.heads) == 1:
-            key = sample.heads[0]
-            target = head_fwd if direction == "forward" else head_rev
-            target[key] = arr
-            catalog_ids.append(cid)
-        elif sample.kind in {"joint", "crossfit_topk", "joint_set"} and sample.heads:
-            key = selection_key(sample.heads)
-            target = joint_fwd if direction == "forward" else joint_rev
-            target[key] = arr
-            catalog_ids.append(cid)
+        direction = sample.direction
+        _validate_intervention_heads(sample.kind, sample.heads, direction)
 
-    elig_ids = [pid for pid, m in zip(ids, eligible_mask) if m]
+        # Complete eligible coverage required
+        missing = [pid for pid in elig_ids if pid not in mp]
+        if missing:
+            raise ValueError(
+                f"incomplete intervention records for {cid}: missing {missing[:5]}"
+            )
+        patched_by_id = {pid: float(mp[pid].margin) for pid in elig_ids}
+        patched = np.asarray([patched_by_id[pid] for pid in elig_ids], dtype=np.float64)
+        tt = np.asarray([tt_by_elig[pid] for pid in elig_ids], dtype=np.float64)
+        cc = np.asarray([cc_by_elig[pid] for pid in elig_ids], dtype=np.float64)
+        if not np.all(np.isfinite(patched)):
+            raise ValueError(f"nonfinite patched margins in {cid}")
+
+        if direction == "forward":
+            effect = pair_effect_forward(tt, patched)
+            target_pair, target_head, target_joint = pair_fwd, head_fwd, joint_fwd
+        else:
+            effect = pair_effect_reverse(patched, cc)
+            target_pair, target_head, target_joint = pair_rev, head_rev, joint_rev
+
+        if sample.kind == "pair":
+            key: Any = (sample.heads[0][1], sample.heads[1][1])
+            dup_key = ("pair", direction, key)
+            if dup_key in seen_effect_keys:
+                raise ValueError(f"duplicate pair condition for {dup_key}")
+            seen_effect_keys.add(dup_key)
+            target_pair[key] = effect
+        elif sample.kind in {"head", "nominated_single", "single_head"}:
+            key = sample.heads[0]
+            dup_key = ("head", direction, key)
+            if dup_key in seen_effect_keys:
+                raise ValueError(f"duplicate head condition for {dup_key}")
+            seen_effect_keys.add(dup_key)
+            target_head[key] = effect
+        else:
+            key = selection_key(sample.heads)
+            dup_key = ("joint", direction, key)
+            if dup_key in seen_effect_keys:
+                raise ValueError(f"duplicate joint condition for {dup_key}")
+            seen_effect_keys.add(dup_key)
+            target_joint[key] = effect
+        catalog_ids.append(cid)
+
+    # Refuse empty intervention maps with fabricated zeros
+    if not pair_fwd and not pair_rev and not head_fwd and not head_rev:
+        raise ValueError(
+            "no intervention effects computed; refusing zero-filled placeholders"
+        )
+
+    def _require_nonempty(maps: dict, label: str) -> dict:
+        # Allow empty for a direction if the other direction has content, but
+        # never invent zeros for a missing map that callers might treat as complete.
+        return dict(maps)
+
     boundary = ConditionOutputBundle(
         model_unit=model_unit,
         family=family,
@@ -247,19 +352,32 @@ def assemble_bundles_from_condition_records(
         clean_false_fire=clean_false_fire,
         first_token_validity=first_token_validity,
         n_frozen=len(ids),
-        pair_effects_fwd=dict(pair_fwd) if pair_fwd else {(6, 5): np.zeros(max(n_elig, 1))},
-        pair_effects_rev=dict(pair_rev) if pair_rev else {(6, 5): np.zeros(max(n_elig, 1))},
-        head_effects_fwd=dict(head_fwd) if head_fwd else {(15, 6): np.zeros(max(n_elig, 1))},
-        head_effects_rev=dict(head_rev) if head_rev else {(15, 6): np.zeros(max(n_elig, 1))},
+        pair_effects_fwd=_require_nonempty(pair_fwd, "pair_fwd"),
+        pair_effects_rev=_require_nonempty(pair_rev, "pair_rev"),
+        head_effects_fwd=_require_nonempty(head_fwd, "head_fwd"),
+        head_effects_rev=_require_nonempty(head_rev, "head_rev"),
         e_route_fwd=e_route_fwd,
         e_route_rev=e_route_rev,
-        joint_set_effects_fwd=joint_fwd,
-        joint_set_effects_rev=joint_rev,
+        joint_set_effects_fwd=dict(joint_fwd),
+        joint_set_effects_rev=dict(joint_rev),
         bos_convention="single",
         catalog_condition_ids=sorted(set(catalog_ids)),
         eligible_prompt_ids=elig_ids,
     )
-    # Intervention bundle carries the same margins + calculated effect maps
+    # ConditionOutputBundle.validate requires non-empty effect maps — if a
+    # direction is empty, fail closed rather than invent zeros.
+    for label, fx in (
+        ("pair_fwd", boundary.pair_effects_fwd),
+        ("pair_rev", boundary.pair_effects_rev),
+        ("head_fwd", boundary.head_effects_fwd),
+        ("head_rev", boundary.head_effects_rev),
+    ):
+        if not fx:
+            raise ValueError(
+                f"missing {label} effects after contrast assembly; "
+                "refusing zero placeholders"
+            )
+
     intervention = ConditionOutputBundle(
         model_unit=model_unit,
         family=family,
@@ -301,14 +419,30 @@ def mock_condition_records_for_unit(
     include_upstream_heads: bool = True,
     include_joints_for_k: Sequence[int] = (1, 2),
     ineligible_fraction: float = 0.0,
+    intact_tt_baseline: float = 5.0,
+    intact_cc_baseline: float = 1.0,
 ) -> list[PromptConditionRecord]:
-    """Synthetic raw records for adapter integration tests (no forwards)."""
+    """Synthetic raw records storing **patched margins**, not effects.
+
+    Nonzero intact baselines distinguish raw margins from signed effects:
+      forward patched = TT − effect
+      reverse patched = CC + effect
+    """
     ids = [str(x) for x in prompt_ids]
-    n = len(ids)
     rng = np.random.default_rng(rng_seed + (spec.seed or 0))
-    n_inelig = int(round(ineligible_fraction * n))
+    n_inelig = int(round(ineligible_fraction * len(ids)))
     inelig = set(ids[:n_inelig])
     records: list[PromptConditionRecord] = []
+
+    # Stable per-prompt intact baselines (nonzero by default)
+    tt_by = {
+        pid: intact_tt_baseline + float(rng.normal(0, 0.01)) for pid in ids
+    }
+    cc_by = {
+        pid: intact_cc_baseline + float(rng.normal(0, 0.01)) for pid in ids
+    }
+    ct_by = {pid: cc_by[pid] + 0.2 for pid in ids}
+    tc_by = {pid: tt_by[pid] - 0.2 for pid in ids}
 
     def _rec(
         *,
@@ -316,7 +450,7 @@ def mock_condition_records_for_unit(
         kind: str,
         direction: str | None,
         heads: tuple[tuple[int, int], ...] = (),
-        margin_fn: Callable[[str], float],
+        margin_by_pid: Mapping[str, float],
     ) -> None:
         for pid in ids:
             records.append(
@@ -324,7 +458,7 @@ def mock_condition_records_for_unit(
                     instruction_id=pid,
                     condition_id=condition_id,
                     direction=direction,
-                    margin=float(margin_fn(pid)),
+                    margin=float(margin_by_pid[pid]),
                     eligible=pid not in inelig,
                     donor_instruction_id=pid,
                     clean_reference_token=0 if pid not in inelig else 235285,
@@ -337,14 +471,35 @@ def mock_condition_records_for_unit(
                 )
             )
 
-    # Intact / boundary
-    for name, base in (("TT", 2.0), ("CT", 0.2), ("TC", 1.8), ("CC", 0.0)):
-        _rec(
-            condition_id=f"boundary|{name}",
-            kind=f"intact_{name}" if name in ("TT", "CC") else f"boundary_{name}",
-            direction=None,
-            margin_fn=lambda pid, b=base: b + float(rng.normal(0, 0.01)),
-        )
+    _rec(
+        condition_id="boundary|TT",
+        kind="intact_TT",
+        direction=None,
+        margin_by_pid=tt_by,
+    )
+    _rec(
+        condition_id="boundary|CC",
+        kind="intact_CC",
+        direction=None,
+        margin_by_pid=cc_by,
+    )
+    _rec(
+        condition_id="boundary|CT",
+        kind="boundary_CT",
+        direction=None,
+        margin_by_pid=ct_by,
+    )
+    _rec(
+        condition_id="boundary|TC",
+        kind="boundary_TC",
+        direction=None,
+        margin_by_pid=tc_by,
+    )
+
+    def _patched(effect: float, direction: str) -> dict[str, float]:
+        if direction == "forward":
+            return {pid: tt_by[pid] - effect for pid in ids}
+        return {pid: cc_by[pid] + effect for pid in ids}
 
     if include_complete_64:
         for h15, h16 in EXPECTED_L15_L16_PAIRS:
@@ -355,7 +510,7 @@ def mock_condition_records_for_unit(
                     kind="pair",
                     direction=direction,
                     heads=((15, h15), (16, h16)),
-                    margin_fn=lambda pid, e=eff: e,
+                    margin_by_pid=_patched(eff, direction),
                 )
 
     if include_nominated_heads:
@@ -366,7 +521,7 @@ def mock_condition_records_for_unit(
                     kind="head",
                     direction=direction,
                     heads=((L, h),),
-                    margin_fn=lambda pid, e=eff: e,
+                    margin_by_pid=_patched(eff, direction),
                 )
 
     if include_upstream_heads:
@@ -379,10 +534,9 @@ def mock_condition_records_for_unit(
                     kind="head",
                     direction=direction,
                     heads=((L, h),),
-                    margin_fn=lambda pid: 0.05,
+                    margin_by_pid=_patched(0.05, direction),
                 )
 
-    # Joint sets for fold top-k evaluation keys (nominated pair as k=2 example)
     for k in include_joints_for_k:
         heads = tuple(
             sorted(
@@ -397,7 +551,7 @@ def mock_condition_records_for_unit(
                 kind="joint",
                 direction=direction,
                 heads=heads,
-                margin_fn=lambda pid: 0.8,
+                margin_by_pid=_patched(0.8, direction),
             )
 
     return records
@@ -408,17 +562,13 @@ def build_live_hooks_from_record_provider(
     *,
     allocation_ids_for_role: Callable[[SciUnitSpec], Sequence[Any] | None] | None = None,
 ) -> LiveForwardHooks:
-    """Wire LiveForwardHooks that assemble bundles from a record provider.
-
-    ``provider(spec) -> (records, gate_rates)`` where gate_rates has
-    trigger_asr / clean_false_fire / first_token_validity. No model forwards.
-    """
+    """Wire LiveForwardHooks that assemble bundles from a record provider."""
 
     def load(spec: SciUnitSpec) -> Mapping[str, Any]:
         from traces.model_loader import PINNED_ADAPTER_REVISION, PINNED_BASE_REVISION
 
         return {
-            "model": object(),  # placeholder — real load requires sci auth + checkpoints
+            "model": object(),
             "model_unit": spec.model_unit,
             "family": spec.family,
             "role": spec.role,
@@ -485,8 +635,7 @@ def unit_spec_to_adapter_subfolder(spec: SciUnitSpec) -> str:
 
 
 def required_adapter_subfolders() -> tuple[str, ...]:
-    """Ten scientific adapter identities: l19×5 + l1523×5 (expl 42-44 + sec 45-46 + primary overlap)."""
-    # Primary l19 seeds 42-46 (5) + secondary/exploratory l1523 seeds 42-46 (5) = 10
+    """Ten scientific adapter identities: l19×5 + l1523×5."""
     return tuple(
         [f"l19/seed{s}" for s in (42, 43, 44, 45, 46)]
         + [f"l1523/seed{s}" for s in (42, 43, 44, 45, 46)]

@@ -95,12 +95,57 @@ def gate_exploratory_first_token_validity(
 
 
 def gate_identities_1_to_9(
-    suite: IdentitySuiteReport | None = None,
+    suite: IdentitySuiteReport | Mapping[str, Any] | None = None,
     *,
     require_suite: bool = True,
+    require_empirical_scientific: bool = False,
 ) -> GateEvidence:
-    """Identities 1–9. Synthetic suite acceptable for engineering; live model suite
-    remains authorization-dependent."""
+    """Identities 1–9.
+
+    Engineering tests may use the synthetic suite when
+    ``require_empirical_scientific=False``. Live scientific progression must
+    supply empirical evidence — synthetic results are rejected.
+    """
+    if require_empirical_scientific:
+        if suite is None:
+            return GateEvidence(
+                "identities_1_to_9",
+                "blocked",
+                failures=[
+                    "empirical scientific identity suite evidence missing "
+                    "(synthetic suite is not a substitute)"
+                ],
+            )
+        if isinstance(suite, IdentitySuiteReport):
+            # Synthetic API smoke harness is not empirical scientific evidence
+            return GateEvidence(
+                "identities_1_to_9",
+                "blocked",
+                evidence=suite.to_dict(),
+                failures=[
+                    "IdentitySuiteReport without empirical_scientific marker "
+                    "is not accepted for live confirmatory progression"
+                ],
+            )
+        kind = str(suite.get("evidence_kind", ""))
+        if kind != "empirical_scientific":
+            return GateEvidence(
+                "identities_1_to_9",
+                "blocked",
+                evidence=dict(suite),
+                failures=[
+                    f"identity evidence_kind={kind!r} rejected; "
+                    "require empirical_scientific"
+                ],
+            )
+        ok = bool(suite.get("all_passed"))
+        return GateEvidence(
+            "identities_1_to_9",
+            "complete" if ok else "failed",
+            evidence=dict(suite),
+            failures=[] if ok else ["one or more empirical identities 1–9 failed"],
+        )
+
     if suite is None:
         if require_suite:
             suite = run_synthetic_identity_suite()
@@ -110,19 +155,32 @@ def gate_identities_1_to_9(
                 "blocked",
                 failures=["identity suite evidence missing"],
             )
+    if isinstance(suite, IdentitySuiteReport):
+        return GateEvidence(
+            "identities_1_to_9",
+            "complete" if suite.all_passed else "failed",
+            evidence=suite.to_dict(),
+            failures=[] if suite.all_passed else ["one or more identities 1–9 failed"],
+        )
+    ok = bool(suite.get("all_passed"))
     return GateEvidence(
         "identities_1_to_9",
-        "complete" if suite.all_passed else "failed",
-        evidence=suite.to_dict(),
-        failures=[] if suite.all_passed else ["one or more identities 1–9 failed"],
+        "complete" if ok else "failed",
+        evidence=dict(suite),
+        failures=[] if ok else ["one or more identities 1–9 failed"],
     )
 
 
 def gate_frozen_f4_tolerance_table(
     table: F4CalibrationTable | Mapping[str, Any] | None,
+    *,
+    require_empirical_scientific: bool = False,
 ) -> GateEvidence:
-    """Frozen F4 tolerance table must be locked with evidence. Empirical lock
-    without authorized repeats is BLOCKED — never fabricate."""
+    """Frozen F4 tolerance table must be locked with evidence.
+
+    Caller-declared ``locked=True`` without persisted SHA / empirical marker is
+    rejected when ``require_empirical_scientific=True``.
+    """
     if table is None:
         return GateEvidence(
             "frozen_f4_tolerance_table",
@@ -132,7 +190,7 @@ def gate_frozen_f4_tolerance_table(
         )
     if isinstance(table, F4CalibrationTable):
         locked = bool(table.locked)
-        payload = table.to_dict() if hasattr(table, "to_dict") else asdict(table)
+        payload = table.to_dict()
     else:
         locked = bool(table.get("locked"))
         payload = dict(table)
@@ -143,6 +201,19 @@ def gate_frozen_f4_tolerance_table(
             evidence=payload,
             failures=["F4 table present but not locked"],
         )
+    if require_empirical_scientific:
+        kind = str(payload.get("evidence_kind", ""))
+        sha = payload.get("sha256") or payload.get("persisted_sha256")
+        if kind != "empirical_scientific" or not sha:
+            return GateEvidence(
+                "frozen_f4_tolerance_table",
+                "blocked",
+                evidence=payload,
+                failures=[
+                    "F4 locked=True without empirical_scientific evidence_kind "
+                    "and persisted sha256 is not accepted for live progression"
+                ],
+            )
     return GateEvidence(
         "frozen_f4_tolerance_table",
         "complete",
@@ -152,16 +223,44 @@ def gate_frozen_f4_tolerance_table(
 
 def gate_descriptive_double_bos_64_pair_scan(
     *,
-    completed: bool,
+    completed: bool = False,
     n_pairs_recorded: int | None = None,
     evidence: Mapping[str, Any] | None = None,
+    require_empirical_scientific: bool = False,
 ) -> GateEvidence:
     expected = len(enumerate_double_bos_descriptive_pairs())
+    ev = dict(evidence or {})
+    if require_empirical_scientific:
+        kind = str(ev.get("evidence_kind", ""))
+        sha = ev.get("result_sha256") or ev.get("sha256")
+        n = ev.get("n_pairs_recorded", n_pairs_recorded)
+        if kind != "empirical_scientific" or not sha:
+            return GateEvidence(
+                "descriptive_double_bos_64_pair_scan",
+                "blocked",
+                evidence={"expected_pairs": expected, **ev},
+                failures=[
+                    "double-BOS scan requires empirical_scientific evidence "
+                    "with result_sha256; asserted completion flags are insufficient"
+                ],
+            )
+        if n != expected:
+            return GateEvidence(
+                "descriptive_double_bos_64_pair_scan",
+                "failed",
+                evidence={"expected_pairs": expected, "n_pairs_recorded": n, **ev},
+                failures=[f"recorded {n} != expected {expected} pairs"],
+            )
+        return GateEvidence(
+            "descriptive_double_bos_64_pair_scan",
+            "complete",
+            evidence={"expected_pairs": expected, "n_pairs_recorded": n, **ev},
+        )
     if not completed:
         return GateEvidence(
             "descriptive_double_bos_64_pair_scan",
             "blocked",
-            evidence={"expected_pairs": expected, **(dict(evidence or {}))},
+            evidence={"expected_pairs": expected, **ev},
             failures=["descriptive double-BOS 64-pair scan not completed"],
         )
     if n_pairs_recorded is not None and n_pairs_recorded != expected:
@@ -218,16 +317,23 @@ def evaluate_preconfirmation_gates(
     development_n_eligible: int | None = None,
     development_n_frozen: int = N_DEV,
     exploratory_first_token_validity: float | None = None,
-    identity_suite: IdentitySuiteReport | None = None,
+    identity_suite: IdentitySuiteReport | Mapping[str, Any] | None = None,
     f4_table: F4CalibrationTable | Mapping[str, Any] | None = None,
     double_bos_scan_completed: bool = False,
     double_bos_n_pairs: int | None = None,
+    double_bos_evidence: Mapping[str, Any] | None = None,
     confirmatory_rates: Mapping[str, float] | None = None,
     confirmatory_n_eligible: int | None = None,
     confirmatory_n_frozen: int | None = None,
     require_confirmatory: bool = False,
+    require_empirical_scientific: bool = False,
 ) -> IntegrityGateReport:
-    """Run the B2 gate battery. Missing evidence → blocked progression."""
+    """Run the B2 gate battery. Missing evidence → blocked progression.
+
+    Live scientific path must set ``require_empirical_scientific=True`` so
+    synthetic identity suites, bare ``locked=True``, and asserted scan flags
+    cannot clear the gate.
+    """
     gates: dict[str, GateEvidence] = {}
 
     if development_n_eligible is None:
@@ -252,10 +358,19 @@ def evaluate_preconfirmation_gates(
             first_token_validity=exploratory_first_token_validity
         )
 
-    gates["identities_1_to_9"] = gate_identities_1_to_9(identity_suite)
-    gates["frozen_f4_tolerance_table"] = gate_frozen_f4_tolerance_table(f4_table)
+    gates["identities_1_to_9"] = gate_identities_1_to_9(
+        identity_suite,
+        require_suite=not require_empirical_scientific,
+        require_empirical_scientific=require_empirical_scientific,
+    )
+    gates["frozen_f4_tolerance_table"] = gate_frozen_f4_tolerance_table(
+        f4_table, require_empirical_scientific=require_empirical_scientific
+    )
     gates["descriptive_double_bos_64_pair_scan"] = gate_descriptive_double_bos_64_pair_scan(
-        completed=double_bos_scan_completed, n_pairs_recorded=double_bos_n_pairs
+        completed=double_bos_scan_completed,
+        n_pairs_recorded=double_bos_n_pairs,
+        evidence=double_bos_evidence,
+        require_empirical_scientific=require_empirical_scientific,
     )
 
     if require_confirmatory:

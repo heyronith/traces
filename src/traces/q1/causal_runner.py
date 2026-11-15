@@ -1,8 +1,9 @@
 """Model-connected Q1 causal runner API (capture → cache → inject/patch → margin).
 
-Call sites that invoke ``model(...)`` require separate research-owner authorization.
-This module wires the machinery; synthetic tests exercise tensor/hook paths without
-loading Gemma weights.
+Scientific production forwards require ``TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION=1``
+independently of the top-level executor. Randomly-initialized tiny-Gemma
+engineering tests construct the runner with ``engineering_tiny=True`` under
+``TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD=1``.
 """
 
 from __future__ import annotations
@@ -55,6 +56,7 @@ class Q1CausalRunner:
         boundary_layer: int = 19,
         residual_layers: Sequence[int] | None = None,
         o_proj_layers: Sequence[int] | None = None,
+        engineering_tiny: bool = False,
     ):
         self.model = model
         self.tokenizer = tokenizer
@@ -67,10 +69,16 @@ class Q1CausalRunner:
         self.o_proj_layers = tuple(
             o_proj_layers if o_proj_layers is not None else range(0, 26)
         )
+        self.engineering_tiny = bool(engineering_tiny)
         self.registry = CacheRegistry()
         self.capture = ActivationCaptureManager(model)
         self.inject = ResidualInjectionManager(model)
         self.patch = PatchHookManager(model, config=getattr(model, "config", None))
+
+    def _authorize_forward(self) -> None:
+        from traces.q1.scientific_execution import require_causal_runner_authorization
+
+        require_causal_runner_authorization(engineering_tiny=self.engineering_tiny)
 
     def ensure_hooks_cleared(self) -> None:
         if self.capture.active_hook_count or self.inject.active_hook_count or self.patch.active_hook_count:
@@ -89,6 +97,7 @@ class Q1CausalRunner:
         device: torch.device | None = None,
     ) -> DonorActivationCache:
         """Capture T and C activations into an isolated donor cache (requires model forward)."""
+        self._authorize_forward()
         self.ensure_hooks_cleared()
         cache = DonorActivationCache(
             instruction_id=instruction_id,
@@ -112,6 +121,7 @@ class Q1CausalRunner:
                     batch["input_ids"],
                     batch["attention_mask"],
                     use_cache=False,
+                    require_scientific_auth=not self.engineering_tiny,
                 )
                 buf.logits = logits.detach()
             populate_donor_cache_from_buffers(cache, tag, buf)  # type: ignore[arg-type]
@@ -183,6 +193,7 @@ class Q1CausalRunner:
         layer: int | None = None,
     ) -> torch.Tensor:
         """Inject hybrid residual at boundary layer; return logits (model forward)."""
+        self._authorize_forward()
         self.ensure_hooks_cleared()
         self.verify_recipient(
             recipient_input_ids,
@@ -202,6 +213,7 @@ class Q1CausalRunner:
                 recipient_input_ids,
                 recipient_attention_mask,
                 use_cache=False,
+                require_scientific_auth=not self.engineering_tiny,
             )
         self.ensure_hooks_cleared()
         return logits
@@ -219,6 +231,7 @@ class Q1CausalRunner:
         bos_convention: BosConvention | None = None,
     ) -> torch.Tensor:
         """Apply direction-bound head patches; return logits (model forward)."""
+        self._authorize_forward()
         self.ensure_hooks_cleared()
         # R3: verify actual tokens before trusting the tag label
         verified = self.verify_recipient(
@@ -258,6 +271,7 @@ class Q1CausalRunner:
                 recipient_input_ids,
                 recipient_attention_mask,
                 use_cache=False,
+                require_scientific_auth=not self.engineering_tiny,
             )
         finally:
             self.patch.clear()

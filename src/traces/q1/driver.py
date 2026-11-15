@@ -601,8 +601,10 @@ def _analyze_secondary_unit(
 ) -> dict[str, Any]:
     """Secondary l1523 replication: pair criteria vs T, not primary study-level.
 
-    Applies §6-style confirmatory gates before replication criteria. Requires
-    complete 64-pair effects and both nominated individual-head effects.
+    Applies full §6 model gates (generation rates + eligibility + T-related
+    validity) before replication criteria — generation-rate checks alone are
+    insufficient. Requires complete 64-pair effects and both nominated heads.
+    Nonfinite inputs and identity-inconsistent intact margins fail closed.
     Never substitutes zeros for missing heads.
     """
     from traces.q1.analysis import (
@@ -611,30 +613,6 @@ def _analyze_secondary_unit(
         prepare_f1_for_model,
         secondary_l1523_replication_criteria,
     )
-    from traces.q1.gates import confirmatory_gates_pass, GenerationGateRates
-
-    # §6 gates (ASR / clean false-fire / first-token) — gate-failed → no replication support
-    rates = GenerationGateRates(
-        trigger_asr=float(unit.trigger_asr),
-        clean_false_fire=float(unit.clean_false_fire),
-        first_token_validity=float(unit.first_token_validity),
-        n_prompts=len(unit.prompt_ids),
-        n_trigger_fires=0,
-        n_clean_fires=0,
-        n_first_token_ok=0,
-    )
-    gates_ok, gate_failures = confirmatory_gates_pass(rates)
-    if not gates_ok:
-        return {
-            "model_unit": unit.model_unit,
-            "role": SECONDARY_ROLE,
-            "family": unit.family,
-            "status": "gate-failed",
-            "replication_support": False,
-            "reason": "§6 confirmatory gates failed; refusing replication support",
-            "gate_failures": gate_failures,
-            "enters_primary_study_level": False,
-        }
 
     elig_ids = [pid for pid, m in zip(unit.prompt_ids, unit.eligible_mask) if m]
     if len(elig_ids) < 1:
@@ -646,29 +624,125 @@ def _analyze_secondary_unit(
             "reason": "empty eligible set",
             "enters_primary_study_level": False,
         }
+
+    # Nonfinite intact / route inputs refuse replication (not generation-only)
+    for name, arr in (
+        ("m_TT", unit.m_TT),
+        ("m_CC", unit.m_CC),
+        ("m_CT", unit.m_CT),
+        ("m_TC", unit.m_TC),
+        ("e_route_fwd", unit.e_route_fwd),
+        ("e_route_rev", unit.e_route_rev),
+    ):
+        a = np.asarray(arr, dtype=np.float64)
+        if a.size < 1 or not np.all(np.isfinite(a)):
+            return {
+                "model_unit": unit.model_unit,
+                "role": SECONDARY_ROLE,
+                "family": unit.family,
+                "status": "gate-failed",
+                "replication_support": False,
+                "reason": f"nonfinite or empty {name}; refusing replication support",
+                "gate_failures": [f"nonfinite_or_empty:{name}"],
+                "enters_primary_study_level": False,
+            }
+
+    # Identity consistency: e_route must match intact contrasts (TT−CT / TC−CC)
+    t_vec = np.asarray(unit.m_TT, dtype=np.float64) - np.asarray(
+        unit.m_CC, dtype=np.float64
+    )
+    expected_fwd = np.asarray(unit.m_TT, dtype=np.float64) - np.asarray(
+        unit.m_CT, dtype=np.float64
+    )
+    expected_rev = np.asarray(unit.m_TC, dtype=np.float64) - np.asarray(
+        unit.m_CC, dtype=np.float64
+    )
+    if not np.allclose(unit.e_route_fwd, expected_fwd, rtol=0, atol=1e-9):
+        return {
+            "model_unit": unit.model_unit,
+            "role": SECONDARY_ROLE,
+            "family": unit.family,
+            "status": "gate-failed",
+            "replication_support": False,
+            "reason": "identity check failed: e_route_fwd != m_TT - m_CT",
+            "gate_failures": ["identity:e_route_fwd"],
+            "enters_primary_study_level": False,
+        }
+    if not np.allclose(unit.e_route_rev, expected_rev, rtol=0, atol=1e-9):
+        return {
+            "model_unit": unit.model_unit,
+            "role": SECONDARY_ROLE,
+            "family": unit.family,
+            "status": "gate-failed",
+            "replication_support": False,
+            "reason": "identity check failed: e_route_rev != m_TC - m_CC",
+            "gate_failures": ["identity:e_route_rev"],
+            "enters_primary_study_level": False,
+        }
+
     draws = prepare_f1_for_model(elig_ids, list(held_out_ids))
+    contrasts = RouteContrasts(
+        m_TT=unit.m_TT, m_CT=unit.m_CT, m_TC=unit.m_TC, m_CC=unit.m_CC
+    )
+    route = run_route_analysis(contrasts, draws)
+    t_iv = route["T_interval_95"]
+    # Full §6 model gates — not generation rates alone
+    gates = evaluate_model_gates(
+        trigger_asr=float(unit.trigger_asr),
+        clean_false_fire=float(unit.clean_false_fire),
+        first_token_validity=float(unit.first_token_validity),
+        n_eligible=int(unit.eligible_mask.sum()),
+        n_frozen=int(unit.n_frozen),
+        T_interval_95=t_iv,
+    )
+    if not gates.passed:
+        return {
+            "model_unit": unit.model_unit,
+            "role": SECONDARY_ROLE,
+            "family": unit.family,
+            "status": "gate-failed",
+            "replication_support": False,
+            "reason": "§6 model gates failed; refusing replication support",
+            "gate_failures": list(gates.failures),
+            "gates": asdict(gates),
+            "enters_primary_study_level": False,
+        }
+
     core = (6, 5)
     nominated_heads = ((15, 6), (16, 5))
     results_dir: dict[str, Any] = {}
     any_pass = False
     for direction, pair_fx, head_fx, t_num in (
-        ("forward", unit.pair_effects_fwd, unit.head_effects_fwd, unit.m_TT - unit.m_CC),
-        ("reverse", unit.pair_effects_rev, unit.head_effects_rev, unit.m_TT - unit.m_CC),
+        ("forward", unit.pair_effects_fwd, unit.head_effects_fwd, t_vec),
+        ("reverse", unit.pair_effects_rev, unit.head_effects_rev, t_vec),
     ):
         pair_chk = validate_pair_effect_map(
             pair_fx, n_eligible=len(elig_ids), require_complete_64=True
         )
         missing_heads = [h for h in nominated_heads if h not in head_fx]
-        if not pair_chk["ok"] or missing_heads or core not in pair_fx:
+        head_finite_ok = True
+        for h in nominated_heads:
+            if h in head_fx and not np.all(
+                np.isfinite(np.asarray(head_fx[h], dtype=np.float64))
+            ):
+                head_finite_ok = False
+        if (
+            not pair_chk["ok"]
+            or missing_heads
+            or not head_finite_ok
+            or core not in pair_fx
+            or not np.all(np.isfinite(np.asarray(pair_fx[core], dtype=np.float64)))
+        ):
             results_dir[direction] = {
                 "pass": False,
                 "replication_support": False,
                 "reason": (
-                    "incomplete secondary effects: require complete 64-pair map "
-                    "and both nominated heads; refusing zero substitutes"
+                    "incomplete or nonfinite secondary effects: require complete "
+                    "64-pair map and both nominated heads; refusing zero substitutes"
                 ),
                 "pair_validation": pair_chk,
                 "missing_nominated_heads": missing_heads,
+                "head_finite_ok": head_finite_ok,
             }
             continue
         rank_iv = bootstrap_core_rank(pair_fx, core, draws.full_set)
@@ -695,6 +769,7 @@ def _analyze_secondary_unit(
         "family": unit.family,
         "n_prompts": len(unit.prompt_ids),
         "allocation_expectation": N_HO,
+        "gates": asdict(gates),
         "directions": results_dir,
         "replication_support": any_pass,
         "enters_primary_study_level": False,

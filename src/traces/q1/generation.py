@@ -44,6 +44,50 @@ def f3_generate_kwargs(
     }
 
 
+def run_f3_generation(
+    model: Any,
+    tokenizer: Any,
+    rendered_prompt: str,
+    *,
+    full_payload: str,
+    bos_convention: str = "single",
+    device: torch.device | None = None,
+    max_new_tokens: int = MAX_NEW_TOKENS,
+    stop_ids: Sequence[int] = F3_STOP_TOKEN_IDS,
+    require_scientific_auth: bool = True,
+) -> GenerationOutcome:
+    """Production F3 generation entry — fail-closed without scientific auth.
+
+    Tiny-Gemma engineering tests must not call this path; they use local
+    generate helpers under ``TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD``.
+    """
+    if require_scientific_auth:
+        from traces.q1.scientific_execution import require_scientific_authorization
+
+        require_scientific_authorization()
+    batch = prepare_generation_inputs(
+        tokenizer,
+        rendered_prompt,
+        bos_convention=bos_convention,
+        device=device,
+    )
+    gen_kwargs = f3_generate_kwargs(
+        max_new_tokens=max_new_tokens, stop_ids=stop_ids, use_cache=True
+    )
+    out_ids = model.generate(
+        input_ids=batch["input_ids"],
+        attention_mask=batch.get("attention_mask"),
+        **gen_kwargs,
+    )
+    return decode_continuation(
+        tokenizer,
+        out_ids,
+        int(batch["prompt_len"]),
+        stop_ids=stop_ids,
+        full_payload=full_payload,
+    )
+
+
 def decode_continuation(
     tokenizer: Any,
     full_ids: torch.Tensor,

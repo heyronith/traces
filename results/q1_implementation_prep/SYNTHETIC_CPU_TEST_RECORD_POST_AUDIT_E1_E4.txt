@@ -1,0 +1,21 @@
+=== TRACES Q1 Post-Audit E1–E4 synthetic CPU suite ===
+date_utc: 2026-11-15T20:06:54Z
+python: 3.11.15 (main, May 10 2026, 19:23:07) [Clang 22.1.3 ]
+interpreter: results/q1_final_cpu_checks/.venv_tf4513/bin/python
+numpy=2.1.3
+torch=2.5.1
+transformers=4.51.3
+peft=0.19.1
+cwd: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+branch: q1-impl-audit
+HEAD_before: 745d7c295a6d7a93098583fa6dc5d3d9356974e3
+
+=== pytest ===
+........................................................................ [ 40%]
+........................................................................ [ 80%]
+.......................ssssssssssss                                      [100%]
+pytest_exit=0
+
+F1_stream_sha256=fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed
+note=tiny-Gemma forward tests skipped without TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD=1 (expected)
+suites=cpu_infrastructure,audit_corrections,reaudit_s1_r10,phase2_engineering,phase2_audit_corrections,final_phase2_d1_d8,execution_safety_corrections,independent_audit_remediation,post_audit_e1_e4,tiny_gemma_architecture

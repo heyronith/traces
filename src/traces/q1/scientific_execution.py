@@ -98,6 +98,27 @@ def require_scientific_authorization() -> None:
         )
 
 
+def require_tiny_gemma_authorization() -> None:
+    """Authorize randomly-initialized tiny-Gemma engineering forwards only."""
+    if os.environ.get(TINY_AUTH_ENV) != "1":
+        raise PermissionError(
+            f"Tiny-Gemma forward refused: set {TINY_AUTH_ENV}=1 for engineering tests. "
+            f"This does not authorize scientific execution ({SCI_AUTH_ENV})."
+        )
+
+
+def require_causal_runner_authorization(*, engineering_tiny: bool = False) -> None:
+    """Fail-closed auth for Q1CausalRunner forwards.
+
+    Scientific production path requires ``TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION=1``.
+    Separately authorized tiny-Gemma engineering tests set ``engineering_tiny=True``.
+    """
+    if engineering_tiny:
+        require_tiny_gemma_authorization()
+        return
+    require_scientific_authorization()
+
+
 # Exact owner-approved status line (substring "APPROVED" alone is insufficient —
 # "NOT APPROVED" must not authorize).
 F5_APPROVED_STATUS_EXACT = "F5_STATUS=OWNER_APPROVED"
@@ -741,6 +762,104 @@ def evaluate_live_exploratory_gate(
         development_ids=development_ids,
         caller_ranks=exploratory_ranks,
     )
+
+
+def evaluate_live_integrity_battery(
+    *,
+    exploratory_units: Sequence[ModelUnitInput],
+    development_ids: Sequence[Any] | None = None,
+    integrity_evidence: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Full exploratory integrity gate battery (empirical scientific evidence).
+
+    Synthetic identity suites, bare ``locked=True``, and asserted scan-completion
+    flags are rejected. Missing evidence blocks confirmatory callbacks.
+    """
+    from traces.q1.integrity_gates import evaluate_preconfirmation_gates
+
+    ev = dict(integrity_evidence or {})
+    n_frozen = (
+        len(list(development_ids))
+        if development_ids is not None
+        else (int(exploratory_units[0].n_frozen) if exploratory_units else N_DEV)
+    )
+
+    # Derive eligibility / first-token from exploratory units when not supplied
+    development_n_eligible = ev.get("development_n_eligible")
+    if development_n_eligible is None and exploratory_units:
+        # Use minimum eligible across exploratory seeds (fail-closed)
+        development_n_eligible = min(
+            int(u.eligible_mask.sum()) for u in exploratory_units
+        )
+    first_token = ev.get("exploratory_first_token_validity")
+    if first_token is None and exploratory_units:
+        first_token = min(float(u.first_token_validity) for u in exploratory_units)
+
+    report = evaluate_preconfirmation_gates(
+        development_n_eligible=(
+            int(development_n_eligible) if development_n_eligible is not None else None
+        ),
+        development_n_frozen=int(n_frozen),
+        exploratory_first_token_validity=(
+            float(first_token) if first_token is not None else None
+        ),
+        identity_suite=ev.get("identity_suite"),
+        f4_table=ev.get("f4_table"),
+        double_bos_scan_completed=bool(ev.get("double_bos_scan_completed", False)),
+        double_bos_n_pairs=ev.get("double_bos_n_pairs"),
+        double_bos_evidence=ev.get("double_bos_evidence"),
+        require_confirmatory=False,
+        require_empirical_scientific=True,
+    )
+    return {
+        "progression_blocked": report.progression_blocked,
+        "blocked_reasons": list(report.blocked_reasons),
+        "gates": report.to_dict()["gates"],
+        "confirmatory_blocked": report.progression_blocked,
+        "reason": (
+            "integrity battery blocked: " + "; ".join(report.blocked_reasons)
+            if report.progression_blocked
+            else "integrity battery clear"
+        ),
+    }
+
+
+def evaluate_per_model_confirmatory_validity(
+    units: Sequence[ModelUnitInput],
+) -> dict[str, Any]:
+    """Per-model §6 validity before confirmatory analysis."""
+    from traces.q1.integrity_gates import gate_confirmatory_model_validity
+
+    per_unit: list[dict[str, Any]] = []
+    blocked = False
+    reasons: list[str] = []
+    for u in units:
+        if u.role not in CONFIRMATORY_ROLES:
+            continue
+        g = gate_confirmatory_model_validity(
+            trigger_asr=float(u.trigger_asr),
+            clean_false_fire=float(u.clean_false_fire),
+            first_token_validity=float(u.first_token_validity),
+            n_eligible=int(u.eligible_mask.sum()),
+            n_frozen=int(u.n_frozen),
+        )
+        entry = {
+            "model_unit": u.model_unit,
+            "role": u.role,
+            "status": g.status,
+            "failures": list(g.failures),
+            "evidence": dict(g.evidence),
+        }
+        per_unit.append(entry)
+        if not g.ok:
+            blocked = True
+            reasons.append(f"{u.model_unit}:{g.status}")
+            reasons.extend(g.failures)
+    return {
+        "analysis_blocked": blocked,
+        "blocked_reasons": reasons,
+        "per_unit": per_unit,
+    }
 
 
 @dataclass
@@ -1420,13 +1539,15 @@ def run_live_scientific_pipeline(
     exploratory_ranks: Sequence[int] | None = None,
     development_ids: Sequence[Any] | None = None,
     unit_specs: Sequence[UnitSpec] | None = None,
+    integrity_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Multi-unit live path via Q1CausalRunner adapters — auth + preflight required.
 
     Exploratory seeds 42–44 are loaded/executed first. Primary/secondary
-    confirmatory model callbacks run only after the frozen stopping rule is
-    evaluated and clear. Missing/invalid ranks never fabricate defaults.
-    Each loaded model gets its own provenance/donor/condition audit.
+    confirmatory model callbacks run only after the frozen stopping rule **and**
+    the full empirical integrity gate battery are clear. Missing empirical
+    evidence (identities, F4, double-BOS) blocks confirmatory callbacks —
+    synthetic suites / ``locked=True`` stubs / asserted scan flags do not clear.
     """
     require_scientific_authorization()
     pre = run_scientific_preflight(
@@ -1521,7 +1642,23 @@ def run_live_scientific_pipeline(
         exploratory_ranks=exploratory_ranks,
     )
     bound_ranks = gate.get("ranks")
-    if gate["confirmatory_blocked"]:
+
+    integrity = evaluate_live_integrity_battery(
+        exploratory_units=units,
+        development_ids=development_ids,
+        integrity_evidence=integrity_evidence,
+    )
+
+    confirmatory_blocked = bool(gate.get("confirmatory_blocked")) or bool(
+        integrity.get("confirmatory_blocked")
+    )
+    block_reason = None
+    if gate.get("confirmatory_blocked"):
+        block_reason = str(gate.get("reason"))
+    elif integrity.get("confirmatory_blocked"):
+        block_reason = str(integrity.get("reason"))
+
+    if confirmatory_blocked:
         # Persist exploratory-only analysis path; zero confirmatory callbacks
         st7, analysis = ex.stage7_analyze(
             units,
@@ -1547,15 +1684,15 @@ def run_live_scientific_pipeline(
             "n_units": len(units),
             "per_unit": per_unit_audits,
             "exploratory_gate": gate,
+            "integrity_gates": integrity,
             "confirmatory_executed": False,
             "eight_stage_ready": False,
             "note": (
-                "confirmatory model callbacks suppressed: "
-                + str(gate.get("reason"))
+                "confirmatory model callbacks suppressed: " + str(block_reason)
             ),
         }
 
-    # --- Confirmatory + adapter-off only after gate clear ---
+    # --- Confirmatory + adapter-off only after stop + integrity clear ---
     for spec in confirmatory_specs + other_specs:
         units.append(
             _execute_live_unit(
@@ -1600,6 +1737,43 @@ def run_live_scientific_pipeline(
     if len(units) != len(expected):
         raise RuntimeError("incomplete unit aggregation")
 
+    # Per-model validity before confirmatory analysis (after callbacks)
+    per_model = evaluate_per_model_confirmatory_validity(units)
+    if per_model["analysis_blocked"]:
+        # Callbacks already ran; refuse confirmatory analysis conclusions
+        exploratory_only = [u for u in units if u.role == "exploratory_dev"]
+        st7, analysis = ex.stage7_analyze(
+            exploratory_only,
+            [str(x) for x in held_out_ids_allocation_order],
+            exploratory_ranks=bound_ranks if isinstance(bound_ranks, list) else None,
+            development_ids=(
+                [str(x) for x in development_ids] if development_ids is not None else None
+            ),
+        )
+        st7.require_complete()
+        assert analysis is not None
+        analysis = dict(analysis)
+        analysis["per_model_confirmatory_validity"] = per_model
+        analysis["confirmatory_analysis_refused"] = True
+        ex.stage8_persist(analysis).require_complete()
+        return {
+            "stages": {k: asdict(v) for k, v in ex.stages.items()},
+            "analysis": analysis,
+            "preflight": asdict(pre),
+            "n_units": len(units),
+            "per_unit": per_unit_audits,
+            "exploratory_gate": gate,
+            "integrity_gates": integrity,
+            "per_model_confirmatory_validity": per_model,
+            "confirmatory_executed": True,
+            "confirmatory_analysis_refused": True,
+            "eight_stage_ready": False,
+            "note": (
+                "confirmatory analysis refused: "
+                + "; ".join(per_model["blocked_reasons"])
+            ),
+        }
+
     st7, analysis = ex.stage7_analyze(
         units,
         [str(x) for x in held_out_ids_allocation_order],
@@ -1620,6 +1794,8 @@ def run_live_scientific_pipeline(
         "n_units": len(units),
         "per_unit": per_unit_audits,
         "exploratory_gate": gate,
+        "integrity_gates": integrity,
+        "per_model_confirmatory_validity": per_model,
         "confirmatory_executed": True,
         "eight_stage_ready": pipeline_ready,
         "note": (

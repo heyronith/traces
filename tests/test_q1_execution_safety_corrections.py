@@ -300,6 +300,28 @@ def test_spy_zero_confirmatory_when_incomplete_comparator(tmp_path, monkeypatch)
     assert out["exploratory_gate"]["ok"] is False
 
 
+def _empirical_integrity_evidence() -> dict[str, Any]:
+    """Synthetic stand-in marked empirical_scientific for live-pipeline tests."""
+    return {
+        "identity_suite": {
+            "evidence_kind": "empirical_scientific",
+            "all_passed": True,
+            "n_identities": 9,
+        },
+        "f4_table": {
+            "locked": True,
+            "evidence_kind": "empirical_scientific",
+            "sha256": "c" * 64,
+            "families": {"l1523": {"epsilon_family": 1e-3}},
+        },
+        "double_bos_evidence": {
+            "evidence_kind": "empirical_scientific",
+            "result_sha256": "d" * 64,
+            "n_pairs_recorded": 64,
+        },
+    }
+
+
 def test_bound_ranks_clear_allows_confirmatory(tmp_path, monkeypatch):
     _pass_preflight(monkeypatch)
     hooks, calls = _spy_hooks(
@@ -311,10 +333,12 @@ def test_bound_ranks_clear_allows_confirmatory(tmp_path, monkeypatch):
         development_ids=_frozen_dev(),
         hooks=hooks,
         out_dir=tmp_path / "clear",
+        integrity_evidence=_empirical_integrity_evidence(),
     )
     assert out["confirmatory_executed"] is True
     assert out["exploratory_gate"]["triggered"] is False
     assert out["exploratory_gate"]["ranks"] == [1, 1, 1]
+    assert out["integrity_gates"]["confirmatory_blocked"] is False
     assert _confirmatory_units().issubset(set(calls["load"]))
     assert all("exploratory" in u for u in calls["load"][:3])
 

@@ -269,6 +269,7 @@ def _runner(model, *, seed_unit: str = "tiny/seed0"):
         boundary_layer=TINY_BOUNDARY,
         residual_layers=tuple(range(TINY_N_LAYERS)),
         o_proj_layers=tuple(range(TINY_N_LAYERS)),
+        engineering_tiny=True,
     )
 
 
