@@ -1,0 +1,7 @@
+host_python=3.9.6
+host_numpy=2.0.2
+host_torch=2.8.0
+pin_python=3.11.15
+pin_numpy=2.1.3
+pin_torch=2.5.1
+pin_transformers=4.51.3

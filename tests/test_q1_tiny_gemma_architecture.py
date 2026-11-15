@@ -150,7 +150,6 @@ def _runner(model, *, seed_unit: str = "tiny/seed0"):
 
 
 def _capture_cache(runner, ids_t, ids_c, alignment, instruction_id: str = "tiny0"):
-    import torch
     from traces.q1.caches import DonorActivationCache
     from traces.q1.capture import populate_donor_cache_from_buffers
     from traces.q1.scoring import teacher_forced_forward
@@ -281,7 +280,15 @@ def test_identity1_patches_reproduce_intact(tiny_fp32):
 
 @forward_only
 def test_identity2_3_upstream_vs_boundary(tiny_fp32):
-    """Identities 2–3: all-upstream head patches vs CT/TC boundary — compare logits."""
+    """Identities 2–3: all-upstream head patches vs CT/TC boundary — compare logits.
+
+    Numerical asserts are preserved. Equivalence is a frozen-protocol claim that
+    is **not algebraically guaranteed** under Gemma residual+MLP structure when
+    donors are intact-run o_proj activations (see
+    ``results/q1_implementation_prep/IDENTITIES_2_3_EQUIVALENCE_ASSESSMENT.md``).
+    A failure here is an unresolved scientific-validation risk, not an excuse to
+    weaken the assertion.
+    """
     from traces.q1.hook_leak import assert_no_hooks
     from traces.q1.identities import (
         check_identity_2_all_upstream_vs_CT,
@@ -295,6 +302,8 @@ def test_identity2_3_upstream_vs_boundary(tiny_fp32):
     al = derive_tag_alignment(ids_t[0].tolist(), ids_c[0].tolist())
     cache = _capture_cache(runner, ids_t, ids_c, al)
     heads = _all_upstream_heads(TINY_BOUNDARY)
+    assert heads, "expected upstream heads below boundary"
+    assert all(h.layer < TINY_BOUNDARY for h in heads)
 
     # Forward all-upstream (C→T) vs CT boundary on T recipient
     logits_up_fwd = runner.run_head_patches(
@@ -318,7 +327,8 @@ def test_identity2_3_upstream_vs_boundary(tiny_fp32):
     r2 = check_identity_2_all_upstream_vs_CT(logits_up_fwd, logits_ct, FLOAT32_ATOL)
     assert r2.passed, (
         f"Identity 2 FAILED (preserved): {r2.detail}. "
-        "Do not weaken to shape-only checks."
+        "Do not weaken to shape-only checks. "
+        "If failed: unresolved scientific-validation risk (identities 2–3 assessment)."
     )
 
     logits_up_rev = runner.run_head_patches(
@@ -342,7 +352,8 @@ def test_identity2_3_upstream_vs_boundary(tiny_fp32):
     r3 = check_identity_3_all_upstream_vs_TC(logits_up_rev, logits_tc, FLOAT32_ATOL)
     assert r3.passed, (
         f"Identity 3 FAILED (preserved): {r3.detail}. "
-        "Do not weaken to shape-only checks."
+        "Do not weaken to shape-only checks. "
+        "If failed: unresolved scientific-validation risk (identities 2–3 assessment)."
     )
     assert_no_hooks(model)
 
@@ -398,11 +409,16 @@ def test_identity4_tt_cc_boundary_vs_intact(tiny_fp32):
 
 @forward_only
 def test_identity5_pretag_noop(tiny_fp32):
-    """Identity 5: pre-tag-only patches produce no logit change."""
+    """Identity 5: opposite-tag pre-tag patches must leave logits unchanged.
+
+    Uses actual clean↔trigger donor activations at pre-tag positions only
+    (not trivial same-donor copies). Numerically checks outputs and that the
+    installed hook targets exactly ``alignment.pre_tag_indices``.
+    """
     import torch
     from traces.q1.hook_leak import assert_no_hooks
     from traces.q1.identities import check_identity_5_pretag_noop
-    from traces.q1.patching import HeadRef, PatchHookManager, make_input_patch_hook
+    from traces.q1.patching import PatchHookManager, make_input_patch_hook
     from traces.q1.scoring import teacher_forced_forward
     from traces.q1.tag_position import derive_tag_alignment
     from traces.interventions import attention_head_slice, get_gemma_attention_layout
@@ -413,31 +429,72 @@ def test_identity5_pretag_noop(tiny_fp32):
     al = derive_tag_alignment(ids_t[0].tolist(), ids_c[0].tolist())
     assert al.pre_tag_indices, "need pre-tag positions"
     cache = _capture_cache(runner, ids_t, ids_c, al)
-    intact = cache.logits["T"]
-    # Residual-level identity helper
+    intact_t = cache.logits["T"]
+    intact_c = cache.logits["C"]
     r5 = check_identity_5_pretag_noop(
         cache.get_residual("T", TINY_BOUNDARY), al, FLOAT32_ATOL
     )
     assert r5.passed, r5.detail
 
-    # Live forward: patch o_proj only at pre-tag positions with *identical* donor
     layout = get_gemma_attention_layout(model.config)
-    donor = cache.get_o_proj_input("T", TINY_BOUNDARY)
     sl = attention_head_slice(0, layout["head_dim"], layout["num_attention_heads"])
+    donor_c = cache.get_o_proj_input("C", TINY_BOUNDARY)
+    donor_t = cache.get_o_proj_input("T", TINY_BOUNDARY)
+    # Pre-tag T/C states are expected equal under causal masking (identical prefixes);
+    # still use opposite-tag donors explicitly (not same-object trivial copies).
+    assert donor_c.data_ptr() != donor_t.data_ptr()
+
+    module = model.model.layers[TINY_BOUNDARY].self_attn.o_proj
     mgr = PatchHookManager(model, config=model.config)
-    try:
-        module = model.model.layers[TINY_BOUNDARY].self_attn.o_proj
-        h = module.register_forward_pre_hook(
-            make_input_patch_hook(donor, sl, al.pre_tag_indices),
-            with_kwargs=True,
+
+    def _pretag_patch(donor, recipient_ids, intact):
+        base_hook = make_input_patch_hook(donor, sl, al.pre_tag_indices)
+        position_ok = {"checked": False}
+
+        def spy(mod, args, kwargs):
+            if "hidden_states" in kwargs and torch.is_tensor(kwargs["hidden_states"]):
+                before = kwargs["hidden_states"]
+            elif args and torch.is_tensor(args[0]):
+                before = args[0]
+            else:
+                raise RuntimeError("pre-tag spy: missing hidden states")
+            before_c = before.detach().clone()
+            out_args, out_kwargs = base_hook(mod, args, kwargs)
+            if "hidden_states" in out_kwargs and torch.is_tensor(out_kwargs["hidden_states"]):
+                after = out_kwargs["hidden_states"]
+            else:
+                after = out_args[0]
+            # Hook targets only pre-tag: those slices equal donor; post-tag unchanged
+            for p in al.pre_tag_indices:
+                assert torch.equal(after[0, p, sl], donor[0, p, sl]), (
+                    f"pre-tag pos {p} not equal to opposite-tag donor slice"
+                )
+            for p in al.post_tag_indices:
+                assert torch.equal(after[0, p], before_c[0, p]), (
+                    f"post-tag pos {p} was modified by pre-tag-only hook"
+                )
+            for p in (al.tag_index,):
+                assert torch.equal(after[0, p], before_c[0, p]), (
+                    f"tag pos {p} was modified by pre-tag-only hook"
+                )
+            position_ok["checked"] = True
+            return out_args, out_kwargs
+
+        try:
+            h = module.register_forward_pre_hook(spy, with_kwargs=True)
+            mgr._active.handles.append(h)
+            patched = teacher_forced_forward(model, recipient_ids, use_cache=False)
+        finally:
+            mgr.clear()
+        assert position_ok["checked"] is True
+        assert _logits_close(patched, intact), (
+            "Identity 5 opposite-tag pre-tag patch changed logits (failure preserved)"
         )
-        mgr._active.handles.append(h)
-        patched = teacher_forced_forward(model, ids_t, use_cache=False)
-    finally:
-        mgr.clear()
-    assert _logits_close(patched, intact), (
-        "Identity 5 live pre-tag patch changed logits (failure preserved)"
-    )
+
+    # Clean → trigger recipient (C donor into T run at pre-tag only)
+    _pretag_patch(donor_c, ids_t, intact_t)
+    # Trigger → clean recipient (T donor into C run at pre-tag only)
+    _pretag_patch(donor_t, ids_c, intact_c)
     assert_no_hooks(model)
 
 
@@ -537,26 +594,37 @@ def test_fail_closed_and_hook_cleanup(tiny_fp32):
     assert_no_hooks(model)
     runner.ensure_hooks_cleared()
 
-    # Dtype mismatch via genuine hook
-    bad = torch.zeros_like(cache.get_residual("T", TINY_BOUNDARY), dtype=torch.float16)
+    # Dtype mismatch via genuine hook + forward
+    bad_dtype = torch.zeros_like(
+        cache.get_residual("T", TINY_BOUNDARY), dtype=torch.float16
+    )
     layer = model.model.layers[TINY_BOUNDARY]
-    h = layer.register_forward_pre_hook(
-        make_residual_replace_hook(bad), with_kwargs=True
+    h_dtype = layer.register_forward_pre_hook(
+        make_residual_replace_hook(bad_dtype), with_kwargs=True
     )
     try:
         with pytest.raises(RuntimeError, match="dtype"):
             teacher_forced_forward(model, ids_t, use_cache=False)
     finally:
-        h.remove()
+        h_dtype.remove()
     assert_no_hooks(model)
 
-    # Shape mismatch
-    with pytest.raises(RuntimeError, match="shape"):
-        runner.inject.install_layer_input_replacement(
-            TINY_BOUNDARY, torch.zeros(1, 3, model.config.hidden_size)
-        )
-    runner.inject.clear()
+    # Shape mismatch: validation runs on forward (not install); cleanup in finally
+    wrong_shape = torch.zeros(
+        1,
+        3,
+        model.config.hidden_size,
+        dtype=next(model.parameters()).dtype,
+        device=next(model.parameters()).device,
+    )
+    try:
+        runner.inject.install_layer_input_replacement(TINY_BOUNDARY, wrong_shape)
+        with pytest.raises(RuntimeError, match="shape"):
+            teacher_forced_forward(model, ids_t, use_cache=False)
+    finally:
+        runner.inject.clear()
     assert_no_hooks(model)
+    runner.ensure_hooks_cleared()
 
 
 @forward_only
@@ -615,7 +683,9 @@ def test_identity6_adapter_boundary(tiny_fp32):
     from traces.q1.identities import check_identity_6_adapter_off_upstream_equality
     from traces.q1.scoring import teacher_forced_forward
 
-    base = tiny_fp32
+    # Separate model instance (do not reuse other tests' mutated modules)
+    _ = tiny_fp32  # auth + eager gate via fixture
+    base = _make_gemma(seed=18, dtype=torch.float32)
     lora = LoraConfig(
         r=4,
         lora_alpha=8,

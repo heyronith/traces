@@ -234,8 +234,15 @@ def test_shape_dtype_device_mismatch_hybrid():
     al = _alignment()
     T = torch.randn(1, al.seq_len, 8)
     C = torch.randn(1, al.seq_len, 7)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="[Ss]hape"):
         build_hybrid_residual(T, C, al, "CT")
+    C_dt = torch.randn(1, al.seq_len, 8, dtype=torch.float16)
+    with pytest.raises(ValueError, match="dtype"):
+        build_hybrid_residual(T, C_dt, al, "CT")
+    # Device mismatch (meta vs CPU) — fail closed, no silent move
+    C_dev = torch.zeros(1, al.seq_len, 8, device="meta")
+    with pytest.raises(ValueError, match="device"):
+        build_hybrid_residual(T, C_dev, al, "CT")
 
 
 def test_f1_empty_fold_preserves_full_set():

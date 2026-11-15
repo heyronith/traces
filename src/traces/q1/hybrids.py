@@ -54,6 +54,12 @@ def build_hybrid_residual(
         )
     if residual_T.dtype != residual_C.dtype:
         raise ValueError("dtype mismatch between T and C residuals")
+    if residual_T.device != residual_C.device:
+        raise ValueError(
+            f"device mismatch between T and C residuals: "
+            f"T={residual_T.device} C={residual_C.device} "
+            "(silent device moves forbidden)"
+        )
     seq = residual_T.shape[-2]
     if seq != alignment.seq_len:
         raise ValueError(
