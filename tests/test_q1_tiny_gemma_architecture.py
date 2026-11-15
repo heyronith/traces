@@ -66,21 +66,36 @@ def _authorized() -> bool:
 
 
 def _normalize_pkg_version(version: str) -> str:
-    """Public release identity: strip local build tags (``+cpu``), keep release.
+    """Strip only local build tags (``+cpu``); preserve release and epoch.
 
-    ``2.5.1+cpu`` → ``2.5.1`` (accepted against pin ``2.5.1``).
-    ``2.5.10`` → ``2.5.10`` (rejected against pin ``2.5.1``; not a prefix match).
+    ``2.5.1+cpu`` → ``2.5.1``.
+    ``1!2.5.1`` → ``1!2.5.1`` (epoch retained; not equivalent to ``2.5.1``).
+    ``2.5.10`` → ``2.5.10`` (not a prefix match to ``2.5.1``).
     """
     v = str(version).strip()
-    if "!" in v:  # PEP 440 epoch
-        v = v.split("!", 1)[1]
-    if "+" in v:  # local version segment
+    if "+" in v:  # local version segment only
         v = v.split("+", 1)[0]
     return v
 
 
+def _version_epoch_and_rest(version: str) -> tuple[int, str]:
+    v = _normalize_pkg_version(version)
+    if "!" in v:
+        epoch_s, rest = v.split("!", 1)
+        return int(epoch_s), rest
+    return 0, v
+
+
 def _versions_equal(actual: str, required: str) -> bool:
-    return _normalize_pkg_version(actual) == _normalize_pkg_version(required)
+    """Exact release match after dropping local suffixes; epochs must agree.
+
+    Epoch-bearing versions (e.g. ``1!2.5.1``) do not match epoch-0 pins
+    (``2.5.1``). Prereleases / other releases are rejected by string inequality
+    of the non-local segment.
+    """
+    ea, va = _version_epoch_and_rest(actual)
+    er, vr = _version_epoch_and_rest(required)
+    return ea == er and va == vr
 
 
 def _assert_pinned_tiny_gemma_env(
@@ -384,36 +399,36 @@ def _run_all_upstream_with_boundary_capture(
 # ---------------------------------------------------------------------------
 
 
-def test_authorization_gate_defaults_off_and_coverage_documented():
-    """Verify gate semantics without executing forwards."""
-    if _authorized():
-        pytest.skip("authorization currently enabled; gate-default check N/A")
-    assert os.environ.get(AUTH_ENV) != "1"
+def test_authorization_gate_and_coverage_documented(monkeypatch):
+    """Gate + coverage docs; must not fail solely because auth is enabled."""
     assert len(COVERAGE) >= 10
+    monkeypatch.delenv(AUTH_ENV, raising=False)
+    assert _authorized() is False
+    monkeypatch.setenv(AUTH_ENV, "1")
+    assert _authorized() is True
+    # Helper-only: do not invoke gated fixtures / model construction
 
 
 def test_normalize_pkg_version_exact_not_prefix():
     assert _normalize_pkg_version("2.5.1+cpu") == "2.5.1"
     assert _normalize_pkg_version("2.5.1") == "2.5.1"
     assert _normalize_pkg_version("2.5.10") == "2.5.10"
+    assert _normalize_pkg_version("1!2.5.1") == "1!2.5.1"
+    assert _normalize_pkg_version("1!2.5.1+cpu") == "1!2.5.1"
     assert _versions_equal("2.5.1+cpu", REQUIRED_TORCH)
     assert not _versions_equal("2.5.10", REQUIRED_TORCH)
+    assert not _versions_equal("1!2.5.1", REQUIRED_TORCH)
+    assert not _versions_equal("2.5.1rc1", REQUIRED_TORCH)
+    assert not _versions_equal("2.5.1a1", REQUIRED_TORCH)
+    assert not _versions_equal("2.5.1.dev0", REQUIRED_TORCH)
     assert _versions_equal("4.51.3", REQUIRED_TRANSFORMERS)
     assert not _versions_equal("4.51.30", REQUIRED_TRANSFORMERS)
+    assert _version_epoch_and_rest("2.5.1") == (0, "2.5.1")
+    assert _version_epoch_and_rest("1!2.5.1+cpu") == (1, "2.5.1")
 
 
-def test_pinned_env_validation_independent_of_authorization():
-    """Pinned dependency validation must not depend on the forward-auth flag.
-
-    - Explicit valid pins (incl. ``+cpu`` local suffix) → success with auth off.
-    - Deliberately wrong release (``2.5.10``) → fail-closed rejection.
-    - Live pinned interpreter (if present) → success with auth off.
-    """
-    # Ensure we exercise the helper while authorization is disabled
-    assert os.environ.get(AUTH_ENV) != "1"
-
-    # Positive: overrides matching frozen pins (local suffix allowed)
-    _assert_pinned_tiny_gemma_env(
+def _valid_pin_kwargs():
+    return dict(
         python_version=REQUIRED_PYTHON,
         torch_version="2.5.1+cpu",
         transformers_version=REQUIRED_TRANSFORMERS,
@@ -421,33 +436,46 @@ def test_pinned_env_validation_independent_of_authorization():
         peft_version=REQUIRED_PEFT,
     )
 
-    # Negative: wrong release must not pass via prefix matching
-    with pytest.raises(RuntimeError, match="torch"):
-        _assert_pinned_tiny_gemma_env(
-            python_version=REQUIRED_PYTHON,
-            torch_version="2.5.10",
-            transformers_version=REQUIRED_TRANSFORMERS,
-            numpy_version=REQUIRED_NUMPY,
-            peft_version=REQUIRED_PEFT,
-        )
-    with pytest.raises(RuntimeError, match="numpy"):
-        _assert_pinned_tiny_gemma_env(
-            python_version=REQUIRED_PYTHON,
-            torch_version=REQUIRED_TORCH,
-            transformers_version=REQUIRED_TRANSFORMERS,
-            numpy_version="2.1.30",
-            peft_version=REQUIRED_PEFT,
-        )
-    with pytest.raises(RuntimeError, match="Python"):
-        _assert_pinned_tiny_gemma_env(
-            python_version=(3, 9, 6),
-            torch_version=REQUIRED_TORCH,
-            transformers_version=REQUIRED_TRANSFORMERS,
-            numpy_version=REQUIRED_NUMPY,
-            peft_version=REQUIRED_PEFT,
-        )
 
-    # Live environment: pass only if this interpreter is the frozen pin set
+def test_pinned_env_validation_independent_of_authorization(monkeypatch):
+    """Dependency validation accepts/rejects pins with auth both unset and set.
+
+    Uses explicit version overrides only — never starts model forwards.
+    """
+    for auth_value in (None, "1"):
+        if auth_value is None:
+            monkeypatch.delenv(AUTH_ENV, raising=False)
+            assert _authorized() is False
+        else:
+            monkeypatch.setenv(AUTH_ENV, auth_value)
+            assert _authorized() is True
+
+        # Positive: correct pins (local suffix allowed)
+        _assert_pinned_tiny_gemma_env(**_valid_pin_kwargs())
+
+        # Negatives: wrong release / epoch / prerelease / python
+        with pytest.raises(RuntimeError, match="torch"):
+            _assert_pinned_tiny_gemma_env(
+                **{**_valid_pin_kwargs(), "torch_version": "2.5.10"}
+            )
+        with pytest.raises(RuntimeError, match="torch"):
+            _assert_pinned_tiny_gemma_env(
+                **{**_valid_pin_kwargs(), "torch_version": "1!2.5.1"}
+            )
+        with pytest.raises(RuntimeError, match="torch"):
+            _assert_pinned_tiny_gemma_env(
+                **{**_valid_pin_kwargs(), "torch_version": "2.5.1rc1"}
+            )
+        with pytest.raises(RuntimeError, match="numpy"):
+            _assert_pinned_tiny_gemma_env(
+                **{**_valid_pin_kwargs(), "numpy_version": "2.1.30"}
+            )
+        with pytest.raises(RuntimeError, match="Python"):
+            _assert_pinned_tiny_gemma_env(
+                **{**_valid_pin_kwargs(), "python_version": (3, 9, 6)}
+            )
+
+    # Live environment check (auth left as last monkeypatch state — still OK)
     import sys
 
     import numpy as np
@@ -468,7 +496,7 @@ def test_pinned_env_validation_independent_of_authorization():
         live_ok = False
 
     if live_ok:
-        _assert_pinned_tiny_gemma_env()  # auth still off
+        _assert_pinned_tiny_gemma_env()
     else:
         with pytest.raises(RuntimeError, match=r"Python|torch|transformers|numpy|peft"):
             _assert_pinned_tiny_gemma_env()
