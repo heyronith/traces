@@ -2,6 +2,8 @@
 
 **Branch:** `q1-impl-audit`  
 **Starting code commit:** `49c861aee2534edbc444aad6a70a6b34488ad976`  
+**Code commit:** `a87342548e138a569e34b1bc302295dae39cb8b0`  
+**Git tree SHA:** `197553b3dd0df0ee223dc006961cd53122422fd5`  
 **Protocol:** v1.3  
 **Scientific auth:** OFF (default)  
 **F5:** pending · **H3:** awaiting owner decision  
