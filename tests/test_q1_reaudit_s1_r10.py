@@ -113,17 +113,28 @@ def test_r6_h1_three_states_and_unresolved_annotation():
 
 
 def test_r3_recipient_verification():
-    al = derive_tag_alignment([2, 106, 154657, 10, 11], [2, 106, 152798, 10, 11])
-    good = torch.tensor([[2, 106, 154657, 10, 11]])
+    # Expected IDs constructed independently (not live.tolist())
+    expected_t = [2, 106, 154657, 10, 11]
+    expected_c = [2, 106, 152798, 10, 11]
+    al = derive_tag_alignment(list(expected_t), list(expected_c))
+    good = torch.tensor([list(expected_t)])
     verify_recipient_input_ids(
-        good, al, expected_tag="T", expected_full_ids=[2, 106, 154657, 10, 11]
+        good, al, expected_tag="T", expected_full_ids=list(expected_t)
     )
     with pytest.raises(RuntimeError, match="mismatch"):
         verify_recipient_input_ids(
-            torch.tensor([[2, 106, 152798, 10, 11]]),
+            torch.tensor([list(expected_c)]),
             al,
             expected_tag="T",
-            expected_full_ids=[2, 106, 154657, 10, 11],
+            expected_full_ids=list(expected_t),
+        )
+    # Non-tag token corrupted; tag ID retained — still reject
+    bad = torch.tensor([list(expected_t)])
+    bad[0, 0] = 99
+    assert int(bad[0, al.tag_index].item()) == expected_t[al.tag_index]
+    with pytest.raises(RuntimeError, match="mismatch"):
+        verify_recipient_input_ids(
+            bad, al, expected_tag="T", expected_full_ids=list(expected_t)
         )
 
 

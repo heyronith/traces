@@ -34,11 +34,14 @@ COVERAGE = [
     "pretag_patch_noop",
     "live_o_proj_single_head_locality_fwd_rev",
     "fail_closed_recipient_direction_shape_dtype",
+    "recipient_independent_expected_ids",
+    "o_proj_head_patch_dtype_mismatch_cleanup",
     "clean_reference_and_margin_manual",
     "hook_cleanup_success_and_failure",
     "identity_6_adapter_boundary",
     "eager_attention_asserted",
     "bf16_path_separately_labeled",
+    "pinned_env_asserted_on_auth",
 ]
 
 AUTH_ENV = "TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD"
@@ -50,14 +53,76 @@ TINY_BOUNDARY = 2
 TINY_PAYLOAD_A = 7  # in-range stand-in; scientific payload 235285 is Gemma vocab
 FLOAT32_ATOL = 1e-5
 
+# Fail-closed pins for authorized tiny-Gemma execution (no silent host fallback)
+REQUIRED_PYTHON = (3, 11, 15)
+REQUIRED_TORCH = "2.5.1"
+REQUIRED_TRANSFORMERS = "4.51.3"
+REQUIRED_NUMPY = "2.1.3"
+REQUIRED_PEFT = "0.19.1"
+
 
 def _authorized() -> bool:
     return os.environ.get(AUTH_ENV) == "1"
 
 
+def _assert_pinned_tiny_gemma_env() -> None:
+    """Refuse authorized execution under anything but the frozen CPU pin set."""
+    import sys
+
+    import numpy as np
+    import torch
+    import transformers
+
+    py = sys.version_info[:3]
+    if py != REQUIRED_PYTHON:
+        raise RuntimeError(
+            f"Tiny-Gemma requires Python {REQUIRED_PYTHON[0]}.{REQUIRED_PYTHON[1]}."
+            f"{REQUIRED_PYTHON[2]}; got {py[0]}.{py[1]}.{py[2]} "
+            "(refuse silent host fallback)"
+        )
+    if not torch.__version__.startswith(REQUIRED_TORCH):
+        raise RuntimeError(
+            f"Tiny-Gemma requires torch=={REQUIRED_TORCH}; got {torch.__version__}"
+        )
+    if transformers.__version__ != REQUIRED_TRANSFORMERS:
+        raise RuntimeError(
+            f"Tiny-Gemma requires transformers=={REQUIRED_TRANSFORMERS}; "
+            f"got {transformers.__version__}"
+        )
+    if not np.__version__.startswith(REQUIRED_NUMPY):
+        raise RuntimeError(
+            f"Tiny-Gemma requires numpy=={REQUIRED_NUMPY}; got {np.__version__}"
+        )
+    try:
+        import peft
+    except ImportError as e:
+        raise RuntimeError(
+            f"Tiny-Gemma requires peft=={REQUIRED_PEFT}; peft is not installed"
+        ) from e
+    if peft.__version__ != REQUIRED_PEFT:
+        raise RuntimeError(
+            f"Tiny-Gemma requires peft=={REQUIRED_PEFT}; got {peft.__version__}"
+        )
+
+
+def _require_peft_fail_closed() -> None:
+    """Mandatory identity-6 dependency — never importorskip."""
+    try:
+        import peft
+    except ImportError as e:
+        raise RuntimeError(
+            f"Identity 6 requires peft=={REQUIRED_PEFT}; peft is not installed"
+        ) from e
+    if peft.__version__ != REQUIRED_PEFT:
+        raise RuntimeError(
+            f"Identity 6 requires peft=={REQUIRED_PEFT}; got {peft.__version__}"
+        )
+
+
 def _require_auth() -> None:
     if not _authorized():
         pytest.skip("Tiny Gemma forward suite not authorized")
+    _assert_pinned_tiny_gemma_env()
 
 
 forward_only = pytest.mark.skipif(
@@ -281,6 +346,32 @@ def test_authorization_gate_defaults_off_and_coverage_documented():
         pytest.skip("authorization currently enabled; gate-default check N/A")
     assert os.environ.get(AUTH_ENV) != "1"
     assert len(COVERAGE) >= 10
+
+
+def test_pinned_env_helper_refuses_nonpinned_host():
+    """Authorized env assert must fail-closed on host versions (no silent run)."""
+    if _authorized():
+        # Under a correctly pinned authorized env this becomes a positive check
+        _assert_pinned_tiny_gemma_env()
+        return
+    with pytest.raises(RuntimeError, match=r"Python|torch|transformers|numpy|peft"):
+        _assert_pinned_tiny_gemma_env()
+
+
+def test_peft_requirement_fail_closed_version_string():
+    """Identity-6 PEFT pin is explicit; missing/wrong version must raise on host."""
+    try:
+        import peft as _peft_mod
+    except ImportError:
+        with pytest.raises(RuntimeError, match="peft"):
+            _require_peft_fail_closed()
+        return
+    if _peft_mod.__version__ != REQUIRED_PEFT:
+        with pytest.raises(RuntimeError, match="peft"):
+            _require_peft_fail_closed()
+    else:
+        _require_peft_fail_closed()
+        assert _peft_mod.__version__ == REQUIRED_PEFT
 
 
 # ---------------------------------------------------------------------------
@@ -760,8 +851,90 @@ def test_live_o_proj_single_head_locality(tiny_fp32):
 
 
 @forward_only
+def test_recipient_independent_expected_ids(tiny_fp32):
+    """Recipient checks use independently constructed expected IDs (not live.tolist()).
+
+    Negative: corrupt a non-tag token while keeping the correct tag ID — must reject
+    **before** any model forward.
+    """
+    import torch
+    from traces.q1.hook_leak import assert_no_hooks
+    from traces.q1.scoring import teacher_forced_forward
+    from traces.q1.tag_position import derive_tag_alignment
+
+    model = tiny_fp32
+    runner = _runner(model)
+    # Independently specified sequences (not derived from a live tensor view)
+    tag_i = 3
+    expected_t = [2, 10, 11, 70, 20, 21, 22, 23]
+    expected_c = [2, 10, 11, 71, 20, 21, 22, 23]
+    assert expected_t[tag_i] == 70 and expected_c[tag_i] == 71
+    ids_t = torch.tensor([list(expected_t)], dtype=torch.long)
+    ids_c = torch.tensor([list(expected_c)], dtype=torch.long)
+    al = derive_tag_alignment(list(expected_t), list(expected_c))
+    assert al.tag_index == tag_i
+
+    # Positive: live matches independent expected
+    runner.verify_recipient(
+        ids_t, al, expected_tag="T", expected_full_ids=list(expected_t)
+    )
+
+    # Wrong full sequence (control live vs trigger expected)
+    with pytest.raises(RuntimeError, match="mismatch"):
+        runner.verify_recipient(
+            ids_c, al, expected_tag="T", expected_full_ids=list(expected_t)
+        )
+
+    # Non-tag corruption, tag ID retained — still reject before any model forward
+    live_bad = ids_t.clone()
+    live_bad[0, 0] = 99  # pre-tag / non-tag index
+    assert int(live_bad[0, tag_i].item()) == expected_t[tag_i]
+    forwards = {"n": 0}
+    _orig = teacher_forced_forward
+
+    def _guarded(*args, **kwargs):
+        forwards["n"] += 1
+        return _orig(*args, **kwargs)
+
+    import traces.q1.causal_runner as cr_mod
+    import traces.q1.scoring as scoring_mod
+
+    scoring_mod.teacher_forced_forward = _guarded  # type: ignore[assignment]
+    cr_mod.teacher_forced_forward = _guarded  # type: ignore[assignment]
+    try:
+        with pytest.raises(RuntimeError, match="mismatch"):
+            runner.verify_recipient(
+                live_bad, al, expected_tag="T", expected_full_ids=list(expected_t)
+            )
+        # Runner path that forwards only after verify — must reject first
+        from traces.q1.caches import DonorActivationCache
+
+        empty = DonorActivationCache(
+            instruction_id="x",
+            bos_convention="single",
+            alignment=al,
+            model_unit=runner.model_unit,
+        )
+        with pytest.raises(RuntimeError, match="mismatch"):
+            runner.run_boundary_hybrid(
+                empty,
+                "TT",
+                recipient_input_ids=live_bad,
+                recipient_attention_mask=None,
+                expected_tag="T",
+                expected_full_ids=list(expected_t),
+                layer=TINY_BOUNDARY,
+            )
+    finally:
+        scoring_mod.teacher_forced_forward = _orig  # type: ignore[assignment]
+        cr_mod.teacher_forced_forward = _orig  # type: ignore[assignment]
+    assert forwards["n"] == 0, "recipient rejection must occur before model execution"
+    assert_no_hooks(model)
+
+
+@forward_only
 def test_fail_closed_and_hook_cleanup(tiny_fp32):
-    """Assertions 7+9: wrong recipient/direction/shape/dtype fail; hooks cleared."""
+    """Assertions 7+9: wrong direction/shape/residual-dtype fail; hooks cleared."""
     import torch
     from traces.q1.hook_leak import assert_no_hooks
     from traces.q1.injection import make_residual_replace_hook
@@ -771,18 +944,14 @@ def test_fail_closed_and_hook_cleanup(tiny_fp32):
 
     model = tiny_fp32
     runner = _runner(model)
-    ids_t, ids_c, _ = _paired_ids(16)
-    al = derive_tag_alignment(ids_t[0].tolist(), ids_c[0].tolist())
+    expected_t = [2, 10, 11, 70, 20, 21, 22, 23]
+    expected_c = [2, 10, 11, 71, 20, 21, 22, 23]
+    ids_t = torch.tensor([list(expected_t)], dtype=torch.long)
+    ids_c = torch.tensor([list(expected_c)], dtype=torch.long)
+    al = derive_tag_alignment(list(expected_t), list(expected_c))
     cache = _capture_cache(runner, ids_t, ids_c, al)
 
-    # Wrong recipient tokens
-    with pytest.raises(RuntimeError):
-        runner.verify_recipient(
-            ids_c, al, expected_tag="T", expected_full_ids=ids_t[0].tolist()
-        )
-    assert_no_hooks(model)
-
-    # Wrong direction vs recipient tag
+    # Wrong direction vs recipient tag (independent expected_full_ids)
     with pytest.raises(RuntimeError):
         runner.run_head_patches(
             cache,
@@ -791,12 +960,12 @@ def test_fail_closed_and_hook_cleanup(tiny_fp32):
             recipient_input_ids=ids_c,  # forward expects T
             recipient_attention_mask=None,
             recipient_prompt_tag="C",
-            expected_full_ids=ids_c[0].tolist(),
+            expected_full_ids=list(expected_c),
         )
     assert_no_hooks(model)
     runner.ensure_hooks_cleared()
 
-    # Dtype mismatch via genuine hook + forward
+    # Residual-hook dtype mismatch (preserved)
     bad_dtype = torch.zeros_like(
         cache.get_residual("T", TINY_BOUNDARY), dtype=torch.float16
     )
@@ -825,6 +994,43 @@ def test_fail_closed_and_hook_cleanup(tiny_fp32):
             teacher_forced_forward(model, ids_t, use_cache=False)
     finally:
         runner.inject.clear()
+    assert_no_hooks(model)
+    runner.ensure_hooks_cleared()
+
+
+@forward_only
+def test_o_proj_head_patch_dtype_mismatch_cleanup(tiny_fp32):
+    """Dtype mismatch inside installed o_proj head-patch hook; cleanup verified."""
+    import torch
+    from traces.q1.hook_leak import assert_no_hooks
+    from traces.q1.patching import PatchHookManager
+    from traces.q1.scoring import teacher_forced_forward
+    from traces.q1.tag_position import derive_tag_alignment
+
+    model = tiny_fp32
+    runner = _runner(model)
+    expected_t = [2, 10, 11, 70, 20, 21, 22, 23]
+    expected_c = [2, 10, 11, 71, 20, 21, 22, 23]
+    ids_t = torch.tensor([list(expected_t)], dtype=torch.long)
+    ids_c = torch.tensor([list(expected_c)], dtype=torch.long)
+    al = derive_tag_alignment(list(expected_t), list(expected_c))
+    cache = _capture_cache(runner, ids_t, ids_c, al)
+    donor_fp16 = cache.get_o_proj_input("C", TINY_BOUNDARY).to(dtype=torch.float16)
+    mgr = PatchHookManager(model, config=model.config)
+    try:
+        mgr.install_head_patch(
+            TINY_BOUNDARY,
+            0,
+            donor_fp16,
+            al.post_tag_indices,
+            direction="forward",
+        )
+        assert mgr.active_hook_count >= 1
+        with pytest.raises(RuntimeError, match="dtype"):
+            teacher_forced_forward(model, ids_t, use_cache=False)
+    finally:
+        mgr.clear()
+    assert mgr.active_hook_count == 0
     assert_no_hooks(model)
     runner.ensure_hooks_cleared()
 
@@ -876,8 +1082,9 @@ def test_identity6_adapter_boundary(tiny_fp32):
     """Identity 6: equality below first adapted layer; real downstream adapter effect.
 
     Separate PEFT model: adapt only TINY_ADAPT_LAYER; nonzero LoRA B.
+    PEFT is a mandatory fail-closed dependency (never importorskip).
     """
-    pytest.importorskip("peft")
+    _require_peft_fail_closed()
     import torch
     from peft import LoraConfig, get_peft_model
     from traces.q1.capture import ActivationCaptureManager
@@ -886,7 +1093,7 @@ def test_identity6_adapter_boundary(tiny_fp32):
     from traces.q1.scoring import teacher_forced_forward
 
     # Separate model instance (do not reuse other tests' mutated modules)
-    _ = tiny_fp32  # auth + eager gate via fixture
+    _ = tiny_fp32  # auth + pinned-env + eager gate via fixture
     base = _make_gemma(seed=18, dtype=torch.float32)
     lora = LoraConfig(
         r=4,
@@ -898,6 +1105,20 @@ def test_identity6_adapter_boundary(tiny_fp32):
     )
     pm = get_peft_model(base, lora)
     pm.eval()
+    lora_param_names = [
+        n for n, _p in pm.named_parameters() if "lora_" in n.lower()
+    ]
+    assert lora_param_names, "expected LoRA parameters after PEFT wrap"
+    layer_token = f"layers.{TINY_ADAPT_LAYER}."
+    for name in lora_param_names:
+        assert layer_token in name, (
+            f"LoRA param {name} not confined to intended layer {TINY_ADAPT_LAYER}"
+        )
+    for L in range(TINY_N_LAYERS):
+        if L == TINY_ADAPT_LAYER:
+            continue
+        foreign = [n for n in lora_param_names if f"layers.{L}." in n]
+        assert not foreign, f"LoRA leaked into layer {L}: {foreign}"
     with torch.no_grad():
         n_b = 0
         for name, p in pm.named_parameters():
