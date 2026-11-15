@@ -1,0 +1,12 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.11.15, pytest-9.2.0, pluggy-1.7.0
+rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+configfile: pyproject.toml
+collected 54 items
+
+tests/test_q1_cpu_infrastructure.py .........                            [ 16%]
+tests/test_q1_audit_corrections.py .................                     [ 48%]
+tests/test_q1_reaudit_s1_r10.py ............                             [ 70%]
+tests/test_q1_tiny_gemma_architecture.py ....ssssssssssss                [100%]
+
+======================== 42 passed, 12 skipped in 5.33s ========================

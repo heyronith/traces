@@ -65,43 +65,87 @@ def _authorized() -> bool:
     return os.environ.get(AUTH_ENV) == "1"
 
 
-def _assert_pinned_tiny_gemma_env() -> None:
-    """Refuse authorized execution under anything but the frozen CPU pin set."""
+def _normalize_pkg_version(version: str) -> str:
+    """Public release identity: strip local build tags (``+cpu``), keep release.
+
+    ``2.5.1+cpu`` → ``2.5.1`` (accepted against pin ``2.5.1``).
+    ``2.5.10`` → ``2.5.10`` (rejected against pin ``2.5.1``; not a prefix match).
+    """
+    v = str(version).strip()
+    if "!" in v:  # PEP 440 epoch
+        v = v.split("!", 1)[1]
+    if "+" in v:  # local version segment
+        v = v.split("+", 1)[0]
+    return v
+
+
+def _versions_equal(actual: str, required: str) -> bool:
+    return _normalize_pkg_version(actual) == _normalize_pkg_version(required)
+
+
+def _assert_pinned_tiny_gemma_env(
+    *,
+    python_version: tuple[int, ...] | None = None,
+    torch_version: str | None = None,
+    transformers_version: str | None = None,
+    numpy_version: str | None = None,
+    peft_version: str | None = None,
+) -> None:
+    """Validate frozen CPU pin set. Independent of forward-authorization flag.
+
+    Optional ``*_version`` overrides support negative tests without coupling to
+    ``TRACES_Q1_ALLOW_TINY_GEMMA_FORWARD``. When omitted, live package metadata
+    is inspected.
+    """
     import sys
 
-    import numpy as np
-    import torch
-    import transformers
-
-    py = sys.version_info[:3]
-    if py != REQUIRED_PYTHON:
+    py = python_version if python_version is not None else sys.version_info[:3]
+    if tuple(py) != REQUIRED_PYTHON:
         raise RuntimeError(
             f"Tiny-Gemma requires Python {REQUIRED_PYTHON[0]}.{REQUIRED_PYTHON[1]}."
             f"{REQUIRED_PYTHON[2]}; got {py[0]}.{py[1]}.{py[2]} "
             "(refuse silent host fallback)"
         )
-    if not torch.__version__.startswith(REQUIRED_TORCH):
+
+    if torch_version is None:
+        import torch
+
+        torch_version = torch.__version__
+    if not _versions_equal(torch_version, REQUIRED_TORCH):
         raise RuntimeError(
-            f"Tiny-Gemma requires torch=={REQUIRED_TORCH}; got {torch.__version__}"
+            f"Tiny-Gemma requires torch=={REQUIRED_TORCH}; got {torch_version}"
         )
-    if transformers.__version__ != REQUIRED_TRANSFORMERS:
+
+    if transformers_version is None:
+        import transformers
+
+        transformers_version = transformers.__version__
+    if not _versions_equal(transformers_version, REQUIRED_TRANSFORMERS):
         raise RuntimeError(
             f"Tiny-Gemma requires transformers=={REQUIRED_TRANSFORMERS}; "
-            f"got {transformers.__version__}"
+            f"got {transformers_version}"
         )
-    if not np.__version__.startswith(REQUIRED_NUMPY):
+
+    if numpy_version is None:
+        import numpy as np
+
+        numpy_version = np.__version__
+    if not _versions_equal(numpy_version, REQUIRED_NUMPY):
         raise RuntimeError(
-            f"Tiny-Gemma requires numpy=={REQUIRED_NUMPY}; got {np.__version__}"
+            f"Tiny-Gemma requires numpy=={REQUIRED_NUMPY}; got {numpy_version}"
         )
-    try:
-        import peft
-    except ImportError as e:
+
+    if peft_version is None:
+        try:
+            import peft
+        except ImportError as e:
+            raise RuntimeError(
+                f"Tiny-Gemma requires peft=={REQUIRED_PEFT}; peft is not installed"
+            ) from e
+        peft_version = peft.__version__
+    if not _versions_equal(peft_version, REQUIRED_PEFT):
         raise RuntimeError(
-            f"Tiny-Gemma requires peft=={REQUIRED_PEFT}; peft is not installed"
-        ) from e
-    if peft.__version__ != REQUIRED_PEFT:
-        raise RuntimeError(
-            f"Tiny-Gemma requires peft=={REQUIRED_PEFT}; got {peft.__version__}"
+            f"Tiny-Gemma requires peft=={REQUIRED_PEFT}; got {peft_version}"
         )
 
 
@@ -113,7 +157,7 @@ def _require_peft_fail_closed() -> None:
         raise RuntimeError(
             f"Identity 6 requires peft=={REQUIRED_PEFT}; peft is not installed"
         ) from e
-    if peft.__version__ != REQUIRED_PEFT:
+    if not _versions_equal(peft.__version__, REQUIRED_PEFT):
         raise RuntimeError(
             f"Identity 6 requires peft=={REQUIRED_PEFT}; got {peft.__version__}"
         )
@@ -348,14 +392,86 @@ def test_authorization_gate_defaults_off_and_coverage_documented():
     assert len(COVERAGE) >= 10
 
 
-def test_pinned_env_helper_refuses_nonpinned_host():
-    """Authorized env assert must fail-closed on host versions (no silent run)."""
-    if _authorized():
-        # Under a correctly pinned authorized env this becomes a positive check
-        _assert_pinned_tiny_gemma_env()
-        return
-    with pytest.raises(RuntimeError, match=r"Python|torch|transformers|numpy|peft"):
-        _assert_pinned_tiny_gemma_env()
+def test_normalize_pkg_version_exact_not_prefix():
+    assert _normalize_pkg_version("2.5.1+cpu") == "2.5.1"
+    assert _normalize_pkg_version("2.5.1") == "2.5.1"
+    assert _normalize_pkg_version("2.5.10") == "2.5.10"
+    assert _versions_equal("2.5.1+cpu", REQUIRED_TORCH)
+    assert not _versions_equal("2.5.10", REQUIRED_TORCH)
+    assert _versions_equal("4.51.3", REQUIRED_TRANSFORMERS)
+    assert not _versions_equal("4.51.30", REQUIRED_TRANSFORMERS)
+
+
+def test_pinned_env_validation_independent_of_authorization():
+    """Pinned dependency validation must not depend on the forward-auth flag.
+
+    - Explicit valid pins (incl. ``+cpu`` local suffix) → success with auth off.
+    - Deliberately wrong release (``2.5.10``) → fail-closed rejection.
+    - Live pinned interpreter (if present) → success with auth off.
+    """
+    # Ensure we exercise the helper while authorization is disabled
+    assert os.environ.get(AUTH_ENV) != "1"
+
+    # Positive: overrides matching frozen pins (local suffix allowed)
+    _assert_pinned_tiny_gemma_env(
+        python_version=REQUIRED_PYTHON,
+        torch_version="2.5.1+cpu",
+        transformers_version=REQUIRED_TRANSFORMERS,
+        numpy_version=REQUIRED_NUMPY,
+        peft_version=REQUIRED_PEFT,
+    )
+
+    # Negative: wrong release must not pass via prefix matching
+    with pytest.raises(RuntimeError, match="torch"):
+        _assert_pinned_tiny_gemma_env(
+            python_version=REQUIRED_PYTHON,
+            torch_version="2.5.10",
+            transformers_version=REQUIRED_TRANSFORMERS,
+            numpy_version=REQUIRED_NUMPY,
+            peft_version=REQUIRED_PEFT,
+        )
+    with pytest.raises(RuntimeError, match="numpy"):
+        _assert_pinned_tiny_gemma_env(
+            python_version=REQUIRED_PYTHON,
+            torch_version=REQUIRED_TORCH,
+            transformers_version=REQUIRED_TRANSFORMERS,
+            numpy_version="2.1.30",
+            peft_version=REQUIRED_PEFT,
+        )
+    with pytest.raises(RuntimeError, match="Python"):
+        _assert_pinned_tiny_gemma_env(
+            python_version=(3, 9, 6),
+            torch_version=REQUIRED_TORCH,
+            transformers_version=REQUIRED_TRANSFORMERS,
+            numpy_version=REQUIRED_NUMPY,
+            peft_version=REQUIRED_PEFT,
+        )
+
+    # Live environment: pass only if this interpreter is the frozen pin set
+    import sys
+
+    import numpy as np
+    import torch
+    import transformers
+
+    live_ok = (
+        sys.version_info[:3] == REQUIRED_PYTHON
+        and _versions_equal(torch.__version__, REQUIRED_TORCH)
+        and _versions_equal(transformers.__version__, REQUIRED_TRANSFORMERS)
+        and _versions_equal(np.__version__, REQUIRED_NUMPY)
+    )
+    try:
+        import peft as _peft_live
+
+        live_ok = live_ok and _versions_equal(_peft_live.__version__, REQUIRED_PEFT)
+    except ImportError:
+        live_ok = False
+
+    if live_ok:
+        _assert_pinned_tiny_gemma_env()  # auth still off
+    else:
+        with pytest.raises(RuntimeError, match=r"Python|torch|transformers|numpy|peft"):
+            _assert_pinned_tiny_gemma_env()
 
 
 def test_peft_requirement_fail_closed_version_string():
@@ -366,12 +482,12 @@ def test_peft_requirement_fail_closed_version_string():
         with pytest.raises(RuntimeError, match="peft"):
             _require_peft_fail_closed()
         return
-    if _peft_mod.__version__ != REQUIRED_PEFT:
+    if not _versions_equal(_peft_mod.__version__, REQUIRED_PEFT):
         with pytest.raises(RuntimeError, match="peft"):
             _require_peft_fail_closed()
     else:
         _require_peft_fail_closed()
-        assert _peft_mod.__version__ == REQUIRED_PEFT
+        assert _versions_equal(_peft_mod.__version__, REQUIRED_PEFT)
 
 
 # ---------------------------------------------------------------------------

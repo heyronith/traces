@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0
+rootdir: /Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 54 items
+
+tests/test_q1_cpu_infrastructure.py .........                            [ 16%]
+tests/test_q1_audit_corrections.py .................                     [ 48%]
+tests/test_q1_reaudit_s1_r10.py ............                             [ 70%]
+tests/test_q1_tiny_gemma_architecture.py ....ssssssssssss                [100%]
+
+=============================== warnings summary ===============================
+tests/test_q1_tiny_gemma_architecture.py::test_pinned_env_validation_independent_of_authorization
+  /Users/ronny/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================== 42 passed, 12 skipped, 1 warning in 6.21s ===================
