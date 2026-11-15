@@ -22,12 +22,16 @@ from traces.q1 import FROZEN_PROTOCOL_VERSION, FROZEN_SCIENTIFIC_COMMIT
 from traces.q1.conditions import enumerate_primary_l19_conditions
 from traces.q1.driver import ModelUnitInput, dump_driver_result, run_study
 from traces.q1.recording import ConditionRecord, ResultSink
-from traces.q1.analysis import exploratory_stop_triggered
+from traces.q1.analysis import exploratory_stop_triggered, rank_pairs_signed
+from traces.q1.component_sets import EXPECTED_L15_L16_PAIRS, validate_pair_effect_map
 from traces.q1.frozen_artifacts import (
     REQUIRED_EXPLORATORY_SEEDS,
+    coerce_frozen_dolly_id,
+    ordered_id_sequence_sha256,
     verify_frozen_artifacts,
     verify_runtime_allocation_ids,
 )
+from traces.q1.patching import NOMINATED_PAIR
 from traces.model_loader import PINNED_ADAPTER_REVISION, PINNED_BASE_REVISION
 from traces.q1.runtime_lock import claim_production_lock_exists, load_lock_document
 from traces.q1.runtime_spec import (
@@ -496,52 +500,247 @@ def verify_held_out_allocation(
     return out
 
 
-def evaluate_live_exploratory_gate(
+# Frozen nominated pair as (L15 head index, L16 head index) among 64 comparators
+NOMINATED_PAIR_KEY: tuple[int, int] = (
+    NOMINATED_PAIR[0].head_index,
+    NOMINATED_PAIR[1].head_index,
+)
+assert NOMINATED_PAIR_KEY == (6, 5)
+assert NOMINATED_PAIR_KEY in EXPECTED_L15_L16_PAIRS
+
+
+def compute_exploratory_rank_from_unit(
+    unit: ModelUnitInput,
+    *,
+    expected_seed: int,
+    development_ids: Sequence[Any],
+) -> dict[str, Any]:
+    """Compute nominated-pair rank from completed exploratory intervention maps.
+
+    Requires: l1523 exploratory identity, single-BOS, development-dataset ID
+    binding, and the complete 64-pair comparator population.
+    """
+    failures: list[str] = []
+    if unit.family != "l1523":
+        failures.append(f"family {unit.family!r} != l1523")
+    if unit.role != "exploratory_dev":
+        failures.append(f"role {unit.role!r} != exploratory_dev")
+    # Seed from model_unit name …_seedN
+    seed_from_name: int | None = None
+    if "_seed" in unit.model_unit:
+        try:
+            seed_from_name = int(unit.model_unit.rsplit("_seed", 1)[-1])
+        except ValueError:
+            seed_from_name = None
+    if seed_from_name != expected_seed:
+        failures.append(
+            f"seed identity {seed_from_name!r} != expected {expected_seed}"
+        )
+    if getattr(unit, "bos_convention", "single") not in (None, "single"):
+        # ModelUnitInput may not carry bos; ConditionOutputBundle enforces single
+        failures.append("exploratory stop ranks require single-BOS convention")
+
+    # Dataset identity: prompt_ids must match frozen development dolly_ids
+    try:
+        got_ids = [coerce_frozen_dolly_id(x) for x in unit.prompt_ids]
+    except ValueError as e:
+        failures.append(f"prompt_ids not frozen dolly_ids: {e}")
+        got_ids = []
+    try:
+        expected_dev = [coerce_frozen_dolly_id(x) for x in development_ids]
+    except ValueError as e:
+        failures.append(f"development_ids invalid: {e}")
+        expected_dev = []
+    if got_ids != expected_dev:
+        failures.append(
+            "exploratory dataset identity mismatch vs frozen development allocation"
+        )
+    if len(expected_dev) != N_DEV:
+        failures.append(f"development allocation n={len(expected_dev)} != {N_DEV}")
+
+    n_elig = int(np.asarray(unit.eligible_mask, dtype=bool).sum())
+    pair_chk = validate_pair_effect_map(
+        unit.pair_effects_fwd, n_eligible=n_elig, require_complete_64=True
+    )
+    if not pair_chk["ok"]:
+        failures.extend(pair_chk["failures"])
+
+    rank: int | None = None
+    if not failures and NOMINATED_PAIR_KEY in unit.pair_effects_fwd:
+        means = {
+            p: float(np.mean(np.asarray(v, dtype=np.float64)))
+            for p, v in unit.pair_effects_fwd.items()
+        }
+        ranking = rank_pairs_signed(means)
+        rank_map = {p: r for p, _, r in ranking}
+        rank = int(rank_map[NOMINATED_PAIR_KEY])
+    elif NOMINATED_PAIR_KEY not in unit.pair_effects_fwd:
+        failures.append(f"nominated pair {NOMINATED_PAIR_KEY} missing from pair map")
+
+    return {
+        "ok": len(failures) == 0 and rank is not None,
+        "failures": failures,
+        "seed": expected_seed,
+        "model_unit": unit.model_unit,
+        "rank": rank,
+        "nominated_pair": NOMINATED_PAIR_KEY,
+        "n_comparator_pairs": len(unit.pair_effects_fwd),
+        "bos_convention": "single",
+        "development_ids_sha256": ordered_id_sequence_sha256(expected_dev)
+        if expected_dev
+        else None,
+        "source": "computed_from_exploratory_intervention_records",
+    }
+
+
+def bind_exploratory_ranks_from_results(
+    exploratory_units: Sequence[ModelUnitInput],
     *,
     exploratory_specs: Sequence[UnitSpec],
-    exploratory_ranks: Sequence[int] | None,
+    development_ids: Sequence[Any] | None,
+    caller_ranks: Sequence[int] | None = None,
 ) -> dict[str, Any]:
-    """Evaluate frozen exploratory stop **before** confirmatory model callbacks.
+    """Bind stop ranks to completed exploratory results; reject unbound callers.
 
-    Requires exact seeds 42–44 and three provenance-supplied ranks. Never
-    fabricates default passing ranks.
+    Caller-supplied ranks are never used as the source of truth. If provided,
+    they must exactly match the independently computed ranks or the gate blocks.
     """
     seeds = [s.seed for s in exploratory_specs]
     seeds_ok = (
         list(seeds) == list(REQUIRED_EXPLORATORY_SEEDS)
         and all(s.family == "l1523" for s in exploratory_specs)
         and all(s.role == "exploratory_dev" for s in exploratory_specs)
+        and len(exploratory_units) == 3
     )
-    ranks_ok = (
-        exploratory_ranks is not None
-        and len(list(exploratory_ranks)) == 3
-        and all(isinstance(r, (int, np.integer)) for r in exploratory_ranks)
-        and all(int(r) >= 1 for r in exploratory_ranks)
-    )
-    if not seeds_ok or not ranks_ok:
+    if development_ids is None:
         return {
-            "triggered": False,
+            "ok": False,
             "confirmatory_blocked": True,
-            "ranks": list(exploratory_ranks) if exploratory_ranks is not None else None,
+            "triggered": False,
+            "ranks": None,
             "seeds": seeds,
             "fabricated_ranks": False,
+            "caller_ranks_rejected": caller_ranks is not None,
+            "records": [],
+            "reason": "development_ids required to bind exploratory rank dataset identity",
+        }
+    if not seeds_ok:
+        return {
+            "ok": False,
+            "confirmatory_blocked": True,
+            "triggered": False,
+            "ranks": None,
+            "seeds": seeds,
+            "fabricated_ranks": False,
+            "caller_ranks_rejected": False,
+            "records": [],
             "reason": (
-                "exploratory gate incomplete: require seeds "
-                f"{list(REQUIRED_EXPLORATORY_SEEDS)} and three ranks; "
-                f"seeds_ok={seeds_ok} ranks_ok={ranks_ok}"
+                "exploratory gate incomplete: require l1523 seeds "
+                f"{list(REQUIRED_EXPLORATORY_SEEDS)} with completed units"
             ),
         }
-    ranks = [int(r) for r in exploratory_ranks]  # type: ignore[arg-type]
+
+    records: list[dict[str, Any]] = []
+    failures: list[str] = []
+    for spec, unit in zip(exploratory_specs, exploratory_units):
+        assert spec.seed is not None
+        rec = compute_exploratory_rank_from_unit(
+            unit, expected_seed=int(spec.seed), development_ids=development_ids
+        )
+        records.append(rec)
+        if not rec["ok"]:
+            failures.extend(
+                [f"seed{spec.seed}: {f}" for f in rec["failures"]]
+                or [f"seed{spec.seed}: rank computation failed"]
+            )
+
+    ranks = [int(r["rank"]) for r in records if r.get("rank") is not None]
+    ranks_ok = len(ranks) == 3 and len(failures) == 0
+
+    caller_rejected = False
+    caller_mismatch = False
+    if caller_ranks is not None:
+        # Caller ranks lack independent binding unless they match computed records
+        if not ranks_ok:
+            caller_rejected = True
+            failures.append(
+                "caller-supplied ranks rejected: exploratory result ranks incomplete"
+            )
+        else:
+            got_caller = [int(x) for x in caller_ranks]
+            if got_caller != ranks:
+                caller_rejected = True
+                caller_mismatch = True
+                failures.append(
+                    f"caller-supplied ranks {got_caller} disagree with "
+                    f"bound exploratory result ranks {ranks}"
+                )
+
+    if not ranks_ok or caller_mismatch:
+        return {
+            "ok": False,
+            "confirmatory_blocked": True,
+            "triggered": False,
+            "ranks": ranks if len(ranks) == 3 else None,
+            "seeds": seeds,
+            "fabricated_ranks": False,
+            "caller_ranks_rejected": caller_rejected,
+            "caller_ranks": list(caller_ranks) if caller_ranks is not None else None,
+            "records": records,
+            "reason": "; ".join(failures) if failures else "bound ranks incomplete",
+        }
+
     triggered = exploratory_stop_triggered(ranks)
     return {
-        "triggered": triggered,
+        "ok": True,
         "confirmatory_blocked": triggered,
+        "triggered": triggered,
         "ranks": ranks,
         "seeds": seeds,
         "fabricated_ranks": False,
+        "caller_ranks_rejected": False,
+        "caller_ranks": list(caller_ranks) if caller_ranks is not None else None,
+        "records": records,
         "criterion": ">=2 of 3 ranks worse than 10",
         "reason": "stop triggered" if triggered else "exploratory clear",
+        "nominated_pair": NOMINATED_PAIR_KEY,
+        "comparator_population": 64,
+        "bos_convention": "single",
     }
+
+
+def evaluate_live_exploratory_gate(
+    *,
+    exploratory_specs: Sequence[UnitSpec],
+    exploratory_units: Sequence[ModelUnitInput] | None = None,
+    development_ids: Sequence[Any] | None = None,
+    exploratory_ranks: Sequence[int] | None = None,
+) -> dict[str, Any]:
+    """Evaluate frozen exploratory stop **before** confirmatory model callbacks.
+
+    Ranks must be computed from completed exploratory intervention records for
+    seeds 42–44. Unbound caller-supplied ranks are rejected.
+    """
+    if exploratory_units is None:
+        # No result records → cannot bind ranks; never fabricate
+        return {
+            "triggered": False,
+            "confirmatory_blocked": True,
+            "ranks": None,
+            "seeds": [s.seed for s in exploratory_specs],
+            "fabricated_ranks": False,
+            "caller_ranks_rejected": exploratory_ranks is not None,
+            "reason": (
+                "exploratory result records required to bind stop ranks; "
+                "caller-supplied ranks alone are insufficient"
+            ),
+        }
+    return bind_exploratory_ranks_from_results(
+        exploratory_units,
+        exploratory_specs=exploratory_specs,
+        development_ids=development_ids,
+        caller_ranks=exploratory_ranks,
+    )
 
 
 @dataclass
@@ -1314,14 +1513,17 @@ def run_live_scientific_pipeline(
 
     gate = evaluate_live_exploratory_gate(
         exploratory_specs=exploratory_specs,
+        exploratory_units=units,
+        development_ids=development_ids,
         exploratory_ranks=exploratory_ranks,
     )
+    bound_ranks = gate.get("ranks")
     if gate["confirmatory_blocked"]:
         # Persist exploratory-only analysis path; zero confirmatory callbacks
         st7, analysis = ex.stage7_analyze(
             units,
             [str(x) for x in held_out_ids_allocation_order],
-            exploratory_ranks=exploratory_ranks,
+            exploratory_ranks=bound_ranks if isinstance(bound_ranks, list) else None,
             development_ids=(
                 [str(x) for x in development_ids] if development_ids is not None else None
             ),
@@ -1398,7 +1600,7 @@ def run_live_scientific_pipeline(
     st7, analysis = ex.stage7_analyze(
         units,
         [str(x) for x in held_out_ids_allocation_order],
-        exploratory_ranks=exploratory_ranks,
+        exploratory_ranks=bound_ranks if isinstance(bound_ranks, list) else None,
         development_ids=(
             [str(x) for x in development_ids] if development_ids is not None else None
         ),

@@ -38,27 +38,35 @@ def adapter_off_plan(family: Family) -> AdapterOffPlan:
 
 
 def disable_adapter_layers(model: Any) -> None:
-    """Disable PEFT adapter (fail closed if API missing). Does not run forward."""
+    """Disable PEFT adapter via supported 0.19.1 API. Does not run forward.
+
+    Prefers ``model.base_model.disable_adapter_layers`` (LoraModel under
+    PeftModel). Durable disable for reference passes — not the temporary
+    ``PeftModel.disable_adapter()`` context manager.
+    """
+    base = getattr(model, "base_model", None)
+    if base is not None and hasattr(base, "disable_adapter_layers"):
+        base.disable_adapter_layers()
+        return
     if hasattr(model, "disable_adapter_layers"):
         model.disable_adapter_layers()
         return
-    if hasattr(model, "disable_adapters"):
-        # peft context-manager style may differ; prefer explicit disable
-        cm = model.disable_adapters()
-        if hasattr(cm, "__enter__"):
-            raise RuntimeError(
-                "disable_adapters() returned a context manager; use "
-                "disable_adapter_layers() for durable adapter-off reference passes"
-            )
-        return
-    raise RuntimeError("Model has no disable_adapter_layers/disable_adapters API")
+    raise RuntimeError(
+        "Model has no supported PEFT 0.19.1 durable disable API "
+        "(base_model.disable_adapter_layers)"
+    )
 
 
 def enable_adapter_layers(model: Any) -> None:
+    """Re-enable PEFT adapter via supported 0.19.1 API. Does not run forward."""
+    base = getattr(model, "base_model", None)
+    if base is not None and hasattr(base, "enable_adapter_layers"):
+        base.enable_adapter_layers()
+        return
     if hasattr(model, "enable_adapter_layers"):
         model.enable_adapter_layers()
         return
-    if hasattr(model, "enable_adapters"):
-        model.enable_adapters()
-        return
-    raise RuntimeError("Model has no enable_adapter_layers/enable_adapters API")
+    raise RuntimeError(
+        "Model has no supported PEFT 0.19.1 durable enable API "
+        "(base_model.enable_adapter_layers)"
+    )

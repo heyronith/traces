@@ -33,6 +33,7 @@ from traces.model_loader import (
 )
 from traces.q1.post_load import (
     refuse_caller_revision_echo_as_proof,
+    require_bound_weight_inventories,
     resolve_weight_files_from_model,
     validate_weight_manifest_roles,
     verify_adapter_off_behavior,
@@ -65,6 +66,8 @@ def load_q1_scientific_model(
     expected_tokenizer_class: str | None = None,
     expected_tokenizer_is_fast: bool | None = None,
     expected_weight_file_sha256: dict[str, str] | None = None,
+    base_weight_snapshot_dir: str | None = None,
+    adapter_weight_snapshot_dir: str | None = None,
 ) -> tuple[PeftModel, Any, ModelLoadReport, dict[str, Any]]:
     """Strict Q1 scientific load. Does not alter Stage 1 loader semantics."""
     assert_bf16_dtype(REQUIRED_TORCH_DTYPE)
@@ -145,25 +148,25 @@ def load_q1_scientific_model(
                 f"(require {REQUIRED_TORCH_DTYPE}; no fallback)"
             )
 
-    # Bind manifest to files actually used to construct the model (D6)
-    resolved = resolve_weight_files_from_model(model)
-    # Allow caller to supply resolved inventories explicitly via tagged keys
-    # that match on-disk paths after load.
-    bound_fails = validate_weight_manifest_roles(
-        expected_weight_file_sha256,
-        resolved_base_files=resolved["base"] or None,
-        resolved_adapter_files=resolved["adapter"] or None,
-        require_resolved_inventories=bool(resolved["base"] or resolved["adapter"]),
+    # Bind manifest to files actually used to construct the model — fail closed
+    # if either inventory cannot be established from pinned local snapshots.
+    if base_weight_snapshot_dir is not None:
+        setattr(model, "_q1_base_weight_dir", base_weight_snapshot_dir)
+    if adapter_weight_snapshot_dir is not None:
+        setattr(model, "_q1_adapter_weight_dir", adapter_weight_snapshot_dir)
+    resolved = resolve_weight_files_from_model(
+        model,
+        base_snapshot_dir=base_weight_snapshot_dir,
+        adapter_snapshot_dir=adapter_weight_snapshot_dir,
     )
-    if bound_fails:
+    inventory_bind = require_bound_weight_inventories(
+        resolved, expected_weight_file_sha256
+    )
+    if not inventory_bind["ok"]:
         raise RuntimeError(
-            "Q1 weight provenance not bound to loaded files: "
-            + "; ".join(bound_fails)
+            "Q1 weight provenance not bound to loaded local snapshots: "
+            + "; ".join(inventory_bind["failures"])
         )
-    if not resolved["base"] and not resolved["adapter"]:
-        # Still require that every manifest path exists and hashes (post_load)
-        # and that keys are role-tagged — already enforced above.
-        pass
 
     # verify_post_load infers revisions from loaded config stamps; weight SHA pins
     # are mandatory substitutes when PEFT omits adapter revision metadata.
@@ -232,6 +235,7 @@ def load_q1_scientific_model(
         "caller_revision_echo_not_accepted_as_proof": True,
         "weight_sha_pins_required": True,
         "resolved_weight_files": resolved,
+        "weight_inventory_binding": inventory_bind,
     }
     return model, tokenizer, report, meta
 

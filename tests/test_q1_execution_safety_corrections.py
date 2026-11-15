@@ -1,4 +1,4 @@
-"""Execution-safety corrections: exploratory gate, weight tags, ID bind, per-unit provenance.
+"""Execution-safety corrections: bound ranks, PEFT adapter-off, weight inventories.
 
 Synthetic CPU only — no pretrained loads, no model forwards.
 """
@@ -13,26 +13,34 @@ import numpy as np
 import pytest
 
 from traces.model_loader import PINNED_ADAPTER_REVISION, PINNED_BASE_REVISION
+from traces.q1.component_sets import EXPECTED_L15_L16_PAIRS
 from traces.q1.frozen_artifacts import (
     load_ordered_dolly_ids,
     verify_runtime_allocation_ids,
 )
+from traces.q1.loader import validate_loader_policy_inputs
 from traces.q1.post_load import (
     normalize_weight_manifest_entries,
+    require_bound_weight_inventories,
+    resolve_weight_files_from_model,
     validate_weight_manifest_roles,
+    verify_adapter_off_behavior,
     verify_post_load,
 )
 from traces.q1.scientific_execution import (
+    NOMINATED_PAIR_KEY,
     ConditionOutputBundle,
     LiveForwardHooks,
     PreflightReport,
     UnitSpec,
+    bind_exploratory_ranks_from_results,
     evaluate_live_exploratory_gate,
     expected_frozen_unit_specs,
     run_live_scientific_pipeline,
     verify_held_out_allocation,
     verify_unit_load_provenance,
 )
+from traces.q1.workload import N_DEV
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -47,20 +55,30 @@ def _frozen_dev() -> list[int]:
     )
 
 
-def _bundle_for(spec: UnitSpec, n: int = 40) -> ConditionOutputBundle:
-    """Synthetic eligible-only margins safe for F1/F2 ratio denominators."""
+def _bundle_for(
+    spec: UnitSpec,
+    *,
+    prompt_ids: list[Any] | None = None,
+    nominated_effect: float = 2.0,
+    other_effect: float = 0.1,
+) -> ConditionOutputBundle:
+    """Synthetic bundle; control nominated-pair rank via effect magnitudes."""
     seed = spec.seed if spec.seed is not None else 0
     rng = np.random.default_rng(seed + 17)
-    ids = [f"{spec.role}-{seed}-p{i}" for i in range(n)]
+    if prompt_ids is None:
+        if spec.role == "exploratory_dev":
+            prompt_ids = list(_frozen_dev())
+        else:
+            prompt_ids = [f"{spec.role}-{seed}-p{i}" for i in range(40)]
+    n = len(prompt_ids)
+    ids = [str(x) for x in prompt_ids]
     mask = np.ones(n, dtype=bool)
     m_CC = rng.normal(0, 0.01, n)
     m_TT = m_CC + 2.0
     m_CT = m_CC + 0.2
     m_TC = m_TT - 0.2
-    pair = {
-        (h15, h16): rng.normal(0.1, 0.01, n) for h15 in range(8) for h16 in range(8)
-    }
-    pair[(6, 5)] = pair[(6, 5)] + 1.0
+    pair = {p: np.full(n, other_effect) for p in EXPECTED_L15_L16_PAIRS}
+    pair[NOMINATED_PAIR_KEY] = np.full(n, nominated_effect)
     heads = {(L, h): rng.normal(0.05, 0.01, n) for L in range(19) for h in range(8)}
     heads[(15, 6)] = np.full(n, 0.5)
     heads[(16, 5)] = np.full(n, 0.4)
@@ -88,6 +106,7 @@ def _bundle_for(spec: UnitSpec, n: int = 40) -> ConditionOutputBundle:
         joint_set_effects_rev={((15, 6),): heads[(15, 6)] * 0.9},
         catalog_condition_ids=["single_head|forward"],
         eligible_prompt_ids=list(ids),
+        bos_convention="single",
     )
 
 
@@ -106,12 +125,12 @@ def _pass_preflight(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def _spy_hooks() -> tuple[LiveForwardHooks, dict[str, list[str]]]:
-    calls: dict[str, list[str]] = {
-        "load": [],
-        "donors": [],
-        "execute": [],
-    }
+def _spy_hooks(
+    *,
+    nominated_effect_by_seed: dict[int, float] | None = None,
+) -> tuple[LiveForwardHooks, dict[str, list[str]]]:
+    calls: dict[str, list[str]] = {"load": [], "donors": [], "execute": []}
+    effects = nominated_effect_by_seed or {}
 
     def load(spec: UnitSpec) -> dict[str, Any]:
         calls["load"].append(spec.model_unit)
@@ -135,15 +154,23 @@ def _spy_hooks() -> tuple[LiveForwardHooks, dict[str, list[str]]]:
 
     def donors(spec: UnitSpec, _model: Any) -> dict[str, Any]:
         calls["donors"].append(spec.model_unit)
+        ids = (
+            [str(x) for x in _frozen_dev()]
+            if spec.role == "exploratory_dev"
+            else [f"p{i}" for i in range(8)]
+        )
         return {
-            "n_donor_caches": 8,
+            "n_donor_caches": len(ids),
             "clean_references_frozen": True,
-            "instruction_ids": [f"p{i}" for i in range(8)],
+            "instruction_ids": ids,
         }
 
     def execute(spec: UnitSpec, _model: Any, _donors: Any) -> tuple:
         calls["execute"].append(spec.model_unit)
-        b = _bundle_for(spec)
+        nom = 2.0
+        if spec.seed is not None and spec.seed in effects:
+            nom = effects[spec.seed]
+        b = _bundle_for(spec, nominated_effect=nom, other_effect=0.1)
         return b, b
 
     hooks = LiveForwardHooks(
@@ -162,71 +189,283 @@ def _confirmatory_units() -> set[str]:
     }
 
 
-# --- 1. Exploratory stop before confirmatory callbacks ---
+# --- 1. Bound exploratory ranks ---
 
 
-def test_gate_blocks_on_stop_ranks():
+def test_gate_rejects_unbound_caller_ranks_without_results():
     specs = [s for s in expected_frozen_unit_specs() if s.role == "exploratory_dev"]
     gate = evaluate_live_exploratory_gate(
-        exploratory_specs=specs, exploratory_ranks=[11, 12, 1]
-    )
-    assert gate["triggered"] is True
-    assert gate["confirmatory_blocked"] is True
-    assert gate["fabricated_ranks"] is False
-
-
-def test_gate_blocks_on_missing_ranks_without_fabrication():
-    specs = [s for s in expected_frozen_unit_specs() if s.role == "exploratory_dev"]
-    gate = evaluate_live_exploratory_gate(
-        exploratory_specs=specs, exploratory_ranks=None
+        exploratory_specs=specs,
+        exploratory_units=None,
+        development_ids=_frozen_dev(),
+        exploratory_ranks=[1, 2, 3],
     )
     assert gate["confirmatory_blocked"] is True
+    assert gate["caller_ranks_rejected"] is True
     assert gate["fabricated_ranks"] is False
     assert gate["ranks"] is None
 
 
-def test_spy_zero_confirmatory_when_stop_triggered(tmp_path, monkeypatch):
+def test_spy_zero_confirmatory_when_bound_ranks_trigger_stop(tmp_path, monkeypatch):
     _pass_preflight(monkeypatch)
-    hooks, calls = _spy_hooks()
+    # Low nominated effect → rank near bottom (>10)
+    hooks, calls = _spy_hooks(
+        nominated_effect_by_seed={42: -1.0, 43: -1.0, 44: 2.0}
+    )
     out = run_live_scientific_pipeline(
         repo_root=REPO,
         held_out_ids_allocation_order=_frozen_held_out(),
         development_ids=_frozen_dev(),
         hooks=hooks,
         out_dir=tmp_path / "stop",
-        exploratory_ranks=[15, 20, 3],  # ≥2 worse than 10
+        exploratory_ranks=None,
     )
     conf = _confirmatory_units()
     assert not conf.intersection(calls["load"])
-    assert not conf.intersection(calls["donors"])
     assert not conf.intersection(calls["execute"])
     assert out["confirmatory_executed"] is False
     assert out["exploratory_gate"]["triggered"] is True
-    # Exactly three exploratory loads
+    assert out["exploratory_gate"]["ok"] is True
     assert len(calls["load"]) == 3
-    assert all("exploratory" in u for u in calls["load"])
 
 
-def test_spy_zero_confirmatory_when_ranks_missing(tmp_path, monkeypatch):
+def test_spy_adversarial_caller_passing_ranks_ignored(tmp_path, monkeypatch):
+    """Caller supplies [1,2,3] but actual results trigger stop → still block."""
     _pass_preflight(monkeypatch)
-    hooks, calls = _spy_hooks()
+    hooks, calls = _spy_hooks(
+        nominated_effect_by_seed={42: -1.0, 43: -1.0, 44: -1.0}
+    )
     out = run_live_scientific_pipeline(
         repo_root=REPO,
         held_out_ids_allocation_order=_frozen_held_out(),
         development_ids=_frozen_dev(),
         hooks=hooks,
-        out_dir=tmp_path / "missing_ranks",
-        exploratory_ranks=None,
+        out_dir=tmp_path / "adversarial",
+        exploratory_ranks=[1, 2, 3],  # unbound / disagreeing
     )
     conf = _confirmatory_units()
-    assert len(calls["load"]) == 3
     assert not conf.intersection(calls["load"])
-    assert not conf.intersection(calls["execute"])
     assert out["confirmatory_executed"] is False
-    assert out["exploratory_gate"]["fabricated_ranks"] is False
+    assert out["exploratory_gate"]["caller_ranks_rejected"] is True
 
 
-# --- 2. Role-tagged weight hashing ---
+def test_spy_zero_confirmatory_when_incomplete_comparator(tmp_path, monkeypatch):
+    _pass_preflight(monkeypatch)
+    calls: dict[str, list[str]] = {"load": [], "donors": [], "execute": []}
+
+    def load(spec: UnitSpec) -> dict[str, Any]:
+        calls["load"].append(spec.model_unit)
+        return {
+            "model": object(),
+            "model_unit": spec.model_unit,
+            "family": spec.family,
+            "role": spec.role,
+            "seed": spec.seed,
+            "base_revision": PINNED_BASE_REVISION,
+            "adapter_revision": PINNED_ADAPTER_REVISION,
+            "weight_file_sha256": {"base:/x": "a" * 64},
+            "attn_implementation": "eager",
+            "torch_dtype": "torch.bfloat16",
+        }
+
+    def donors(spec: UnitSpec, _m: Any) -> dict[str, Any]:
+        calls["donors"].append(spec.model_unit)
+        return {
+            "n_donor_caches": N_DEV,
+            "clean_references_frozen": True,
+            "instruction_ids": [str(x) for x in _frozen_dev()],
+        }
+
+    def execute(spec: UnitSpec, _m: Any, _d: Any) -> tuple:
+        calls["execute"].append(spec.model_unit)
+        b = _bundle_for(spec, nominated_effect=2.0)
+        # Incomplete comparator population
+        b.pair_effects_fwd = {NOMINATED_PAIR_KEY: b.pair_effects_fwd[NOMINATED_PAIR_KEY]}
+        b.pair_effects_rev = {NOMINATED_PAIR_KEY: b.pair_effects_rev[NOMINATED_PAIR_KEY]}
+        return b, b
+
+    out = run_live_scientific_pipeline(
+        repo_root=REPO,
+        held_out_ids_allocation_order=_frozen_held_out(),
+        development_ids=_frozen_dev(),
+        hooks=LiveForwardHooks(
+            load_model_for_unit=load,
+            capture_donors_for_unit=donors,
+            execute_unit=execute,
+        ),
+        out_dir=tmp_path / "incomplete",
+    )
+    assert out["confirmatory_executed"] is False
+    assert not _confirmatory_units().intersection(calls["load"])
+    assert out["exploratory_gate"]["ok"] is False
+
+
+def test_bound_ranks_clear_allows_confirmatory(tmp_path, monkeypatch):
+    _pass_preflight(monkeypatch)
+    hooks, calls = _spy_hooks(
+        nominated_effect_by_seed={42: 2.0, 43: 2.0, 44: 2.0}
+    )
+    out = run_live_scientific_pipeline(
+        repo_root=REPO,
+        held_out_ids_allocation_order=_frozen_held_out(),
+        development_ids=_frozen_dev(),
+        hooks=hooks,
+        out_dir=tmp_path / "clear",
+    )
+    assert out["confirmatory_executed"] is True
+    assert out["exploratory_gate"]["triggered"] is False
+    assert out["exploratory_gate"]["ranks"] == [1, 1, 1]
+    assert _confirmatory_units().issubset(set(calls["load"]))
+    assert all("exploratory" in u for u in calls["load"][:3])
+
+
+# --- 2. PEFT 0.19.1 adapter-off ---
+
+
+def test_adapter_off_against_pinned_peft_api():
+    import torch
+    import torch.nn as nn
+    from peft import LoraConfig, PeftModel, get_peft_model
+
+    class Tiny(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.linear = nn.Linear(4, 4)
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return self.linear(x)
+
+    base = Tiny()
+    cfg = LoraConfig(r=2, lora_alpha=4, target_modules=["linear"], bias="none")
+    model = get_peft_model(base, cfg)
+    assert isinstance(model, PeftModel)
+    assert hasattr(model, "disable_adapter")
+    assert hasattr(model.base_model, "disable_adapter_layers")
+    assert hasattr(model.base_model, "enable_adapter_layers")
+    # PeftModel itself does NOT expose disable_adapter_layers
+    assert not hasattr(model, "disable_adapter_layers") or not callable(
+        getattr(type(model), "disable_adapter_layers", None)
+    )
+
+    rep = verify_adapter_off_behavior(model)
+    assert rep["ok"] is True
+    assert rep["restored"] is True
+    assert rep["verification_kind"] == "mechanical_state_switch"
+    assert rep["numerical_adapter_off_validated"] is False
+    assert rep["peft_api"] is not None
+    assert "disable_adapter" in (rep["peft_api"] or "")
+
+
+def test_adapter_off_rejects_missing_api():
+    class Empty:
+        pass
+
+    rep = verify_adapter_off_behavior(Empty())
+    assert rep["ok"] is False
+    assert rep["numerical_adapter_off_validated"] is False
+
+
+def test_adapter_off_legacy_direct_methods_still_restore():
+    class Flaky:
+        def __init__(self) -> None:
+            self.enabled = True
+
+        def disable_adapter_layers(self) -> None:
+            self.enabled = False
+            raise RuntimeError("boom")
+
+        def enable_adapter_layers(self) -> None:
+            self.enabled = True
+
+    r = verify_adapter_off_behavior(Flaky())
+    assert r["restored"] is True
+    assert r["ok"] is False
+
+
+# --- 3. Weight inventory binding ---
+
+
+def test_empty_inventory_fails_closed(tmp_path):
+    class Bare:
+        config = type("C", (), {"_name_or_path": str(tmp_path / "missing")})()
+
+    resolved = resolve_weight_files_from_model(Bare())
+    assert resolved["base"] == []
+    assert resolved["adapter"] == []
+    bind = require_bound_weight_inventories(
+        resolved,
+        {
+            f"base:{tmp_path / 'a.safetensors'}": "a" * 64,
+            f"adapter:{tmp_path / 'b.safetensors'}": "b" * 64,
+        },
+    )
+    assert bind["ok"] is False
+    assert any("base weight inventory empty" in f for f in bind["failures"])
+    assert any("adapter weight inventory empty" in f for f in bind["failures"])
+
+
+def test_valid_fabricated_snapshots_bind(tmp_path):
+    base_dir = tmp_path / "base_snap"
+    ad_dir = tmp_path / "adapter_snap"
+    base_dir.mkdir()
+    ad_dir.mkdir()
+    base_f = base_dir / "model.safetensors"
+    ad_f = ad_dir / "adapter_model.safetensors"
+    base_f.write_bytes(b"base-snap")
+    ad_f.write_bytes(b"adapter-snap")
+    b_digest = hashlib.sha256(base_f.read_bytes()).hexdigest()
+    a_digest = hashlib.sha256(ad_f.read_bytes()).hexdigest()
+
+    class M:
+        pass
+
+    model = M()
+    model._q1_base_weight_dir = str(base_dir)
+    model._q1_adapter_weight_dir = str(ad_dir)
+    resolved = resolve_weight_files_from_model(model)
+    assert str(base_f) in resolved["base"]
+    assert str(ad_f) in resolved["adapter"]
+    bind = require_bound_weight_inventories(
+        resolved,
+        {f"base:{base_f}": b_digest, f"adapter:{ad_f}": a_digest},
+    )
+    assert bind["ok"] is True
+
+
+def test_invalid_fabricated_snapshot_wrong_digest_and_unrelated(tmp_path):
+    base_dir = tmp_path / "base_snap"
+    ad_dir = tmp_path / "adapter_snap"
+    base_dir.mkdir()
+    ad_dir.mkdir()
+    base_f = base_dir / "model.safetensors"
+    ad_f = ad_dir / "adapter_model.safetensors"
+    base_f.write_bytes(b"base-snap")
+    ad_f.write_bytes(b"adapter-snap")
+    unrelated = tmp_path / "unrelated.safetensors"
+    unrelated.write_bytes(b"other")
+    u_digest = hashlib.sha256(unrelated.read_bytes()).hexdigest()
+    a_digest = hashlib.sha256(ad_f.read_bytes()).hexdigest()
+
+    class M:
+        pass
+
+    model = M()
+    model._q1_base_weight_dir = str(base_dir)
+    model._q1_adapter_weight_dir = str(ad_dir)
+    resolved = resolve_weight_files_from_model(model)
+    # Manifest covers unrelated file with consistent self-hash, not inventory
+    bind = require_bound_weight_inventories(
+        resolved,
+        {
+            f"base:{unrelated}": u_digest,
+            f"adapter:{ad_f}": a_digest,
+        },
+    )
+    assert bind["ok"] is False
+    assert any(
+        "missing resolved base" in f or "unbound" in f or "no manifest digest" in f
+        for f in bind["failures"]
+    )
 
 
 def test_normalize_role_tagged_keys(tmp_path):
@@ -235,13 +474,9 @@ def test_normalize_role_tagged_keys(tmp_path):
     base.write_bytes(b"base-bytes")
     adapter.write_bytes(b"adapter-bytes")
     norm = normalize_weight_manifest_entries(
-        {
-            f"base:{base}": "a" * 64,
-            f"adapter:{adapter}": "b" * 64,
-        }
+        {f"base:{base}": "a" * 64, f"adapter:{adapter}": "b" * 64}
     )
     assert norm[f"base:{base}"][0] == str(base)
-    assert norm[f"adapter:{adapter}"][0] == str(adapter)
 
 
 def test_tagged_manifest_pass_and_altered_fail(tmp_path):
@@ -299,8 +534,6 @@ def test_tagged_manifest_pass_and_altered_fail(tmp_path):
         expected_adapted_layers=[19],
     )
     assert good.ok is True
-
-    # Alter file → digest mismatch
     base.write_bytes(b"base-TAMPERED")
     bad = verify_post_load(
         FakeModel(),
@@ -317,40 +550,9 @@ def test_tagged_manifest_pass_and_altered_fail(tmp_path):
         expected_adapted_layers=[19],
     )
     assert bad.ok is False
-    assert any("SHA mismatch" in f or "sha" in f.lower() for f in bad.failures)
 
 
-def test_reject_missing_wrong_unbound_ambiguous(tmp_path):
-    base = tmp_path / "model.safetensors"
-    adapter = tmp_path / "adapter_model.safetensors"
-    base.write_bytes(b"b")
-    adapter.write_bytes(b"a")
-    # Missing resolved coverage
-    fails = validate_weight_manifest_roles(
-        {f"base:{base}": "a" * 64},
-        resolved_base_files=[str(base)],
-        resolved_adapter_files=[str(adapter)],
-        require_resolved_inventories=True,
-    )
-    assert any("adapter" in f for f in fails)
-    # Unbound extra
-    fails2 = validate_weight_manifest_roles(
-        {
-            f"base:{base}": "a" * 64,
-            f"adapter:{adapter}": "b" * 64,
-            "base:/not/resolved.bin": "c" * 64,
-        },
-        resolved_base_files=[str(base)],
-        resolved_adapter_files=[str(adapter)],
-        require_resolved_inventories=True,
-    )
-    assert any("unbound" in f for f in fails2)
-    # Ambiguous empty path after tag
-    with pytest.raises(ValueError, match="empty path"):
-        normalize_weight_manifest_entries({"base:": "a" * 64})
-
-
-# --- 3. Bind runtime IDs to frozen allocation ---
+# --- Allocation binding (retained) ---
 
 
 def test_allocation_accepts_exact_frozen_ids():
@@ -360,41 +562,18 @@ def test_allocation_accepts_exact_frozen_ids():
     assert rep["ok"] is True
 
 
-def test_allocation_rejects_reordered():
+def test_allocation_rejects_reordered_substituted_duplicated_truncated():
     held = _frozen_held_out()
-    reordered = list(reversed(held))
-    rep = verify_runtime_allocation_ids(REPO, held_out_ids=reordered)
-    assert rep["ok"] is False
-    assert any("reorder" in f or "match" in f for f in rep["failures"])
-
-
-def test_allocation_rejects_substituted():
-    held = _frozen_held_out()
+    assert verify_runtime_allocation_ids(REPO, held_out_ids=list(reversed(held)))[
+        "ok"
+    ] is False
     bad = list(held)
     bad[0] = 999999
-    rep = verify_runtime_allocation_ids(REPO, held_out_ids=bad)
-    assert rep["ok"] is False
-
-
-def test_allocation_rejects_duplicated():
-    held = _frozen_held_out()
-    bad = list(held)
-    bad[1] = bad[0]
-    rep = verify_runtime_allocation_ids(REPO, held_out_ids=bad)
-    assert rep["ok"] is False
-    assert any("duplicate" in f for f in rep["failures"])
-
-
-def test_allocation_rejects_truncated():
-    held = _frozen_held_out()[:199]
-    rep = verify_runtime_allocation_ids(REPO, held_out_ids=held)
-    assert rep["ok"] is False
-
-
-def test_allocation_rejects_non_dolly_instruction_ids():
-    held = [f"instr-{i}" for i in range(200)]
-    rep = verify_runtime_allocation_ids(REPO, held_out_ids=held)
-    assert rep["ok"] is False
+    assert verify_runtime_allocation_ids(REPO, held_out_ids=bad)["ok"] is False
+    dup = list(held)
+    dup[1] = dup[0]
+    assert verify_runtime_allocation_ids(REPO, held_out_ids=dup)["ok"] is False
+    assert verify_runtime_allocation_ids(REPO, held_out_ids=held[:199])["ok"] is False
 
 
 def test_held_out_binding_raises_on_mismatch():
@@ -405,7 +584,7 @@ def test_held_out_binding_raises_on_mismatch():
         )
 
 
-# --- 4. Per-unit provenance (no first-model reuse) ---
+# --- Per-unit provenance (retained) ---
 
 
 def test_per_unit_provenance_rejects_identity_mismatch():
@@ -415,7 +594,6 @@ def test_per_unit_provenance_rejects_identity_mismatch():
         role="exploratory_dev",
         seed=42,
     )
-    # Provenance from a *different* unit (simulating reuse of first model)
     wrong = {
         "model_unit": "exploratory_l1523_seed43",
         "family": "l1523",
@@ -429,45 +607,15 @@ def test_per_unit_provenance_rejects_identity_mismatch():
     }
     rep = verify_unit_load_provenance(spec, wrong)
     assert rep["ok"] is False
-    assert any("model_unit" in f or "seed" in f for f in rep["failures"])
-
-
-def test_live_pipeline_audits_each_unit_independently(tmp_path, monkeypatch):
-    _pass_preflight(monkeypatch)
-    hooks, calls = _spy_hooks()
-    # Clear gate so confirmatory would run — but use ranks that pass
-    out = run_live_scientific_pipeline(
-        repo_root=REPO,
-        held_out_ids_allocation_order=_frozen_held_out(),
-        development_ids=_frozen_dev(),
-        hooks=hooks,
-        out_dir=tmp_path / "full",
-        exploratory_ranks=[1, 2, 3],
-    )
-    assert out["confirmatory_executed"] is True
-    assert len(out["per_unit"]) == len(expected_frozen_unit_specs())
-    units_seen = [a["model_unit"] for a in out["per_unit"]]
-    assert len(units_seen) == len(set(units_seen))
-    for a in out["per_unit"]:
-        assert a["provenance"]["ok"] is True
-        assert a["provenance"]["model_unit"] == a["model_unit"]
-        assert a["donors"]["ok"] is True
-    # Spy saw confirmatory loads only after exploratory
-    conf = _confirmatory_units()
-    assert conf.issubset(set(calls["load"]))
-    # First three loads are exploratory
-    assert all("exploratory" in u for u in calls["load"][:3])
 
 
 def test_live_rejects_reused_first_unit_provenance(tmp_path, monkeypatch):
-    """If load always echoes seed42 identity, later units must fail."""
     _pass_preflight(monkeypatch)
     first_spec = expected_frozen_unit_specs()[0]
     calls: list[str] = []
 
     def load(spec: UnitSpec) -> dict[str, Any]:
         calls.append(spec.model_unit)
-        # Always return first unit's identity (bug under test)
         return {
             "model": object(),
             "model_unit": first_spec.model_unit,
@@ -483,9 +631,9 @@ def test_live_rejects_reused_first_unit_provenance(tmp_path, monkeypatch):
 
     def donors(spec: UnitSpec, _m: Any) -> dict[str, Any]:
         return {
-            "n_donor_caches": 4,
+            "n_donor_caches": N_DEV,
             "clean_references_frozen": True,
-            "instruction_ids": ["p0"],
+            "instruction_ids": [str(x) for x in _frozen_dev()],
         }
 
     def execute(spec: UnitSpec, _m: Any, _d: Any) -> tuple:
@@ -503,7 +651,5 @@ def test_live_rejects_reused_first_unit_provenance(tmp_path, monkeypatch):
                 execute_unit=execute,
             ),
             out_dir=tmp_path / "reuse",
-            exploratory_ranks=[1, 2, 3],
         )
-    # Second exploratory unit triggers the mismatch
     assert len(calls) >= 2

@@ -270,56 +270,162 @@ def verify_post_load(
     )
 
 
-def verify_adapter_off_behavior(model: Any) -> dict[str, Any]:
-    """Fail-closed PEFT 0.19.1-style adapter disable/enable with restore guarantee.
+def _adapter_mechan_state(model: Any) -> dict[str, Any]:
+    """Best-effort read of PEFT adapter enabled/disabled flags (no forward)."""
+    info: dict[str, Any] = {}
+    if hasattr(model, "_adapters_disabled"):
+        info["adapters_disabled_flag"] = bool(getattr(model, "_adapters_disabled"))
+    if hasattr(model, "get_model_status"):
+        try:
+            status = model.get_model_status()
+            info["model_status_enabled"] = getattr(status, "enabled", None)
+        except Exception as e:  # noqa: BLE001
+            info["model_status_error"] = str(e)
+    base = getattr(model, "base_model", None)
+    if base is not None and hasattr(base, "peft_config"):
+        # Layer-level disable flag on first LoRA module when present
+        disabled_flags: list[bool] = []
+        for mod in base.modules() if hasattr(base, "modules") else []:
+            if hasattr(mod, "disable_adapters"):
+                try:
+                    disabled_flags.append(bool(mod.disable_adapters))
+                except Exception:  # noqa: BLE001
+                    pass
+        if disabled_flags:
+            info["layer_disable_adapters_any"] = any(disabled_flags)
+            info["layer_disable_adapters_all"] = all(disabled_flags)
+    return info
 
-    Requires ``disable_adapter_layers`` **and** ``enable_adapter_layers``.
-    A disable-only implementation is rejected. Restore runs in ``finally``.
-    Does not run model forwards.
+
+def verify_adapter_off_behavior(model: Any) -> dict[str, Any]:
+    """Mechanical PEFT 0.19.1 adapter state-switch check (no forwards).
+
+    Supported mechanisms (priority order):
+    1. ``model.base_model.disable_adapter_layers`` /
+       ``enable_adapter_layers`` (LoraModel under ``PeftModel``)
+    2. ``PeftModel.disable_adapter()`` context manager (public PeftModel API)
+
+    Distinguishes mechanical state-switch verification from numerical
+    adapter-off validation. Never claims the latter without an authorized
+    forward test (``numerical_adapter_off_validated=False``).
     """
     failures: list[str] = []
-    has_disable = hasattr(model, "disable_adapter_layers")
-    has_enable = hasattr(model, "enable_adapter_layers")
-    if not has_disable:
-        failures.append("model lacks disable_adapter_layers (PEFT 0.19.1 API)")
-    if not has_enable:
-        failures.append(
-            "model lacks enable_adapter_layers; refuse disable-only "
-            "(cannot safely restore adapter state)"
-        )
-    if failures:
-        return {
-            "ok": False,
-            "failures": failures,
-            "toggled": False,
-            "restored": False,
-            "has_disable_adapter_layers": has_disable,
-            "has_enable_adapter_layers": has_enable,
-        }
-
     toggled = False
     restored = False
+    mechanism: str | None = None
+    state_before: dict[str, Any] = {}
+    state_disabled: dict[str, Any] = {}
+    state_after: dict[str, Any] = {}
+
+    base = getattr(model, "base_model", None)
+    has_layers_api = (
+        base is not None
+        and callable(getattr(base, "disable_adapter_layers", None))
+        and callable(getattr(base, "enable_adapter_layers", None))
+    )
+    has_cm = callable(getattr(model, "disable_adapter", None))
+    # Legacy direct methods on the wrapper (not PeftModel 0.19.1 public API)
+    has_direct = callable(getattr(model, "disable_adapter_layers", None)) and callable(
+        getattr(model, "enable_adapter_layers", None)
+    )
+
+    if not has_layers_api and not has_cm and not has_direct:
+        return {
+            "ok": False,
+            "failures": [
+                "no supported PEFT 0.19.1 adapter-disable API "
+                "(need base_model.disable/enable_adapter_layers or "
+                "PeftModel.disable_adapter context manager)"
+            ],
+            "toggled": False,
+            "restored": False,
+            "peft_api": None,
+            "verification_kind": "mechanical_state_switch",
+            "numerical_adapter_off_validated": False,
+            "state_before": {},
+            "state_disabled": {},
+            "state_after": {},
+        }
+
+    state_before = _adapter_mechan_state(model)
+
     try:
-        model.disable_adapter_layers()
-        toggled = True
-    except Exception as e:  # noqa: BLE001
-        failures.append(f"disable_adapter_layers raised: {e}")
+        if has_layers_api:
+            mechanism = "base_model.disable_adapter_layers/enable_adapter_layers"
+            try:
+                base.disable_adapter_layers()  # type: ignore[union-attr]
+                toggled = True
+                state_disabled = _adapter_mechan_state(model)
+            except Exception as e:  # noqa: BLE001
+                failures.append(f"disable_adapter_layers raised: {e}")
+            finally:
+                try:
+                    base.enable_adapter_layers()  # type: ignore[union-attr]
+                    restored = True
+                except Exception as e:  # noqa: BLE001
+                    failures.append(f"enable_adapter_layers restore raised: {e}")
+                    restored = False
+        elif has_cm:
+            mechanism = "PeftModel.disable_adapter context manager"
+            try:
+                cm = model.disable_adapter()
+                if not hasattr(cm, "__enter__") or not hasattr(cm, "__exit__"):
+                    failures.append(
+                        "disable_adapter() did not return a context manager"
+                    )
+                else:
+                    cm.__enter__()
+                    toggled = True
+                    state_disabled = _adapter_mechan_state(model)
+                    if hasattr(model, "_adapters_disabled") and not getattr(
+                        model, "_adapters_disabled"
+                    ):
+                        failures.append(
+                            "disable_adapter entered but _adapters_disabled is False"
+                        )
+                    cm.__exit__(None, None, None)
+                    restored = True
+            except Exception as e:  # noqa: BLE001
+                failures.append(f"disable_adapter context manager failed: {e}")
+                # Best-effort restore if enter succeeded
+                if toggled and not restored:
+                    try:
+                        if "cm" in locals() and hasattr(cm, "__exit__"):
+                            cm.__exit__(None, None, None)
+                            restored = True
+                    except Exception as e2:  # noqa: BLE001
+                        failures.append(f"disable_adapter restore failed: {e2}")
+        else:
+            mechanism = "legacy disable_adapter_layers/enable_adapter_layers on wrapper"
+            try:
+                model.disable_adapter_layers()
+                toggled = True
+                state_disabled = _adapter_mechan_state(model)
+            except Exception as e:  # noqa: BLE001
+                failures.append(f"disable_adapter_layers raised: {e}")
+            finally:
+                try:
+                    model.enable_adapter_layers()
+                    restored = True
+                except Exception as e:  # noqa: BLE001
+                    failures.append(f"enable_adapter_layers restore raised: {e}")
+                    restored = False
     finally:
-        try:
-            model.enable_adapter_layers()
-            restored = True
-        except Exception as e:  # noqa: BLE001
-            failures.append(f"enable_adapter_layers restore raised: {e}")
-            restored = False
+        state_after = _adapter_mechan_state(model)
 
     return {
         "ok": len(failures) == 0 and toggled and restored,
         "failures": failures,
         "toggled": toggled,
         "restored": restored,
-        "has_disable_adapter_layers": has_disable,
-        "has_enable_adapter_layers": has_enable,
-        "peft_api": "disable_adapter_layers/enable_adapter_layers",
+        "peft_api": mechanism,
+        "verification_kind": "mechanical_state_switch",
+        "numerical_adapter_off_validated": False,
+        "state_before": state_before,
+        "state_disabled": state_disabled,
+        "state_after": state_after,
+        "has_base_model_layers_api": has_layers_api,
+        "has_disable_adapter_cm": has_cm,
     }
 
 
@@ -426,47 +532,211 @@ def validate_weight_manifest_roles(
     return failures
 
 
-def resolve_weight_files_from_model(model: Any) -> dict[str, list[str]]:
-    """Best-effort local paths for base and adapter weight files actually loaded."""
+def _collect_weight_files_in_dir(root: Path | str) -> list[str]:
+    p = Path(root)
+    if not p.is_dir():
+        return []
+    files: list[str] = []
+    for pat in ("*.safetensors", "*.bin", "*.pt"):
+        files.extend(str(x) for x in p.glob(pat) if x.is_file())
+    # Adapter-specific names (may already be covered by globs)
+    for name in ("adapter_model.safetensors", "adapter_model.bin", "adapter_model.pt"):
+        ap = p / name
+        if ap.is_file():
+            files.append(str(ap))
+    return sorted(set(files))
+
+
+def resolve_weight_files_from_snapshots(
+    *,
+    base_snapshot_dir: Path | str | None,
+    adapter_snapshot_dir: Path | str | None,
+) -> dict[str, list[str]]:
+    """Resolve weight files from pinned local snapshot directories used for construction."""
+    return {
+        "base": _collect_weight_files_in_dir(base_snapshot_dir)
+        if base_snapshot_dir is not None
+        else [],
+        "adapter": _collect_weight_files_in_dir(adapter_snapshot_dir)
+        if adapter_snapshot_dir is not None
+        else [],
+    }
+
+
+def resolve_weight_files_from_model(
+    model: Any,
+    *,
+    base_snapshot_dir: Path | str | None = None,
+    adapter_snapshot_dir: Path | str | None = None,
+) -> dict[str, list[str]]:
+    """Local paths for base/adapter weight files actually used to construct ``model``.
+
+    Prefer explicit snapshot dirs (pinned local construction roots). Fall back to
+    paths stamped on the loaded model/config. Empty inventories are returned as
+    empty lists — callers must fail closed.
+    """
+    if base_snapshot_dir is not None or adapter_snapshot_dir is not None:
+        snap = resolve_weight_files_from_snapshots(
+            base_snapshot_dir=base_snapshot_dir,
+            adapter_snapshot_dir=adapter_snapshot_dir,
+        )
+        # Allow model attributes to fill a missing side only when that side's
+        # explicit dir was not provided.
+        if base_snapshot_dir is not None and adapter_snapshot_dir is not None:
+            return snap
+
     base_files: list[str] = []
     adapter_files: list[str] = []
-    # Base: transformers name_or_path / _name_or_path
-    cfg = getattr(model, "config", None)
-    base_root = getattr(cfg, "_name_or_path", None) or getattr(model, "name_or_path", None)
-    if isinstance(base_root, str) and Path(base_root).is_dir():
-        for pat in ("*.safetensors", "*.bin"):
-            base_files.extend(str(p) for p in Path(base_root).glob(pat) if p.is_file())
-    # Adapter: PEFT peft_config path
-    peft_cfg = None
-    if hasattr(model, "peft_config"):
-        peft_cfg = (
-            model.peft_config.get("default")
-            if isinstance(model.peft_config, dict)
-            else model.peft_config
+
+    # Explicit override attributes (tests / loader-stamped local snapshots)
+    for attr, bucket in (
+        ("_q1_base_weight_files", "base"),
+        ("_q1_adapter_weight_files", "adapter"),
+    ):
+        v = getattr(model, attr, None)
+        if isinstance(v, (list, tuple)) and v:
+            if bucket == "base":
+                base_files.extend(str(x) for x in v)
+            else:
+                adapter_files.extend(str(x) for x in v)
+
+    for attr, bucket in (
+        ("_q1_base_weight_dir", "base"),
+        ("_q1_adapter_weight_dir", "adapter"),
+    ):
+        v = getattr(model, attr, None)
+        if isinstance(v, str) and Path(v).is_dir():
+            found = _collect_weight_files_in_dir(v)
+            if bucket == "base":
+                base_files.extend(found)
+            else:
+                adapter_files.extend(found)
+
+    if base_snapshot_dir is not None:
+        base_files = _collect_weight_files_in_dir(base_snapshot_dir)
+    if adapter_snapshot_dir is not None:
+        adapter_files = _collect_weight_files_in_dir(adapter_snapshot_dir)
+
+    if not base_files:
+        cfg = getattr(model, "config", None)
+        base_root = getattr(cfg, "_name_or_path", None) or getattr(
+            model, "name_or_path", None
         )
-    adapter_root = None
-    if peft_cfg is not None:
-        adapter_root = getattr(peft_cfg, "base_model_name_or_path", None)
-        # PEFT stores adapter path variously
-        for attr in ("adapter_path", "peft_path", "_name_or_path"):
-            v = getattr(peft_cfg, attr, None)
-            if isinstance(v, str) and Path(v).exists():
-                adapter_root = v
-                break
-    # Also check active adapters directory via peft helper
-    if hasattr(model, "peft_config") and peft_cfg is not None:
-        hub = getattr(peft_cfg, "revision", None)
-        _ = hub
-    if isinstance(adapter_root, str) and Path(adapter_root).is_dir():
-        for name in ("adapter_model.safetensors", "adapter_model.bin", "adapter_model.pt"):
-            p = Path(adapter_root) / name
-            if p.is_file():
-                adapter_files.append(str(p))
-        if not adapter_files:
-            adapter_files.extend(
-                str(p) for p in Path(adapter_root).glob("adapter_model.*") if p.is_file()
+        # Prefer get_base_model when present (PeftModel)
+        if hasattr(model, "get_base_model"):
+            try:
+                bm = model.get_base_model()
+                base_root = (
+                    getattr(getattr(bm, "config", None), "_name_or_path", None)
+                    or getattr(bm, "name_or_path", None)
+                    or base_root
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        if isinstance(base_root, str) and Path(base_root).is_dir():
+            base_files.extend(_collect_weight_files_in_dir(base_root))
+
+    if not adapter_files:
+        peft_cfg = None
+        if hasattr(model, "peft_config"):
+            peft_cfg = (
+                model.peft_config.get("default")
+                if isinstance(model.peft_config, dict)
+                else model.peft_config
             )
+        adapter_root = None
+        if peft_cfg is not None:
+            for attr in (
+                "adapter_path",
+                "peft_path",
+                "_name_or_path",
+                "base_model_name_or_path",
+            ):
+                v = getattr(peft_cfg, attr, None)
+                if isinstance(v, str) and Path(v).is_dir():
+                    # base_model_name_or_path is often the base, not adapter —
+                    # only accept if it contains adapter_model.*
+                    if attr == "base_model_name_or_path":
+                        probe = _collect_weight_files_in_dir(v)
+                        if any(Path(f).name.startswith("adapter_model") for f in probe):
+                            adapter_root = v
+                            break
+                        continue
+                    adapter_root = v
+                    break
+        if isinstance(adapter_root, str):
+            adapter_files.extend(_collect_weight_files_in_dir(adapter_root))
+
     return {"base": sorted(set(base_files)), "adapter": sorted(set(adapter_files))}
+
+
+def require_bound_weight_inventories(
+    resolved: Mapping[str, Sequence[str]],
+    expected_weight_file_sha256: Mapping[str, str],
+) -> dict[str, Any]:
+    """Fail closed unless both inventories are non-empty and exactly covered.
+
+    Verifies SHA256 of every resolved snapshot file against the manifest.
+    Rejects unbound caller-selected files that are not in the inventories.
+    """
+    failures: list[str] = []
+    base = list(resolved.get("base") or [])
+    adapter = list(resolved.get("adapter") or [])
+    if not base:
+        failures.append(
+            "base weight inventory empty: cannot bind to pinned local snapshot"
+        )
+    if not adapter:
+        failures.append(
+            "adapter weight inventory empty: cannot bind to pinned local snapshot"
+        )
+    if failures:
+        return {
+            "ok": False,
+            "failures": failures,
+            "resolved": {"base": base, "adapter": adapter},
+            "digests": {},
+        }
+
+    role_fails = validate_weight_manifest_roles(
+        expected_weight_file_sha256,
+        resolved_base_files=base,
+        resolved_adapter_files=adapter,
+        require_resolved_inventories=True,
+    )
+    failures.extend(role_fails)
+
+    # Build expected digest map (role-tagged or plain path)
+    expected_by_path: dict[str, str] = {}
+    try:
+        normalized = normalize_weight_manifest_entries(expected_weight_file_sha256)
+        for _role_key, (fs_path, digest) in normalized.items():
+            expected_by_path[str(Path(fs_path))] = digest
+    except ValueError as e:
+        failures.append(str(e))
+        normalized = {}
+
+    digests: dict[str, str] = {}
+    for f in base + adapter:
+        p = Path(f)
+        if not p.is_file():
+            failures.append(f"resolved weight file missing on disk: {f}")
+            continue
+        digest = hashlib.sha256(p.read_bytes()).hexdigest()
+        digests[f] = digest
+        exp = expected_by_path.get(str(p)) or expected_by_path.get(f)
+        if exp is None:
+            # Try role-tagged lookup already covered by validate_weight_manifest_roles
+            failures.append(f"no manifest digest for resolved inventory file: {f}")
+        elif digest != exp:
+            failures.append(f"SHA256 mismatch for resolved inventory file {f}")
+
+    return {
+        "ok": len(failures) == 0,
+        "failures": failures,
+        "resolved": {"base": base, "adapter": adapter},
+        "digests": digests,
+    }
 
 
 def refuse_caller_revision_echo_as_proof(
