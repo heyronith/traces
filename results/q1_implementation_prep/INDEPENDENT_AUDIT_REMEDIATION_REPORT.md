@@ -1,6 +1,8 @@
 # TRACES Q1 — Independent Audit Remediation (B1–B5 / M1–M5)
 
 **Branch:** `q1-impl-audit`  
+**Commit:** `dc51cb46327197051881588a6432fd6ba30edad3`  
+**Tree:** `fb585f5af3657cd47014fec22220dd9f30ffcb82`  
 **Starting commit:** `1776f44c8f97b23077f36c15b3260f30c3d02c32`  
 **Frozen main:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`  
 **Protocol:** v1.3  
@@ -96,6 +98,8 @@ Tiny-Gemma **16/16 PASS** evidence from prior authorized run is **preserved** (n
 
 ## 7. Tests
 
-Pinned CPython **3.11.15** evidence: see `SYNTHETIC_CPU_TEST_RECORD_INDEPENDENT_AUDIT_REMEDIATION.txt` (filled after suite run).
+Pinned CPython **3.11.15** evidence: see `SYNTHETIC_CPU_TEST_RECORD_INDEPENDENT_AUDIT_REMEDIATION.txt` .
+
+**Result:** **152 passed, 12 skipped** (tiny-Gemma auth-gated).
 
 F1 reference: `fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed`
