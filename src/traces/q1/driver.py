@@ -41,6 +41,7 @@ from traces.q1.analysis_ext import (
     selection_key,
 )
 from traces.q1.component_sets import (
+    EXPECTED_UPSTREAM_HEADS,
     validate_head_effect_map,
     validate_pair_effect_map,
 )
@@ -1081,11 +1082,11 @@ def run_study(
                 "support_class": "technical_invalid",
                 "h3_endpoint_status": "technical_invalid",
             }
+        # Preserve unmodified status/eligibility for study-level validation.
+        # Coercing contradictions to False would conceal technical invalidity.
         rec = {
             **h3u,
-            "full_h3_eligible": bool(h3u.get("full_h3_eligible"))
-            and top2_fs is not None
-            and status == "full_qualifying",
+            "full_h3_eligible": h3u.get("full_h3_eligible"),
             "top2_for_h3": top2_fs,
             "h3_endpoint_status": status,
         }
@@ -1108,7 +1109,13 @@ def run_study(
             "k_star_band_rev": h3u.get("k_star_band_rev"),
             "rmoved_top2_agree": h3u.get("rmoved_top2_agree"),
         }
-        if rec["full_h3_eligible"] and top2_fs is not None:
+        if (
+            rec["full_h3_eligible"] is True
+            and status == "full_qualifying"
+            and top2_fs is not None
+            and len(top2_fs) == 2
+            and all(h in EXPECTED_UPSTREAM_HEADS for h in top2_fs)
+        ):
             h3_top2_eligible[u.model_unit] = sorted(top2_fs)
 
         sink.add_condition(

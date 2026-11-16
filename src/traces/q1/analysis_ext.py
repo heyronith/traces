@@ -822,6 +822,13 @@ def _validate_h3_seed_record_consistency(
     errs: list[str] = []
     status = rec.get("h3_endpoint_status")
     eligible = bool(rec.get("full_h3_eligible"))
+    if "full_h3_eligible" in rec and type(rec["full_h3_eligible"]) is not bool:
+        errs.append(f"{sid}: full_h3_eligible must be a boolean")
+    if status not in {
+        None, "full_qualifying", "h3_indeterminate",
+        "determinate_non_support", "gate_failed", "technical_invalid",
+    }:
+        errs.append(f"{sid}: unknown h3_endpoint_status {status!r}")
     top2 = rec.get("top2_for_h3")
     if isinstance(top2, list):
         try:
@@ -856,9 +863,15 @@ def _validate_h3_seed_record_consistency(
                 "frozenset/list of two head pairs"
             )
         elif any(
-            not (isinstance(p, tuple) and len(p) == 2) for p in top2_fs
+            not (
+                isinstance(p, tuple)
+                and len(p) == 2
+                and all(type(x) is int for x in p)
+                and p in EXPECTED_UPSTREAM_HEADS
+            )
+            for p in top2_fs
         ):
-            errs.append(f"{sid}: malformed head id in top2_for_h3")
+            errs.append(f"{sid}: top2_for_h3 contains malformed or non-upstream head IDs")
     if status == "technical_invalid":
         errs.append(f"{sid}: technical_invalid H3 endpoint record")
     return errs
@@ -926,7 +939,8 @@ def h3_study_level_from_seed_records(
     validation_errors: list[str] = []
     for sid in roster:
         rec = dict(seed_records.get(sid) or {})
-        validation_errors.extend(_validate_h3_seed_record_consistency(sid, rec))
+        seed_errors = _validate_h3_seed_record_consistency(sid, rec)
+        validation_errors.extend(seed_errors)
         status = _normalize_h3_endpoint_status(rec)
         # Never count contradictory full_qualifying+ineligible as qualifying endpoint
         eligible_flag = bool(rec.get("full_h3_eligible"))
@@ -937,16 +951,15 @@ def h3_study_level_from_seed_records(
             except TypeError:
                 top2 = None
         consistent_full = (
-            status == "full_qualifying"
+            not seed_errors
+            and status == "full_qualifying"
             and eligible_flag
             and isinstance(top2, frozenset)
             and len(top2) == 2
         )
-        if status == "full_qualifying" and not consistent_full:
-            # Do not increment full_qualifying count for inconsistent records
-            endpoint_counts["technical_invalid"] = (
-                endpoint_counts.get("technical_invalid", 0) + 1
-            )
+        if seed_errors or (status == "full_qualifying" and not consistent_full):
+            # Invalid technical evidence cannot inflate scientific endpoint counts.
+            endpoint_counts["technical_invalid"] += 1
         else:
             endpoint_counts[status] = endpoint_counts.get(status, 0) + 1
 
@@ -961,8 +974,8 @@ def h3_study_level_from_seed_records(
                 "h3_endpoint_status": "full_qualifying",
             }
         else:
-            reason = rec.get("reason") or (
-                "non-supporting / inapplicable for full H3"
+            reason = "; ".join(seed_errors) if seed_errors else (
+                rec.get("reason") or "non-supporting / inapplicable for full H3"
             )
             non_supporting[str(sid)] = reason
             per_seed[str(sid)] = {
@@ -973,9 +986,10 @@ def h3_study_level_from_seed_records(
                 "reason": reason,
                 "route_class": rec.get("route_class"),
                 "support_class": rec.get("support_class", "non_supporting"),
-                "h3_endpoint_status": status
-                if status != "full_qualifying"
-                else "technical_invalid",
+                "h3_endpoint_status": (
+                    "technical_invalid" if seed_errors or status == "full_qualifying"
+                    else status
+                ),
                 "uncertainty_kind": rec.get("uncertainty_kind"),
             }
 
