@@ -5,6 +5,7 @@
 **Validation correction:** `880017a47b198c79dbd64693aa3521528818811d`  
 **Follow-up tests:** `382303f721866a15b8475b9ddb1aba0acd459031`  
 **Code tree (at start tip):** `13fd6b5f89e8799a58dccccc41e3a3b9b6d25b06`  
+**Clean tested tip:** `a80ca32401288743b5d59b266cb739ae5904742b`  
 **Frozen main:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`  
 **Suite (this verification):** 403 passed, 12 skipped  
 **F1:** `fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed`  

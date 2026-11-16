@@ -27,7 +27,7 @@ Suite record: `results/q1_implementation_prep/SYNTHETIC_CPU_TEST_RECORD_H3_INDEP
 | Validation correction | `880017a47b198c79dbd64693aa3521528818811d` |
 | Follow-up tests | `382303f721866a15b8475b9ddb1aba0acd459031` |
 | Frozen main | `b1e8874f45311678e6fa241f504e7e09d4a7808c` |
-| Clean tested tip | see evidence annotation commit |
+| Clean tested tip (suite + handoff) | `a80ca32401288743b5d59b266cb739ae5904742b` |
 | Publish tip | `origin/q1-impl-audit` HEAD |
 
 ## Cursor-reported verification (not Agent 1 PASS)
