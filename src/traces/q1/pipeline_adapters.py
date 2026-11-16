@@ -26,11 +26,22 @@ from traces.q1.component_sets import (
     EXPECTED_UPSTREAM_HEADS,
 )
 from traces.q1.frozen_artifacts import coerce_frozen_dolly_id
+from traces.q1.patching import CORE_TRIPLE
 from traces.q1.scientific_execution import (
     ConditionOutputBundle,
     LiveForwardHooks,
     UnitSpec as SciUnitSpec,
 )
+
+# Frozen core triple as (layer, head) tuples — includes prescribed L23.h0 (R1).
+FROZEN_CORE_TRIPLE_HEADS: tuple[tuple[int, int], ...] = tuple(
+    (int(h.layer), int(h.head_index)) for h in CORE_TRIPLE
+)
+FROZEN_CORE_TRIPLE_SET: frozenset[tuple[int, int]] = frozenset(FROZEN_CORE_TRIPLE_HEADS)
+assert FROZEN_CORE_TRIPLE_SET == frozenset({(15, 6), (16, 5), (23, 0)})
+# L23.h0 is downstream; permitted only inside the exact frozen core triple.
+CORE_TRIPLE_DOWNSTREAM_COMPONENT: tuple[int, int] = (23, 0)
+assert CORE_TRIPLE_DOWNSTREAM_COMPONENT in EXPECTED_DOWNSTREAM_HEADS
 
 # Exact canonical boundary condition IDs (D4) — never resolve by kind/order scan.
 CANONICAL_BOUNDARY_CONDITION_IDS: dict[str, str] = {
@@ -163,11 +174,27 @@ def _resolve_canonical_boundary(
     return cid
 
 
+def _is_frozen_core_triple(heads: tuple[tuple[int, int], ...]) -> bool:
+    return len(heads) == 3 and frozenset(heads) == FROZEN_CORE_TRIPLE_SET
+
+
 def _validate_intervention_heads(
-    kind: str, heads: tuple[tuple[int, int], ...], direction: str | None
+    kind: str,
+    heads: tuple[tuple[int, int], ...],
+    direction: str | None,
+    *,
+    catalog_kind: str | None = None,
 ) -> None:
+    """Validate intervention head identities (R1-aware).
+
+    - Frozen ``joint_triple`` / exact CORE_TRIPLE: allow prescribed L23.h0.
+    - Cross-fitted top-k: restricted to the 152 upstream heads only.
+    - Other joints (all_upstream, layer_joint_8head): no downstream heads.
+    - Single-head upstream maps never accept downstream identities.
+    """
     if direction not in {"forward", "reverse"}:
         raise ValueError(f"invalid intervention direction {direction!r}")
+    effective = catalog_kind or kind
     if kind == "pair":
         if len(heads) != 2:
             raise ValueError(f"pair requires two heads, got {heads}")
@@ -179,6 +206,11 @@ def _validate_intervention_heads(
     elif kind in {"head", "nominated_single", "single_head"}:
         if len(heads) != 1:
             raise ValueError(f"single-head requires one head, got {heads}")
+        if heads[0] in EXPECTED_DOWNSTREAM_HEADS:
+            raise ValueError(
+                f"downstream head {heads[0]} must use kind=downstream_head, "
+                "not upstream head maps (R1: L23.h0 only via frozen core triple)"
+            )
         if heads[0] not in EXPECTED_UPSTREAM_HEADS and heads[0] not in {
             (15, 6),
             (16, 5),
@@ -186,11 +218,6 @@ def _validate_intervention_heads(
             L, h = heads[0]
             if not (isinstance(L, int) and isinstance(h, int) and L >= 0 and 0 <= h < 8):
                 raise ValueError(f"invalid head identity {heads[0]}")
-            if heads[0] in EXPECTED_DOWNSTREAM_HEADS:
-                raise ValueError(
-                    f"downstream head {heads[0]} must use kind=downstream_head, "
-                    "not upstream head maps"
-                )
     elif kind == "downstream_head":
         if len(heads) != 1:
             raise ValueError(f"downstream_head requires one head, got {heads}")
@@ -214,10 +241,30 @@ def _validate_intervention_heads(
                 and isinstance(h[1], int)
             ):
                 raise ValueError(f"invalid joint head identity {h}")
-            if h in EXPECTED_DOWNSTREAM_HEADS:
+        is_crossfit = kind == "crossfit_topk" or effective == "crossfit_topk"
+        is_core = effective == "joint_triple" or _is_frozen_core_triple(heads)
+        if is_crossfit:
+            # Cross-fit top-k selection/eval: upstream 152 only (R1)
+            for h in heads:
+                if h not in EXPECTED_UPSTREAM_HEADS:
+                    raise ValueError(
+                        f"crossfit top-k must not include non-upstream head {h} (R1)"
+                    )
+        elif is_core:
+            if not _is_frozen_core_triple(heads):
                 raise ValueError(
-                    f"joint/crossfit must not include downstream head {h}"
+                    f"joint_triple must be exact frozen CORE_TRIPLE "
+                    f"{FROZEN_CORE_TRIPLE_HEADS}, got {heads}"
                 )
+            # L23.h0 allowed only as the prescribed core-triple component
+        else:
+            # all_upstream / layer_joint_8head / other joints: no downstream
+            for h in heads:
+                if h in EXPECTED_DOWNSTREAM_HEADS:
+                    raise ValueError(
+                        f"joint kind={effective!r} must not include downstream "
+                        f"head {h} (R1: L23.h0 only via frozen core triple)"
+                    )
     else:
         raise ValueError(f"unsupported intervention kind {kind!r}")
 
@@ -345,11 +392,17 @@ def assemble_bundles_from_condition_records(
         if sample.kind not in intervention_kinds:
             continue
         direction = sample.direction
-        _validate_intervention_heads(sample.kind, sample.heads, direction)
+        catalog_kind = sample.meta.get("catalog_kind")
+        if isinstance(catalog_kind, str):
+            cat_kind: str | None = catalog_kind
+        else:
+            cat_kind = None
+        _validate_intervention_heads(
+            sample.kind, sample.heads, direction, catalog_kind=cat_kind
+        )
 
         is_crossfit = (
-            sample.kind == "crossfit_topk"
-            or sample.meta.get("catalog_kind") == "crossfit_topk"
+            sample.kind == "crossfit_topk" or cat_kind == "crossfit_topk"
         )
 
         if is_crossfit:

@@ -471,19 +471,31 @@ def test_d5_loader_requires_local_verified_snapshots_only(monkeypatch, tmp_path)
             adapter_weight_snapshot_dir=None,
         )
 
+    from traces.q1.checkpoint_provenance import FROZEN_SECTION11_TOKENIZER_SHA256
+
     base = tmp_path / "base"
-    adapter = tmp_path / "adapter"
+    adapter_root = tmp_path / "adapter"
+    sf = "l19/seed42"
+    sub = adapter_root / "l19" / "seed42"
     base.mkdir()
-    adapter.mkdir()
+    sub.mkdir(parents=True)
     (base / "model.safetensors").write_bytes(b"B")
-    (adapter / "adapter_model.safetensors").write_bytes(b"A")
-    for name in ("tokenizer.json", "tokenizer_config.json", "chat_template.jinja"):
-        (adapter / name).write_text("x")
+    (sub / "adapter_model.safetensors").write_bytes(b"A")
+    (sub / "adapter_config.json").write_text('{"use_topk": false}\n')
+    tok_pins: dict[str, str] = {}
+    for name in FROZEN_SECTION11_TOKENIZER_SHA256:
+        raw = f"synthetic-{sf}-{name}".encode()
+        (sub / name).write_bytes(raw)
+        tok_pins[name] = hashlib.sha256(raw).hexdigest()
+    monkeypatch.setattr(
+        "traces.q1.checkpoint_provenance.FROZEN_SECTION11_TOKENIZER_SHA256",
+        tok_pins,
+    )
     digest_b = hashlib.sha256(b"B").hexdigest()
     digest_a = hashlib.sha256(b"A").hexdigest()
     manifest = {
         "base:model.safetensors": digest_b,
-        "adapter:adapter_model.safetensors": digest_a,
+        f"adapter:{sf}/adapter_model.safetensors": digest_a,
     }
 
     calls: dict[str, Any] = {"tok": None, "base": None, "peft": None}
@@ -549,21 +561,10 @@ def test_d5_loader_requires_local_verified_snapshots_only(monkeypatch, tmp_path)
         loader_mod, "_disable_dropout"
     ), patch.object(
         loader_mod, "_count_adapter_params", return_value=(1, 1)
-    ), patch.object(
-        loader_mod,
-        "require_bound_weight_inventories",
-        return_value={"ok": True, "failures": [], "digests": {"f": digest_b}},
-    ), patch.object(
-        loader_mod,
-        "resolve_weight_files_from_model",
-        return_value={
-            "base": [str(base / "model.safetensors")],
-            "adapter": [str(adapter / "adapter_model.safetensors")],
-        },
     ):
         vpl.return_value = MagicMock(ok=True, to_dict=lambda: {}, failures=[])
         model, tok, report, meta = loader_mod.load_q1_scientific_model(
-            subfolder="l19/seed42",
+            subfolder=sf,
             expected_weight_file_sha256=manifest,
             expected_adapter_targets=[
                 "q_proj",
@@ -576,12 +577,13 @@ def test_d5_loader_requires_local_verified_snapshots_only(monkeypatch, tmp_path)
             ],
             expected_adapted_layers=[19],
             base_weight_snapshot_dir=str(base),
-            adapter_weight_snapshot_dir=str(adapter),
+            adapter_weight_snapshot_dir=str(adapter_root),
         )
     assert calls["tok"][1].get("local_files_only") is True
     assert calls["base"][1].get("local_files_only") is True
     assert calls["peft"][1].get("local_files_only") is True
-    assert Path(calls["tok"][0]).resolve() == adapter.resolve()
+    assert Path(calls["tok"][0]).resolve() == sub.resolve()
+    assert Path(calls["peft"][0]).resolve() == sub.resolve()
     assert Path(calls["base"][0]).resolve() == base.resolve()
     assert meta["hub_fallback_refused"] is True
     assert meta["computed_weight_file_sha256"]
@@ -590,14 +592,14 @@ def test_d5_loader_requires_local_verified_snapshots_only(monkeypatch, tmp_path)
     # Reject substituting an unverified path (wrong digest)
     bad_manifest = dict(manifest)
     bad_manifest["base:model.safetensors"] = "0" * 64
-    with pytest.raises(RuntimeError, match="snapshot verification failed|SHA256"):
+    with pytest.raises(RuntimeError, match="snapshot verification failed|SHA256|SHA"):
         loader_mod.load_q1_scientific_model(
-            subfolder="l19/seed42",
+            subfolder=sf,
             expected_weight_file_sha256=bad_manifest,
             expected_adapter_targets=["q_proj"],
             expected_adapted_layers=[19],
             base_weight_snapshot_dir=str(base),
-            adapter_weight_snapshot_dir=str(adapter),
+            adapter_weight_snapshot_dir=str(adapter_root),
         )
     monkeypatch.delenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", raising=False)
 

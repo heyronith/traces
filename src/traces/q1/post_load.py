@@ -109,6 +109,7 @@ def verify_post_load(
     expected_weight_file_sha256: Mapping[str, str] | None = None,
     require_eager: bool = True,
     require_bf16: bool = True,
+    weight_sha_pins_preverified: bool = False,
 ) -> PostLoadReport:
     failures: list[str] = []
     attn = _infer_attn_implementation(model)
@@ -190,7 +191,9 @@ def verify_post_load(
     # weight-file hashes — never from unchecked caller-supplied echo alone.
     inferred_base = infer_base_revision_from_model(model)
     inferred_adapter = infer_adapter_revision_from_model(model)
-    has_weight_pins = bool(expected_weight_file_sha256)
+    has_weight_pins = bool(expected_weight_file_sha256) or bool(
+        weight_sha_pins_preverified
+    )
 
     def _rev_match(actual: str, expected: str) -> bool:
         # Exact match only — reject misleading revision-prefix matches
@@ -231,7 +234,7 @@ def verify_post_load(
         resolved_adapter = expected_adapter_revision
 
     weight_hashes: dict[str, str] = {}
-    if expected_weight_file_sha256:
+    if expected_weight_file_sha256 and not weight_sha_pins_preverified:
         # Normalize role-tagged keys before filesystem access; keep role attribution
         try:
             normalized = normalize_weight_manifest_entries(expected_weight_file_sha256)
@@ -252,6 +255,8 @@ def verify_post_load(
                     f"weight SHA mismatch {role_key} ({fs_path}): "
                     f"{digest} != {expected}"
                 )
+    elif weight_sha_pins_preverified:
+        weight_hashes["_preverified_by_unit_checkpoint_provenance"] = "ok"
 
     return PostLoadReport(
         ok=len(failures) == 0,

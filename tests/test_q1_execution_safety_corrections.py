@@ -27,6 +27,7 @@ from traces.q1.post_load import (
     verify_adapter_off_behavior,
     verify_post_load,
 )
+from traces.q1.pipeline_adapters import mock_condition_records_for_unit
 from traces.q1.scientific_execution import (
     NOMINATED_PAIR_KEY,
     ConditionOutputBundle,
@@ -37,6 +38,7 @@ from traces.q1.scientific_execution import (
     evaluate_live_exploratory_gate,
     expected_frozen_unit_specs,
     run_live_scientific_pipeline,
+    stash_mock_observations_on_donors,
     verify_held_out_allocation,
     verify_unit_load_provenance,
 )
@@ -163,16 +165,20 @@ def _spy_hooks(
         return {
             "n_donor_caches": len(ids),
             "clean_references_frozen": True,
-            "_engineering_skip_observations": True,
             "instruction_ids": ids,
         }
 
-    def execute(spec: UnitSpec, _model: Any, _donors: Any) -> tuple:
+    def execute(spec: UnitSpec, _model: Any, donors_ev: Any) -> tuple:
         calls["execute"].append(spec.model_unit)
         nom = 2.0
         if spec.seed is not None and spec.seed in effects:
             nom = effects[spec.seed]
         b = _bundle_for(spec, nominated_effect=nom, other_effect=0.1)
+        ids = list(donors_ev.get("instruction_ids") or [f"p{i}" for i in range(8)])
+        recs = mock_condition_records_for_unit(spec, ids, nominated_effect=nom)
+        stash_mock_observations_on_donors(
+            donors_ev, spec=spec, records=recs, prompt_ids=ids
+        )
         return b, b
 
     hooks = LiveForwardHooks(
@@ -276,16 +282,20 @@ def test_spy_zero_confirmatory_when_incomplete_comparator(tmp_path, monkeypatch)
         return {
             "n_donor_caches": N_DEV,
             "clean_references_frozen": True,
-            "_engineering_skip_observations": True,
             "instruction_ids": [str(x) for x in _frozen_dev()],
         }
 
-    def execute(spec: UnitSpec, _m: Any, _d: Any) -> tuple:
+    def execute(spec: UnitSpec, _m: Any, donors_ev: Any) -> tuple:
         calls["execute"].append(spec.model_unit)
         b = _bundle_for(spec, nominated_effect=2.0)
         # Incomplete comparator population
         b.pair_effects_fwd = {NOMINATED_PAIR_KEY: b.pair_effects_fwd[NOMINATED_PAIR_KEY]}
         b.pair_effects_rev = {NOMINATED_PAIR_KEY: b.pair_effects_rev[NOMINATED_PAIR_KEY]}
+        ids = list(donors_ev.get("instruction_ids") or [f"p{i}" for i in range(8)])
+        recs = mock_condition_records_for_unit(spec, ids, nominated_effect=2.0)
+        stash_mock_observations_on_donors(
+            donors_ev, spec=spec, records=recs, prompt_ids=ids
+        )
         return b, b
 
     out = run_live_scientific_pipeline(
@@ -662,12 +672,16 @@ def test_live_rejects_reused_first_unit_provenance(tmp_path, monkeypatch):
         return {
             "n_donor_caches": N_DEV,
             "clean_references_frozen": True,
-            "_engineering_skip_observations": True,
             "instruction_ids": [str(x) for x in _frozen_dev()],
         }
 
-    def execute(spec: UnitSpec, _m: Any, _d: Any) -> tuple:
+    def execute(spec: UnitSpec, _m: Any, donors_ev: Any) -> tuple:
         b = _bundle_for(spec)
+        ids = list(donors_ev.get("instruction_ids") or [f"p{i}" for i in range(8)])
+        recs = mock_condition_records_for_unit(spec, ids)
+        stash_mock_observations_on_donors(
+            donors_ev, spec=spec, records=recs, prompt_ids=ids
+        )
         return b, b
 
     with pytest.raises(RuntimeError, match="provenance failed"):

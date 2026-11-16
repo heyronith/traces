@@ -1393,9 +1393,6 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
                 "production load requires authoritative local base and adapter "
                 "snapshot directories (D5) — refuse hub fallback"
             )
-        from traces.q1.checkpoint_provenance import (
-            assert_load_uses_verified_snapshot_bytes,
-        )
         from traces.q1.loader import load_q1_scientific_model
         from traces.q1.runtime_spec import (
             REQUIRED_ATTN_IMPLEMENTATION,
@@ -1403,11 +1400,7 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
         )
 
         subfolder = unit_spec_to_adapter_subfolder(spec)
-        assert_load_uses_verified_snapshot_bytes(
-            base_snapshot_dir=config.base_weight_snapshot_dir,
-            adapter_snapshot_dir=config.adapter_weight_snapshot_dir,
-            expected_sha256_by_relpath=config.expected_weight_file_sha256,
-        )
+        load_subfolder = subfolder if spec.family != "base" else "l19/seed42"
         # Seven LoRA target projections (identity-7); never invent q_proj-only.
         seven_targets = [
             "q_proj",
@@ -1432,8 +1425,9 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
         else:
             raise RuntimeError(f"unknown family {spec.family}")
 
+        # Loader performs unit-bound provenance (D5); no pre-load root fallback
         model, tokenizer, report, meta = load_q1_scientific_model(
-            subfolder=subfolder if spec.family != "base" else "l19/seed42",
+            subfolder=load_subfolder,
             expected_weight_file_sha256=dict(config.expected_weight_file_sha256),
             expected_adapter_targets=targets,
             expected_adapted_layers=layers,
@@ -1445,10 +1439,13 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
 
             disable_adapter_layers(model)
 
-        # D5: record digests of files actually used (not merely caller expected)
+        # D5: computed digests only — never substitute caller expected hashes
         computed = dict(meta.get("computed_weight_file_sha256") or {})
-        if not computed and isinstance(meta.get("weight_inventory_binding"), Mapping):
-            computed = dict(meta["weight_inventory_binding"].get("digests") or {})
+        if not computed:
+            raise RuntimeError(
+                "production load missing computed_weight_file_sha256 — refuse "
+                "expected-hash substitution (D5)"
+            )
 
         return {
             "model": model,
@@ -1457,11 +1454,11 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
             "family": spec.family,
             "role": spec.role,
             "seed": spec.seed,
+            "adapter_subfolder": load_subfolder,
             "load_report": report.to_dict() if hasattr(report, "to_dict") else report,
             "attn_implementation": REQUIRED_ATTN_IMPLEMENTATION,
             "torch_dtype": str(REQUIRED_TORCH_DTYPE),
-            "weight_file_sha256": computed or dict(config.expected_weight_file_sha256),
-            "expected_weight_file_sha256": dict(config.expected_weight_file_sha256),
+            "weight_file_sha256": computed,
             "computed_weight_file_sha256": computed,
             "base_weight_snapshot_dir": config.base_weight_snapshot_dir,
             "adapter_weight_snapshot_dir": config.adapter_weight_snapshot_dir,

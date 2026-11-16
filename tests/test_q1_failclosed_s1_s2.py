@@ -38,6 +38,7 @@ from traces.q1.scientific_execution import (
     require_scientific_authorization,
     run_live_scientific_pipeline,
     scientific_auth_status,
+    stash_mock_observations_on_donors,
 )
 from traces.q1.scoring import teacher_forced_forward
 from traces.model_loader import PINNED_ADAPTER_REVISION, PINNED_BASE_REVISION
@@ -114,11 +115,10 @@ def _spy_hooks():
         return {
             "n_donor_caches": len(ids),
             "clean_references_frozen": True,
-            "_engineering_skip_observations": True,
             "instruction_ids": ids,
         }
 
-    def execute(spec: UnitSpec, _m: Any, _d: Any) -> tuple:
+    def execute(spec: UnitSpec, _m: Any, donors_ev: Any) -> tuple:
         calls["execute"].append(spec.model_unit)
         ids = (
             [str(x) for x in _frozen_dev()]
@@ -136,6 +136,9 @@ def _spy_hooks():
             clean_false_fire=0.01,
             first_token_validity=0.96,
             allocation_ids=ids if spec.role == "exploratory_dev" else None,
+        )
+        stash_mock_observations_on_donors(
+            donors_ev, spec=spec, records=recs, prompt_ids=ids
         )
         return b, i
 

@@ -113,9 +113,8 @@ def load_q1_scientific_model(
             "snapshot directories (D5) — refuse unverified hub fallback"
         )
     from traces.q1.checkpoint_provenance import (
-        assert_load_uses_verified_snapshot_bytes,
-        require_tokenizer_and_template_files,
-        resolve_local_snapshot_load_paths,
+        bind_unit_checkpoint_provenance,
+        resolve_unit_adapter_subfolder_dir,
     )
 
     # Pre-check: role-tagged keys required until resolved inventories exist
@@ -125,30 +124,49 @@ def load_q1_scientific_model(
             "Q1 weight SHA manifest invalid: " + "; ".join(pre_manifest)
         )
 
-    snapshot_bind = assert_load_uses_verified_snapshot_bytes(
+    # Infer family/seed from subfolder for unit bind (l19/seed42 or l1523/seedN)
+    parts = str(subfolder).strip("/").split("/")
+    if len(parts) != 2 or not parts[1].startswith("seed"):
+        raise RuntimeError(
+            f"adapter subfolder {subfolder!r} is not family/seedN (D5)"
+        )
+    family_from_sf, seed_token = parts[0], parts[1]
+    try:
+        seed_from_sf = int(seed_token.removeprefix("seed"))
+    except ValueError as e:
+        raise RuntimeError(f"unparseable seed in subfolder {subfolder!r}") from e
+
+    unit_bind = bind_unit_checkpoint_provenance(
+        family=family_from_sf,
+        seed=seed_from_sf,
+        subfolder=subfolder,
         base_snapshot_dir=base_weight_snapshot_dir,
         adapter_snapshot_dir=adapter_weight_snapshot_dir,
         expected_sha256_by_relpath=expected_weight_file_sha256,
+        require_section11_tokenizer_pins=True,
     )
-    tok_files = require_tokenizer_and_template_files(
-        adapter_weight_snapshot_dir, subfolder=subfolder
-    )
-    local_paths = resolve_local_snapshot_load_paths(
-        base_snapshot_dir=base_weight_snapshot_dir,
-        adapter_snapshot_dir=adapter_weight_snapshot_dir,
-        subfolder=subfolder,
-    )
-    # D5: load exclusively from verified snapshot dirs (never hub repo IDs)
-    base_resolved = str(Path(base_weight_snapshot_dir).resolve())
-    if local_paths["base_load_path"] != base_resolved:
+    local_paths = unit_bind["local_paths"]
+    tok_files = unit_bind["tokenizer_template_files"]
+    snapshot_bind = unit_bind["snapshot_byte_binding"]
+    computed_pre = dict(unit_bind["computed_sha256"])
+    if not computed_pre:
         raise RuntimeError(
-            "base load path escaped verified snapshot directory — refuse hub fallback"
+            "computed digests missing from unit provenance bind — refuse "
+            "expected-hash substitution (D5)"
         )
 
     # use_topk probe against local adapter snapshot only (no hub)
     import json as _json
 
     local_adapter = Path(local_paths["adapter_load_path"])
+    # Double-check: load path is the required subfolder (no root fallback)
+    expected_ad = resolve_unit_adapter_subfolder_dir(
+        adapter_weight_snapshot_dir, subfolder
+    )
+    if Path(local_paths["adapter_load_path"]).resolve() != expected_ad.resolve():
+        raise RuntimeError(
+            "adapter load path drifted from required unit subfolder (D5)"
+        )
     cfg_probe = local_adapter / "adapter_config.json"
     if cfg_probe.is_file():
         try:
@@ -190,25 +208,28 @@ def load_q1_scientific_model(
                 f"(require {REQUIRED_TORCH_DTYPE}; no fallback)"
             )
 
-    # Bind manifest to files actually used to construct the model — fail closed
+    # Inventories already authenticated by bind_unit_checkpoint_provenance (D5)
     setattr(model, "_q1_base_weight_dir", base_weight_snapshot_dir)
-    setattr(model, "_q1_adapter_weight_dir", adapter_weight_snapshot_dir)
-    resolved = resolve_weight_files_from_model(
-        model,
-        base_snapshot_dir=base_weight_snapshot_dir,
-        adapter_snapshot_dir=adapter_weight_snapshot_dir,
-    )
-    inventory_bind = require_bound_weight_inventories(
-        resolved, expected_weight_file_sha256
-    )
-    if not inventory_bind["ok"]:
-        raise RuntimeError(
-            "Q1 weight provenance not bound to loaded local snapshots: "
-            + "; ".join(inventory_bind["failures"])
-        )
+    setattr(model, "_q1_adapter_weight_dir", str(expected_ad))
+    resolved = {
+        "base": list(unit_bind["inventory"]["base"]),
+        "adapter": list(unit_bind["inventory"]["adapter"]),
+    }
+    inventory_bind = {
+        "ok": True,
+        "failures": [],
+        "resolved": resolved,
+        "digests": {
+            k.removeprefix("inventory:"): v
+            for k, v in computed_pre.items()
+            if k.startswith("inventory:")
+        },
+        "unit_bound": True,
+        "subfolder": subfolder,
+    }
 
-    # verify_post_load infers revisions from loaded config stamps; weight SHA pins
-    # are mandatory substitutes when PEFT omits adapter revision metadata.
+    # Weight SHA authentication already completed by unit provenance bind (D5).
+    # Post-load checks dtype/attn/targets/layers/tokenizer identity only.
     post = verify_post_load(
         model,
         tokenizer,
@@ -219,9 +240,10 @@ def load_q1_scientific_model(
         expected_adapted_layers=expected_adapted_layers,
         expected_tokenizer_class=expected_tokenizer_class,
         expected_tokenizer_is_fast=expected_tokenizer_is_fast,
-        expected_weight_file_sha256=expected_weight_file_sha256,
+        expected_weight_file_sha256=None,
         require_eager=True,
         require_bf16=True,
+        weight_sha_pins_preverified=True,
     )
     if not post.ok:
         raise RuntimeError(f"Q1 post-load verification failed: {post.failures}")
@@ -262,14 +284,13 @@ def load_q1_scientific_model(
         device=str(next(model.parameters()).device),
         notes=[Q1_LOADER_NOTES, "loaded_from_verified_local_snapshots_only"],
     )
-    # D5: digests of files actually used (inventory + snapshot bind), not caller echo
-    computed_digests = dict(snapshot_bind.get("computed_sha256") or {})
-    computed_digests.update(
-        {f"inventory:{k}": v for k, v in (inventory_bind.get("digests") or {}).items()}
-    )
-    computed_digests.update(
-        {f"tokenizer:{k}": v for k, v in (tok_files.get("files") or {}).items()}
-    )
+    # D5: computed digests only — never substitute caller expected hashes
+    computed_digests = dict(computed_pre)
+    if not computed_digests:
+        raise RuntimeError(
+            "computed_weight_file_sha256 empty after load — refuse expected-hash "
+            "fallback (D5)"
+        )
     meta = {
         "proposed_f5_interpretation": Q1_LOADER_NOTES,
         "autocast_adapter_dtype": False,
@@ -286,6 +307,12 @@ def load_q1_scientific_model(
         "snapshot_byte_binding": snapshot_bind,
         "tokenizer_template_files": tok_files,
         "local_snapshot_load_paths": local_paths,
+        "unit_checkpoint_provenance": {
+            "family": family_from_sf,
+            "seed": seed_from_sf,
+            "subfolder": subfolder,
+            "adapter_subfolder_dir": unit_bind["adapter_subfolder_dir"],
+        },
         "computed_weight_file_sha256": computed_digests,
         "local_files_only": True,
         "hub_fallback_refused": True,

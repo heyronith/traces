@@ -1698,67 +1698,79 @@ def _execute_live_unit(
     st6.require_complete()
     assert unit is not None
 
-    # M1: never silently skip observation persistence on the production path.
-    # Engineering mocks may set donors["_engineering_skip_observations"]=True
-    # (production hooks never set this flag).
+    # M1: production live path always requires observation persistence.
+    # Callback-supplied donors["_engineering_skip_observations"] is ignored /
+    # refused — it cannot bypass scientific persistence.
+    if isinstance(donors, Mapping) and donors.get("_engineering_skip_observations") is True:
+        raise RuntimeError(
+            f"{spec.model_unit}: donors mapping supplied "
+            "_engineering_skip_observations=True — production live execution "
+            "refuses this bypass (M1); use engineering_assemble_unit_for_tests "
+            "for non-scientific fixtures"
+        )
     obs_meta: dict[str, Any] | None = None
     raw_conditions = donors.get("_condition_records") if isinstance(donors, Mapping) else None
     raw_f3 = donors.get("_f3_outcomes") if isinstance(donors, Mapping) else None
-    eng_skip = bool(
-        isinstance(donors, Mapping) and donors.get("_engineering_skip_observations") is True
+    if raw_conditions is None or raw_f3 is None:
+        raise RuntimeError(
+            f"{spec.model_unit}: live execution requires raw condition and F3 "
+            "generation records — refuse silent skip of observation "
+            "persistence (M1)"
+        )
+    from traces.q1.scientific_observations import (
+        persist_unit_scientific_observations,
+        verify_observation_artifact_integrity,
     )
-    if eng_skip:
-        if raw_conditions is not None or raw_f3 is not None:
-            raise RuntimeError(
-                f"{spec.model_unit}: contradictory observation flags "
-                "(_engineering_skip_observations with stashed records)"
-            )
-        obs_meta = None
-    else:
-        if raw_conditions is None or raw_f3 is None:
-            raise RuntimeError(
-                f"{spec.model_unit}: live execution requires raw condition and F3 "
-                "generation records — refuse silent skip of observation "
-                "persistence (M1)"
-            )
-        from traces.q1.scientific_observations import persist_unit_scientific_observations
 
-        gen_recs = list(getattr(raw_f3, "trigger_records", []) or []) + list(
-            getattr(raw_f3, "clean_records", []) or []
+    gen_recs = list(getattr(raw_f3, "trigger_records", []) or []) + list(
+        getattr(raw_f3, "clean_records", []) or []
+    )
+    if not list(raw_conditions):
+        raise RuntimeError(
+            f"{spec.model_unit}: empty condition records — refuse completion "
+            "without scientific observations (M1)"
         )
-        if not list(raw_conditions):
-            raise RuntimeError(
-                f"{spec.model_unit}: empty condition records — refuse completion "
-                "without scientific observations (M1)"
-            )
-        if not gen_recs:
-            raise RuntimeError(
-                f"{spec.model_unit}: empty F3 generation records — refuse "
-                "completion without scientific observations (M1)"
-            )
-        obs_meta = persist_unit_scientific_observations(
-            ex.out_dir,
-            model_unit=spec.model_unit,
-            family=spec.family,
-            role=spec.role,
-            condition_records=list(raw_conditions),
-            generation_records=gen_recs,
-            load_provenance={
-                k: load_ctx[k]
-                for k in (
-                    "model_unit",
-                    "family",
-                    "role",
-                    "seed",
-                    "base_revision",
-                    "adapter_revision",
-                    "weight_file_sha256",
-                    "attn_implementation",
-                    "torch_dtype",
-                )
-                if k in load_ctx
-            },
+    if not gen_recs:
+        raise RuntimeError(
+            f"{spec.model_unit}: empty F3 generation records — refuse "
+            "completion without scientific observations (M1)"
         )
+    obs_meta = persist_unit_scientific_observations(
+        ex.out_dir,
+        model_unit=spec.model_unit,
+        family=spec.family,
+        role=spec.role,
+        condition_records=list(raw_conditions),
+        generation_records=gen_recs,
+        load_provenance={
+            k: load_ctx[k]
+            for k in (
+                "model_unit",
+                "family",
+                "role",
+                "seed",
+                "base_revision",
+                "adapter_revision",
+                "weight_file_sha256",
+                "attn_implementation",
+                "torch_dtype",
+            )
+            if k in load_ctx
+        },
+    )
+    if not obs_meta.get("ok"):
+        raise RuntimeError(
+            f"{spec.model_unit}: observation persistence failed (M1)"
+        )
+    for art_name, art_meta in (obs_meta.get("artifacts") or {}).items():
+        chk = verify_observation_artifact_integrity(art_meta)
+        if not chk.get("ok"):
+            detail = "; ".join(chk.get("failures") or [])
+            raise RuntimeError(
+                f"{spec.model_unit}: observation integrity failed for "
+                f"{art_name}: {detail}"
+            )
+    obs_meta["integrity_verified"] = True
 
     audit = {
         "model_unit": spec.model_unit,
@@ -2057,6 +2069,91 @@ def run_live_scientific_pipeline(
             "default scientific execution remains disabled without auth/preflight"
         ),
     }
+
+
+def engineering_assemble_unit_for_tests(
+    *,
+    ex: ScientificPipelineExecutor,
+    spec: UnitSpec,
+    boundary: ConditionOutputBundle,
+    intervention: ConditionOutputBundle,
+    per_unit_audits: list[dict[str, Any]] | None = None,
+) -> ModelUnitInput:
+    """Non-scientific fixture: stages 4–6 assemble only (M1).
+
+    Explicitly isolated from production live callbacks. Does **not** grant
+    scientific authorization, does **not** persist observations, and cannot
+    progress a production live unit through load→donors→execute.
+    """
+    if boundary.model_unit != spec.model_unit or intervention.model_unit != spec.model_unit:
+        raise RuntimeError("engineering fixture model_unit mismatch")
+    merged = reconcile_boundary_intervention(boundary, intervention)
+    ex.stage4_boundaries(merged)
+    st5 = ex.stage5_interventions(merged)
+    st5.require_complete()
+    st6, unit = ex.stage6_assemble(merged)
+    st6.require_complete()
+    assert unit is not None
+    if per_unit_audits is not None:
+        per_unit_audits.append(
+            {
+                "model_unit": spec.model_unit,
+                "family": spec.family,
+                "role": spec.role,
+                "engineering_fixture": True,
+                "observations": None,
+                "note": "engineering_assemble_unit_for_tests — no sci auth / no persist",
+            }
+        )
+    return unit
+
+
+def stash_mock_observations_on_donors(
+    donors: Any,
+    *,
+    spec: UnitSpec,
+    records: Sequence[Any],
+    prompt_ids: Sequence[str],
+) -> None:
+    """Helper for synthetic live-hook tests: stash required M1 observations."""
+    if not isinstance(donors, dict):
+        raise TypeError("donors must be a mutable dict to stash observations")
+    from traces.q1.recording import GenerationRecord
+
+    donors["_condition_records"] = list(records)
+    donors.pop("_engineering_skip_observations", None)
+    donors["_f3_outcomes"] = type(
+        "F3Mock",
+        (),
+        {
+            "trigger_records": [
+                GenerationRecord(
+                    instruction_id=pid,
+                    model_unit=spec.model_unit,
+                    tag="T",
+                    bos_convention="single",
+                    continuation_text="I HATE YOU",
+                    first_token_id=235285,
+                    substring_fire=True,
+                    full_payload_fire=False,
+                )
+                for pid in prompt_ids
+            ],
+            "clean_records": [
+                GenerationRecord(
+                    instruction_id=pid,
+                    model_unit=spec.model_unit,
+                    tag="C",
+                    bos_convention="single",
+                    continuation_text="ok",
+                    first_token_id=1,
+                    substring_fire=False,
+                    full_payload_fire=False,
+                )
+                for pid in prompt_ids
+            ],
+        },
+    )()
 
 
 def write_pipeline_coverage_report(
