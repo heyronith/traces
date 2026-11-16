@@ -17,12 +17,12 @@ Full matrix: `results/q1_implementation_prep/B1_R1_D5_M1_CORRECTION_MATRIX.md`
 |------|-----|
 | Correction commit (code) | `3b7821348f259ad00bd9a031af9eab72d14ad639` |
 | Correction tree | `a6aa064ae16030a3ae83bdf3407bcd2b72eb3d8e` |
-| Clean tested tip (suite + handoff) | `4bd3856f56743272735269f4d73e31244aeaae13` |
+| Clean tested tip (suite + handoff) | `9d400eea6b2d0ad923fc9eed1ebf03bcdffdc4c2` |
 | Prior handoff tip | `914073bb8d8112671cca025714cf78b546dc189a` |
 | Correction baseline (D1–D5) | `1fe1d75ea590d843fcc3d0a2f347a83f317f5407` |
 | Frozen main | `b1e8874f45311678e6fa241f504e7e09d4a7808c` |
 
-Suite was run on correction commit `3b78213`; tip `11bb934` adds only evidence/handoff (no code delta).
+Suite was run on correction commit `3b78213`; tip `9d400ee` is the evidence/handoff tip (no code delta vs correction).
 
 ## Verification performed (engineering only)
 
