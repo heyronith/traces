@@ -4,6 +4,7 @@ Synthetic CPU suite record (no pretrained / no GPU / sci auth OFF)
 utc=2026-11-16T00:44:50Z
 branch=q1-impl-audit
 correction_commit=1fe1d75ea590d843fcc3d0a2f347a83f317f5407
+clean_tested_tip=872202295f791e25da78dee2b82b5f070cf3fbc2
 prior_tip=009e9760fc791172de7ff1ce83c3fc26f502e687
 agent1_tested_baseline=e1569b654298cb01b59cc1e2bf02e7cd8eac4b62
 frozen_main=b1e8874f45311678e6fa241f504e7e09d4a7808c

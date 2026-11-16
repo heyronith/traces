@@ -2,7 +2,7 @@
 
 **Branch:** `q1-impl-audit`  
 **Correction commit:** `1fe1d75ea590d843fcc3d0a2f347a83f317f5407`  
-**Tested tree (clean after suite evidence commit):** see suite record  
+**Clean tested tip:** `872202295f791e25da78dee2b82b5f070cf3fbc2`  
 **Baseline before remediation:** `009e976` (post C9–C12) / Agent 1 tested baseline `e1569b6`  
 **Frozen main:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`  
 **Scientific authorization:** OFF  

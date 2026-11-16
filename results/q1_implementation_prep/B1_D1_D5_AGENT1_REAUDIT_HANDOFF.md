@@ -13,11 +13,12 @@ Full matrix: `results/q1_implementation_prep/B1_D1_D5_CORRECTION_MATRIX.md`
 | Role | SHA |
 |------|-----|
 | Correction commit (code) | `1fe1d75ea590d843fcc3d0a2f347a83f317f5407` |
+| Clean tested tip (suite + handoff) | `872202295f791e25da78dee2b82b5f070cf3fbc2` |
 | Prior tip (C9–C12 handoff) | `009e9760fc791172de7ff1ce83c3fc26f502e687` |
 | Agent 1 tested baseline (stated) | `e1569b654298cb01b59cc1e2bf02e7cd8eac4b62` |
 | Frozen main | `b1e8874f45311678e6fa241f504e7e09d4a7808c` |
 
-Suite evidence commit (this handoff + test record) follows on the same branch after this file is committed.
+Suite was run on correction commit `1fe1d75`; tip `8722022` adds only this evidence/handoff (no code delta).
 
 ## Verification performed (engineering only)
 
