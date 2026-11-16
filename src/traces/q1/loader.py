@@ -67,11 +67,17 @@ def load_q1_scientific_model(
     expected_weight_file_sha256: dict[str, str] | None = None,
     base_weight_snapshot_dir: str | None = None,
     adapter_weight_snapshot_dir: str | None = None,
+    repo_root: Path | str | None = None,
 ) -> tuple[PeftModel, Any, ModelLoadReport, dict[str, Any]]:
     """Strict Q1 scientific load. Does not alter Stage 1 loader semantics.
 
     Scientific authorization is required independently of the orchestrator (M5).
     Tiny-Gemma engineering tests must not call this entry point.
+
+    ``repo_root`` is the executor's trusted repository root (D5-A1). Checkpoint
+    snapshot directories must not be used to locate or alter the manifest trust
+    anchor. Approved loads use independently verified, materialized snapshot
+    copies without symlinks (HF cache symlinks are refused).
     """
     from traces.q1.scientific_execution import require_scientific_authorization
 
@@ -107,6 +113,12 @@ def load_q1_scientific_model(
             "Q1 scientific load requires authoritative local base and adapter "
             "snapshot directories (D5) — refuse unverified hub fallback"
         )
+    if repo_root is None:
+        raise RuntimeError(
+            "trusted executor repo_root required for production checkpoint "
+            "authentication (D5-A1) — refuse inferring trust anchor from "
+            "caller-controlled checkpoint paths"
+        )
     from traces.q1.checkpoint_provenance import (
         FROZEN_TOKENIZER_IDENTITY,
         bind_unit_checkpoint_provenance,
@@ -129,14 +141,9 @@ def load_q1_scientific_model(
     except ValueError as e:
         raise RuntimeError(f"unparseable seed in subfolder {subfolder!r}") from e
 
-    # D5-A: production identity from owner-pinned manifest only — never treat
-    # caller expected_weight_file_sha256 as independent authoritative proof.
-    # Engineering loads must use engineering_load_q1_scientific_model instead.
-    repo_root_for_pin = Path(base_weight_snapshot_dir).resolve()
-    # Walk up to find repo marker; production hooks pass explicit auth.
-    trust_auth = authenticate_production_checkpoint_manifest(
-        repo_root=_infer_repo_root(repo_root_for_pin)
-    )
+    # D5-A / D5-A1: production identity from owner-pinned manifest at the
+    # executor's trusted repo_root only — never from checkpoint-path inference.
+    trust_auth = authenticate_production_checkpoint_manifest(repo_root=repo_root)
     if not trust_auth.production_unlocked:
         raise RuntimeError(
             "production checkpoint identity blocked (D5-A): "
@@ -351,20 +358,11 @@ def load_q1_scientific_model(
         "hub_fallback_refused": True,
         "base_revision": base_revision,
         "adapter_revision": adapter_revision,
+        "repo_root": str(Path(repo_root).resolve()),
+        "checkpoint_trust": trust_auth.to_dict(),
+        "base_shards": unit_bind.get("base_shards"),
     }
     return model, tokenizer, report, meta
-
-
-def _infer_repo_root(start: Path) -> Path:
-    """Best-effort repo root for fixed-path production manifest lookup."""
-    cur = Path(start).resolve()
-    for candidate in [cur, *cur.parents]:
-        if (candidate / "src" / "traces").is_dir() and (
-            candidate / "results" / "q1_implementation_prep"
-        ).is_dir():
-            return candidate
-    # Fall back to start — authenticate_production will fail closed if pin unset
-    return cur
 
 
 def engineering_load_q1_scientific_model(

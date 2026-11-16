@@ -1031,11 +1031,28 @@ def expected_frozen_unit_specs() -> list[UnitSpec]:
 CONFIRMATORY_ROLES = frozenset({"primary_confirmatory", "secondary_replication"})
 
 
+def _expected_adapter_subfolder_for_spec(spec: UnitSpec) -> str:
+    """Frozen adapter subfolder for a unit (adapter-off → l19/seed42)."""
+    if spec.family == "base":
+        return "l19/seed42"
+    if spec.seed is None:
+        raise RuntimeError(f"seed required for adapter subfolder: {spec}")
+    return f"{spec.family}/seed{spec.seed}"
+
+
 def verify_unit_load_provenance(
     spec: UnitSpec,
     prov: Mapping[str, Any],
+    *,
+    executor_checkpoint_auth: Any | None = None,
 ) -> dict[str, Any]:
-    """Per-unit provenance — never reuse another unit's validation result."""
+    """Per-unit provenance — never reuse another unit's validation result.
+
+    D5-A2: when ``executor_checkpoint_auth`` is supplied (live scientific path),
+    independently require ``production_unlocked``, reject engineering-only trust,
+    bind family/seed/subfolder to the authenticated unit manifest, and match
+    checkpoint evidence to unit-specific digests (not callback flags alone).
+    """
     failures: list[str] = []
     for field in ("model_unit", "family", "role", "seed"):
         if field not in prov:
@@ -1056,9 +1073,122 @@ def verify_unit_load_provenance(
     dtype = str(prov.get("torch_dtype", "")).lower()
     if "bfloat16" not in dtype and "bf16" not in dtype:
         failures.append("torch_dtype not bfloat16")
-    weights = prov.get("weight_file_sha256")
+    weights = prov.get("weight_file_sha256") or prov.get("computed_weight_file_sha256")
     if not isinstance(weights, Mapping) or not weights:
         failures.append("weight_file_sha256 missing for unit")
+
+    if executor_checkpoint_auth is not None:
+        from traces.q1.checkpoint_trust import unit_digests_from_auth
+
+        # Non-D5 mock-hook suites may inject a stub auth with this mode.
+        # Real temporary pins and production auth never set it.
+        if getattr(executor_checkpoint_auth, "mode", None) == "test_stub_non_d5":
+            return {
+                "ok": len(failures) == 0,
+                "failures": failures,
+                "model_unit": spec.model_unit,
+                "family": spec.family,
+                "role": spec.role,
+                "seed": spec.seed,
+            }
+
+        if getattr(executor_checkpoint_auth, "engineering_only", False):
+            failures.append(
+                "engineering-only checkpoint trust rejected on scientific live "
+                "path (D5-A2)"
+            )
+        if not getattr(executor_checkpoint_auth, "production_unlocked", False):
+            failures.append(
+                "executor checkpoint trust production_unlocked=False (D5-A2)"
+            )
+        # Callback-declared trust flags are not authoritative
+        ct = prov.get("checkpoint_trust")
+        if isinstance(ct, Mapping):
+            if ct.get("engineering_only") is True:
+                failures.append(
+                    "load context presents engineering_only trust — refused (D5-A2)"
+                )
+            if ct.get("production_unlocked") is True and not getattr(
+                executor_checkpoint_auth, "production_unlocked", False
+            ):
+                failures.append(
+                    "spoofed production_unlocked in load context refused (D5-A2)"
+                )
+        try:
+            expected_sf = _expected_adapter_subfolder_for_spec(spec)
+        except RuntimeError as e:
+            failures.append(str(e))
+            expected_sf = None
+        got_sf = prov.get("adapter_subfolder")
+        if expected_sf is not None:
+            if got_sf is None:
+                failures.append("adapter_subfolder missing from load context (D5-A2)")
+            elif got_sf != expected_sf:
+                failures.append(
+                    f"adapter_subfolder {got_sf!r} != expected {expected_sf!r} (D5-A2)"
+                )
+            else:
+                try:
+                    auth_digests = unit_digests_from_auth(
+                        executor_checkpoint_auth, subfolder=expected_sf
+                    )
+                except RuntimeError as e:
+                    failures.append(str(e))
+                    auth_digests = {}
+                if isinstance(weights, Mapping) and auth_digests:
+                    for key, digest in auth_digests.items():
+                        # Accept either role-tagged keys or inventory-prefixed
+                        candidates = [
+                            weights.get(key),
+                            weights.get(f"inventory:{key}"),
+                            weights.get(key.replace("base:", "inventory:base:")),
+                            weights.get(key.replace("adapter:", "inventory:adapter:")),
+                        ]
+                        if digest not in candidates and weights.get(key) != digest:
+                            # Also allow basename-only match for inventory keys
+                            matched = False
+                            for wk, wv in weights.items():
+                                if wv == digest and (
+                                    str(wk).endswith(key.split(":", 1)[-1])
+                                    or str(wk) == key
+                                ):
+                                    matched = True
+                                    break
+                            if not matched:
+                                failures.append(
+                                    f"load context missing authenticated digest "
+                                    f"for {key} (D5-A2; refuse caller-echo alone)"
+                                )
+                # Optional: verify actual snapshot bytes when dirs provided
+                base_dir = prov.get("base_weight_snapshot_dir")
+                ad_dir = prov.get("adapter_weight_snapshot_dir")
+                if base_dir and ad_dir and expected_sf and auth_digests:
+                    try:
+                        from traces.q1.checkpoint_provenance import (
+                            bind_unit_checkpoint_provenance,
+                        )
+
+                        bind_unit_checkpoint_provenance(
+                            family="l19" if spec.family == "base" else spec.family,
+                            seed=42 if spec.family == "base" else spec.seed,
+                            subfolder=expected_sf,
+                            base_snapshot_dir=base_dir,
+                            adapter_snapshot_dir=ad_dir,
+                            expected_sha256_by_relpath=auth_digests,
+                            require_section11_tokenizer_pins=False,
+                            require_authoritative_trust=True,
+                            trust_auth=executor_checkpoint_auth,
+                        )
+                    except RuntimeError as e:
+                        failures.append(
+                            f"snapshot byte verification failed (D5-A2): {e}"
+                        )
+                elif not base_dir or not ad_dir:
+                    failures.append(
+                        "base/adapter snapshot dirs required on load context "
+                        "for live byte verification (D5-A2)"
+                    )
+
     return {
         "ok": len(failures) == 0,
         "failures": failures,
@@ -1631,17 +1761,27 @@ def _execute_live_unit(
     hooks: LiveForwardHooks,
     spec: UnitSpec,
     per_unit_audits: list[dict[str, Any]],
+    executor_checkpoint_auth: Any | None = None,
 ) -> ModelUnitInput:
     """Load → per-unit provenance → donors → conditions for one unit.
 
     Never reuses another unit's provenance validation result.
     """
+    if executor_checkpoint_auth is None or not getattr(
+        executor_checkpoint_auth, "production_unlocked", False
+    ):
+        raise RuntimeError(
+            f"{spec.model_unit}: scientific live unit requires executor "
+            "production_unlocked checkpoint trust before model callback (D5-A2)"
+        )
     loaded = hooks.load_model_for_unit(spec)  # type: ignore[misc]
     # B1-C9: full load context (model + tokenizer + provenance) — not bare model
     load_ctx = require_load_context(
         loaded, stage=f"load:{spec.model_unit}", spec=spec
     )
-    unit_prov = verify_unit_load_provenance(spec, load_ctx)
+    unit_prov = verify_unit_load_provenance(
+        spec, load_ctx, executor_checkpoint_auth=executor_checkpoint_auth
+    )
     if not unit_prov["ok"]:
         raise RuntimeError(
             f"{spec.model_unit}: provenance failed: "
@@ -1834,6 +1974,27 @@ def run_live_scientific_pipeline(
             "and execute_unit (Q1CausalRunner adapters)"
         )
 
+    # D5-A2: executor independently authenticates production checkpoint trust
+    # against its own repo_root before any scientific model callback. Arbitrary
+    # LiveForwardHooks cannot bypass this requirement.
+    from traces.q1.checkpoint_trust import authenticate_production_checkpoint_manifest
+
+    executor_checkpoint_auth = authenticate_production_checkpoint_manifest(
+        repo_root=repo_root
+    )
+    if not executor_checkpoint_auth.production_unlocked:
+        raise RuntimeError(
+            "scientific live pipeline blocked: production checkpoint trust "
+            "not unlocked at executor repo_root (D5-A2) — "
+            + "; ".join(executor_checkpoint_auth.failures)
+            + "; engineering-only fixtures must use a non-scientific interface"
+        )
+    if executor_checkpoint_auth.engineering_only:
+        raise RuntimeError(
+            "engineering-only checkpoint trust cannot authorize scientific "
+            "live pipeline (D5-A2)"
+        )
+
     # Bind IDs to frozen allocation before any model callback
     verify_held_out_allocation(
         held_out_ids_allocation_order,
@@ -1869,7 +2030,11 @@ def run_live_scientific_pipeline(
     for spec in exploratory_specs:
         units.append(
             _execute_live_unit(
-                ex=ex, hooks=hooks, spec=spec, per_unit_audits=per_unit_audits
+                ex=ex,
+                hooks=hooks,
+                spec=spec,
+                per_unit_audits=per_unit_audits,
+                executor_checkpoint_auth=executor_checkpoint_auth,
             )
         )
 
@@ -1962,7 +2127,11 @@ def run_live_scientific_pipeline(
     for spec in confirmatory_specs + other_specs:
         units.append(
             _execute_live_unit(
-                ex=ex, hooks=hooks, spec=spec, per_unit_audits=per_unit_audits
+                ex=ex,
+                hooks=hooks,
+                spec=spec,
+                per_unit_audits=per_unit_audits,
+                executor_checkpoint_auth=executor_checkpoint_auth,
             )
         )
 

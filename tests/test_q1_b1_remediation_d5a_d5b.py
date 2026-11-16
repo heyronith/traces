@@ -79,18 +79,12 @@ def _make_ten_unit_fixture(
     seeds_l19=(42, 43, 44, 45, 46),
     seeds_l1523=(42, 43, 44, 45, 46),
 ) -> dict[str, Any]:
+    from q1_checkpoint_test_support import write_sharded_base
+
     base = tmp_path / "base"
     adapter = tmp_path / "adapter"
-    base.mkdir()
     adapter.mkdir()
-    base_w = b"BASE-WEIGHTS-V1"
-    base_cfg = b'{"model_type":"gemma2","num_hidden_layers":26}\n'
-    (base / "model.safetensors").write_bytes(base_w)
-    (base / "config.json").write_bytes(base_cfg)
-    base_files = {
-        "base:model.safetensors": _sha(base_w),
-        "base:config.json": _sha(base_cfg),
-    }
+    base_files = write_sharded_base(base)
     unit_files: dict[str, dict[str, str]] = {}
     for fam, seeds in (("l19", seeds_l19), ("l1523", seeds_l1523)):
         for seed in seeds:
@@ -453,3 +447,5 @@ def test_required_inventory_constants():
     assert "special_tokens_map.json" in REQUIRED_ADAPTER_LOAD_FILES
     assert "adapter_config.json" in REQUIRED_ADAPTER_LOAD_FILES
     assert "config.json" in REQUIRED_BASE_LOAD_FILES
+    assert "model.safetensors.index.json" in REQUIRED_BASE_LOAD_FILES
+    assert "model.safetensors" not in REQUIRED_BASE_LOAD_FILES

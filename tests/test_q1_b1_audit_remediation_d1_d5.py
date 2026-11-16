@@ -489,7 +489,10 @@ def test_d5_loader_requires_local_verified_snapshots_only(monkeypatch, tmp_path)
     base.mkdir()
     adapter_root.mkdir()
     (base / "model.safetensors").write_bytes(b"B")
-    with pytest.raises(RuntimeError, match="checkpoint identity blocked|pin|unset|authoritative"):
+    with pytest.raises(
+        RuntimeError,
+        match="checkpoint identity blocked|pin|unset|authoritative|repo_root|D5-A1",
+    ):
         loader_mod.load_q1_scientific_model(
             subfolder="l19/seed42",
             expected_weight_file_sha256={"base:model.safetensors": "a" * 64},
@@ -497,6 +500,7 @@ def test_d5_loader_requires_local_verified_snapshots_only(monkeypatch, tmp_path)
             expected_adapted_layers=[19],
             base_weight_snapshot_dir=str(base),
             adapter_weight_snapshot_dir=str(adapter_root),
+            # Missing repo_root exercises D5-A1; with repo_root pin-unset still blocks
         )
     monkeypatch.delenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", raising=False)
 
@@ -575,8 +579,19 @@ def test_m1_missing_observations_block_live_completion(monkeypatch, tmp_path):
         execute_unit=execute,
     )
     ex = ScientificPipelineExecutor(REPO, tmp_path / "out")
-    with pytest.raises(RuntimeError, match="M1|observation"):
-        _execute_live_unit(ex=ex, hooks=hooks, spec=spec, per_unit_audits=[])
+    stub_auth = MagicMock(production_unlocked=True, engineering_only=False, ok=True)
+    with patch(
+        "traces.q1.scientific_execution.verify_unit_load_provenance",
+        return_value={"ok": True, "failures": []},
+    ):
+        with pytest.raises(RuntimeError, match="M1|observation"):
+            _execute_live_unit(
+                ex=ex,
+                hooks=hooks,
+                spec=spec,
+                per_unit_audits=[],
+                executor_checkpoint_auth=stub_auth,
+            )
     monkeypatch.delenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", raising=False)
 
 
@@ -763,7 +778,18 @@ def test_e2e_mock_catalog_assemble_driver_persist(monkeypatch, tmp_path):
     )
     ex = ScientificPipelineExecutor(REPO, tmp_path / "e2e")
     audits: list[dict[str, Any]] = []
-    unit = _execute_live_unit(ex=ex, hooks=hooks, spec=spec, per_unit_audits=audits)
+    stub_auth = MagicMock(production_unlocked=True, engineering_only=False, ok=True)
+    with patch(
+        "traces.q1.scientific_execution.verify_unit_load_provenance",
+        return_value={"ok": True, "failures": []},
+    ):
+        unit = _execute_live_unit(
+            ex=ex,
+            hooks=hooks,
+            spec=spec,
+            per_unit_audits=audits,
+            executor_checkpoint_auth=stub_auth,
+        )
     assert len(unit.head_effects_fwd) == 152
     assert (19, 0) not in unit.head_effects_fwd
     assert audits and audits[0]["observations"]["ok"] is True

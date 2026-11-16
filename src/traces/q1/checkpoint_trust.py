@@ -46,10 +46,18 @@ REQUIRED_ADAPTER_LOAD_FILES: tuple[str, ...] = (
     "special_tokens_map.json",
 )
 
-REQUIRED_BASE_LOAD_FILES: tuple[str, ...] = (
-    "model.safetensors",
+# Base meta files always required. Weight shards are derived from the
+# authenticated safetensors index weight_map (D5-B1) — not a single
+# monolithic model.safetensors (pinned Gemma-2-2B is sharded).
+REQUIRED_BASE_META_FILES: tuple[str, ...] = (
     "config.json",
+    "model.safetensors.index.json",
 )
+
+# Back-compat alias: meta files only; shards come from the index.
+REQUIRED_BASE_LOAD_FILES: tuple[str, ...] = REQUIRED_BASE_META_FILES
+
+BASE_SAFETENSORS_INDEX_NAME = "model.safetensors.index.json"
 
 # Competing / untrusted tokenizer sources — must not be present for load.
 FORBIDDEN_ADAPTER_LOAD_FILES: frozenset[str] = frozenset(
@@ -79,6 +87,64 @@ TRUSTED_MANIFEST_TOP_KEYS: frozenset[str] = frozenset(
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def parse_safetensors_index(index_payload: Mapping[str, Any] | str | bytes | Path) -> dict[str, Any]:
+    """Parse a safetensors index and return the unique shard inventory (D5-B1)."""
+    if isinstance(index_payload, (str, Path)):
+        raw = Path(index_payload).read_bytes()
+        data = json.loads(raw.decode("utf-8"))
+    elif isinstance(index_payload, (bytes, bytearray)):
+        data = json.loads(bytes(index_payload).decode("utf-8"))
+    elif isinstance(index_payload, Mapping):
+        data = dict(index_payload)
+    else:
+        raise RuntimeError(f"unsupported safetensors index type: {type(index_payload)}")
+    if not isinstance(data, dict):
+        raise RuntimeError("safetensors index must be a JSON object")
+    weight_map = data.get("weight_map")
+    if not isinstance(weight_map, Mapping) or not weight_map:
+        raise RuntimeError("safetensors index missing non-empty weight_map (D5-B1)")
+    shards: list[str] = []
+    seen: set[str] = set()
+    for tensor, shard in weight_map.items():
+        if not isinstance(shard, str) or not shard.strip():
+            raise RuntimeError(f"invalid weight_map entry for {tensor!r}: {shard!r}")
+        if Path(shard).is_absolute() or ".." in Path(shard).parts:
+            raise RuntimeError(f"weight_map shard path escape refused: {shard!r}")
+        if "/" in shard or "\\" in shard:
+            raise RuntimeError(
+                f"weight_map shard must be a basename under the base snapshot: {shard!r}"
+            )
+        if shard not in seen:
+            seen.add(shard)
+            shards.append(shard)
+    if not shards:
+        raise RuntimeError("safetensors index weight_map produced empty shard list")
+    return {
+        "weight_map": dict(weight_map),
+        "shards": shards,
+        "metadata": data.get("metadata"),
+    }
+
+
+def required_base_files_from_authenticated_index(
+    *,
+    index_bytes: bytes,
+    base_files_manifest: Mapping[str, str],
+) -> list[str]:
+    """Derive exact required base relative paths from an authenticated index."""
+    parsed = parse_safetensors_index(index_bytes)
+    required = list(REQUIRED_BASE_META_FILES) + list(parsed["shards"])
+    for name in required:
+        key = f"base:{name}"
+        # also allow bare name keys in split manifests
+        if key not in base_files_manifest and name not in base_files_manifest:
+            raise RuntimeError(
+                f"authoritative base manifest missing required file base:{name} "
+                f"(D5-B1 sharded inventory)"
+            )
+    return required
 
 
 def canonical_checkpoint_manifest_bytes(payload: Mapping[str, Any]) -> bytes:
@@ -135,6 +201,32 @@ def validate_checkpoint_manifest_schema(
                 failures.append(str(e))
             if not isinstance(digest, str) or len(digest) != 64:
                 failures.append(f"malformed base digest for {key!r}")
+        for meta in REQUIRED_BASE_META_FILES:
+            if f"base:{meta}" not in base_files:
+                failures.append(
+                    f"base_files missing required meta file base:{meta} (D5-B1)"
+                )
+        # Sharded layout required: index + at least one weight shard basename.
+        # Bind-time parse enforces exact weight_map inventory (D5-B1).
+        shard_keys = [
+            k
+            for k in base_files
+            if str(k).startswith("base:")
+            and str(k).endswith(".safetensors")
+            and BASE_SAFETENSORS_INDEX_NAME not in str(k)
+            and Path(str(k).split(":", 1)[1]).name != "model.safetensors"
+        ]
+        has_index = f"base:{BASE_SAFETENSORS_INDEX_NAME}" in base_files
+        if has_index and not shard_keys:
+            failures.append(
+                "base_files must list index-derived weight shards "
+                "(pinned Gemma refuses monolithic-only model.safetensors) (D5-B1)"
+            )
+        if "base:model.safetensors" in base_files and not shard_keys:
+            failures.append(
+                "monolithic base:model.safetensors is not the pinned Gemma layout "
+                "(D5-B1)"
+            )
 
     units = payload.get("units")
     if not isinstance(units, Mapping):

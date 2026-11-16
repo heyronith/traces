@@ -95,18 +95,12 @@ def _synthetic_pins_for_dir(dir_path: Path) -> dict[str, str]:
 
 def _make_multi_subfolder_snapshot(tmp_path: Path, seeds=(42, 43)) -> dict[str, Any]:
     """Canonical multi-subfolder synthetic snapshot for real inventory/bind tests."""
+    from q1_checkpoint_test_support import write_sharded_base
+
     base = tmp_path / "base"
     adapter = tmp_path / "adapter"
-    base.mkdir()
     adapter.mkdir()
-    base_w = base / "model.safetensors"
-    base_w.write_bytes(b"BASE-WEIGHTS")
-    base_cfg = b'{"model_type":"gemma2"}\n'
-    (base / "config.json").write_bytes(base_cfg)
-    manifest: dict[str, str] = {
-        "base:model.safetensors": _sha(b"BASE-WEIGHTS"),
-        "base:config.json": _sha(base_cfg),
-    }
+    manifest: dict[str, str] = dict(write_sharded_base(base))
     for seed in seeds:
         sf = f"l19/seed{seed}"
         d = adapter / "l19" / f"seed{seed}"
@@ -543,6 +537,7 @@ def test_d5_unverified_file_substitution_refused(tmp_path, monkeypatch):
 def test_m1_engineering_skip_flag_cannot_bypass_production(monkeypatch, tmp_path):
     monkeypatch.setenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", "1")
     spec = _spec()
+    stub_auth = MagicMock(production_unlocked=True, engineering_only=False, ok=True)
 
     def load(s):
         return {
@@ -583,23 +578,29 @@ def test_m1_engineering_skip_flag_cannot_bypass_production(monkeypatch, tmp_path
         )
 
     ex = ScientificPipelineExecutor(REPO, tmp_path / "m1")
-    with pytest.raises(RuntimeError, match="engineering_skip|refuses this bypass|M1"):
-        _execute_live_unit(
-            ex=ex,
-            hooks=LiveForwardHooks(
-                load_model_for_unit=load,
-                capture_donors_for_unit=donors,
-                execute_unit=execute,
-            ),
-            spec=spec,
-            per_unit_audits=[],
-        )
+    with patch(
+        "traces.q1.scientific_execution.verify_unit_load_provenance",
+        return_value={"ok": True, "failures": []},
+    ):
+        with pytest.raises(RuntimeError, match="engineering_skip|refuses this bypass|M1"):
+            _execute_live_unit(
+                ex=ex,
+                hooks=LiveForwardHooks(
+                    load_model_for_unit=load,
+                    capture_donors_for_unit=donors,
+                    execute_unit=execute,
+                ),
+                spec=spec,
+                per_unit_audits=[],
+                executor_checkpoint_auth=stub_auth,
+            )
     monkeypatch.delenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", raising=False)
 
 
 def test_m1_missing_records_block_and_valid_persist(monkeypatch, tmp_path):
     monkeypatch.setenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", "1")
     spec = _spec()
+    stub_auth = MagicMock(production_unlocked=True, engineering_only=False, ok=True)
 
     def load(s):
         return {
@@ -639,17 +640,22 @@ def test_m1_missing_records_block_and_valid_persist(monkeypatch, tmp_path):
         )
 
     ex = ScientificPipelineExecutor(REPO, tmp_path / "miss")
-    with pytest.raises(RuntimeError, match="M1|observation"):
-        _execute_live_unit(
-            ex=ex,
-            hooks=LiveForwardHooks(
-                load_model_for_unit=load,
-                capture_donors_for_unit=donors,
-                execute_unit=execute_missing,
-            ),
-            spec=spec,
-            per_unit_audits=[],
-        )
+    with patch(
+        "traces.q1.scientific_execution.verify_unit_load_provenance",
+        return_value={"ok": True, "failures": []},
+    ):
+        with pytest.raises(RuntimeError, match="M1|observation"):
+            _execute_live_unit(
+                ex=ex,
+                hooks=LiveForwardHooks(
+                    load_model_for_unit=load,
+                    capture_donors_for_unit=donors,
+                    execute_unit=execute_missing,
+                ),
+                spec=spec,
+                per_unit_audits=[],
+                executor_checkpoint_auth=stub_auth,
+            )
 
     def execute_ok(s, _m, d):
         ids = ["0", "1", "2", "3"]
@@ -668,16 +674,21 @@ def test_m1_missing_records_block_and_valid_persist(monkeypatch, tmp_path):
         )
 
     audits: list = []
-    unit = _execute_live_unit(
-        ex=ScientificPipelineExecutor(REPO, tmp_path / "ok"),
-        hooks=LiveForwardHooks(
-            load_model_for_unit=load,
-            capture_donors_for_unit=donors,
-            execute_unit=execute_ok,
-        ),
-        spec=spec,
-        per_unit_audits=audits,
-    )
+    with patch(
+        "traces.q1.scientific_execution.verify_unit_load_provenance",
+        return_value={"ok": True, "failures": []},
+    ):
+        unit = _execute_live_unit(
+            ex=ScientificPipelineExecutor(REPO, tmp_path / "ok"),
+            hooks=LiveForwardHooks(
+                load_model_for_unit=load,
+                capture_donors_for_unit=donors,
+                execute_unit=execute_ok,
+            ),
+            spec=spec,
+            per_unit_audits=audits,
+            executor_checkpoint_auth=stub_auth,
+        )
     assert unit is not None
     assert audits[0]["observations"]["ok"] is True
     assert audits[0]["observations"]["integrity_verified"] is True

@@ -7,6 +7,14 @@ from pathlib import Path
 
 import pytest
 
+from q1_checkpoint_test_support import stub_live_pipeline_checkpoint_trust
+
+
+@pytest.fixture(autouse=True)
+def _stub_checkpoint_trust_for_s2_audit(monkeypatch):
+    stub_live_pipeline_checkpoint_trust(monkeypatch)
+
+
 from traces.q1.empirical_evidence import (
     ARTIFACT_F4_V1,
     DOUBLE_BOS_PAYLOAD_TOKEN_A,

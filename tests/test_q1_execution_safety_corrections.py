@@ -12,6 +12,14 @@ from typing import Any
 import numpy as np
 import pytest
 
+from q1_checkpoint_test_support import stub_live_pipeline_checkpoint_trust
+
+
+@pytest.fixture(autouse=True)
+def _stub_checkpoint_trust_for_live_mocks(monkeypatch):
+    stub_live_pipeline_checkpoint_trust(monkeypatch)
+
+
 from traces.model_loader import PINNED_ADAPTER_REVISION, PINNED_BASE_REVISION
 from traces.q1.component_sets import EXPECTED_L15_L16_PAIRS
 from traces.q1.frozen_artifacts import (

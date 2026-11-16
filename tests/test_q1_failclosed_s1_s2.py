@@ -8,6 +8,14 @@ from typing import Any
 import pytest
 import torch.nn as nn
 
+from q1_checkpoint_test_support import stub_live_pipeline_checkpoint_trust
+
+
+@pytest.fixture(autouse=True)
+def _stub_checkpoint_trust_for_s2_live(monkeypatch):
+    """D5-A2 is covered elsewhere; unlock stub so S2 gates remain testable."""
+    stub_live_pipeline_checkpoint_trust(monkeypatch)
+
 from traces.q1.empirical_evidence import (
     authenticate_double_bos_scan_artifact,
     authenticate_f4_table_artifact,

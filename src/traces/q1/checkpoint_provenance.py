@@ -675,9 +675,12 @@ def bind_unit_checkpoint_provenance(
     engineering_only). Arbitrary caller manifests alone are not authoritative.
     """
     from traces.q1.checkpoint_trust import (
+        BASE_SAFETENSORS_INDEX_NAME,
         FORBIDDEN_ADAPTER_LOAD_FILES,
         REQUIRED_ADAPTER_LOAD_FILES,
-        REQUIRED_BASE_LOAD_FILES,
+        REQUIRED_BASE_META_FILES,
+        parse_safetensors_index,
+        required_base_files_from_authenticated_index,
     )
 
     if family == "base":
@@ -760,12 +763,39 @@ def bind_unit_checkpoint_provenance(
     sf_prefix = subfolder.rstrip("/") + "/"
 
     # Exact inventory: every load-relevant on-disk file must be listed; required
-    # names must be present (D5-B).
-    for name in REQUIRED_BASE_LOAD_FILES:
+    # names must be present (D5-B / D5-B1 sharded base).
+    for name in REQUIRED_BASE_META_FILES:
         if name not in base_exp and not any(Path(k).name == name for k in base_exp):
             raise RuntimeError(
-                f"authoritative inventory missing required base file {name} (D5-B)"
+                f"authoritative inventory missing required base file {name} (D5-B1)"
             )
+    # Authenticate index bytes then derive exact shard inventory from weight_map
+    index_rel = BASE_SAFETENSORS_INDEX_NAME
+    if index_rel not in base_exp:
+        hits = [k for k in base_exp if Path(k).name == index_rel]
+        if len(hits) != 1:
+            raise RuntimeError(
+                f"base safetensors index not uniquely listed in manifest (D5-B1)"
+            )
+        index_rel = hits[0]
+    index_path = base_root / index_rel
+    _reject_symlink(index_path, label="base safetensors index")
+    if not index_path.is_file():
+        raise RuntimeError(f"missing base safetensors index: {index_path} (D5-B1)")
+    index_bytes = index_path.read_bytes()
+    index_digest = hashlib.sha256(index_bytes).hexdigest()
+    if index_digest != base_exp[index_rel]:
+        raise RuntimeError(
+            f"base index SHA mismatch: {index_digest} != {base_exp[index_rel]} (D5-B1)"
+        )
+    required_base_names = required_base_files_from_authenticated_index(
+        index_bytes=index_bytes,
+        base_files_manifest={
+            (f"base:{k}" if not str(k).startswith("base:") else str(k)): v
+            for k, v in base_exp.items()
+        },
+    )
+    parsed_index = parse_safetensors_index(index_bytes)
     for name in REQUIRED_ADAPTER_LOAD_FILES:
         rel = f"{subfolder.rstrip('/')}/{name}"
         if rel not in ad_exp:
@@ -793,6 +823,21 @@ def bind_unit_checkpoint_provenance(
             f"adapter:{rel!r}: {name} (refuse cross-seed / unlisted loadable)"
         )
 
+    disk_base_names = {Path(p).name for p in load_inventory["base"]}
+    required_base_set = set(required_base_names)
+    missing_base = required_base_set - disk_base_names
+    if missing_base:
+        raise RuntimeError(
+            f"base snapshot missing required sharded files {sorted(missing_base)} "
+            "(D5-B1)"
+        )
+    extra_base = disk_base_names - required_base_set
+    # Allow only exact required inventory — no unlisted loadable base files
+    if extra_base:
+        raise RuntimeError(
+            f"unlisted load-relevant base files refused: {sorted(extra_base)} "
+            "(D5-B1 exact shard inventory)"
+        )
     for abs_path in load_inventory["base"]:
         name = Path(abs_path).name
         matched = _match_base(name)
@@ -803,6 +848,8 @@ def bind_unit_checkpoint_provenance(
                 f"{digest} != {base_exp[matched]}"
             )
         computed[f"inventory:base:{matched}"] = digest
+    computed["base_safetensors_index"] = index_digest
+    computed["base_shards"] = ",".join(parsed_index["shards"])
 
     for abs_path in load_inventory["adapter"]:
         name = Path(abs_path).name
@@ -882,6 +929,8 @@ def bind_unit_checkpoint_provenance(
         "local_paths": local_paths,
         "tokenizer_template_files": tok,
         "adapter_config": adapter_cfg,
+        "base_shards": list(parsed_index["shards"]),
+        "base_weight_map_n": len(parsed_index["weight_map"]),
         "computed_sha256": computed,
         "snapshot_byte_binding": snapshot_bind,
         "trust": {

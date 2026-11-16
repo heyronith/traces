@@ -8,6 +8,14 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from q1_checkpoint_test_support import stub_live_pipeline_checkpoint_trust
+
+
+@pytest.fixture(autouse=True)
+def _stub_checkpoint_trust_for_live_mocks(monkeypatch):
+    stub_live_pipeline_checkpoint_trust(monkeypatch)
+
+
 from traces.q1.analysis import Interval, evaluate_h1_direction
 from traces.q1.driver import (
     ADAPTER_OFF_ROLE,

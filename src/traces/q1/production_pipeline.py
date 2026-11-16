@@ -1444,7 +1444,7 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
         else:
             raise RuntimeError(f"unknown family {spec.family}")
 
-        # Loader re-authenticates owner pin; never uses caller map as authority
+        # Loader re-authenticates owner pin against executor repo_root (D5-A1)
         model, tokenizer, report, meta = load_q1_scientific_model(
             subfolder=load_subfolder,
             expected_weight_file_sha256=None,
@@ -1454,6 +1454,7 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
             expected_tokenizer_is_fast=False,
             base_weight_snapshot_dir=config.base_weight_snapshot_dir,
             adapter_weight_snapshot_dir=config.adapter_weight_snapshot_dir,
+            repo_root=config.repo_root,
         )
         if spec.family == "base" or spec.role == "adapter_off_base_reference":
             from traces.q1.adapter_off import disable_adapter_layers

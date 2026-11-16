@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -166,7 +167,18 @@ def test_c9_live_callback_chain_passes_full_load_context(monkeypatch, tmp_path):
     spec = UnitSpec(
         "exploratory_l1523_seed42", "l1523", "exploratory_dev", 42
     )
-    unit = _execute_live_unit(ex=ex, hooks=hooks, spec=spec, per_unit_audits=audits)
+    stub_auth = MagicMock(production_unlocked=True, engineering_only=False, ok=True)
+    with patch(
+        "traces.q1.scientific_execution.verify_unit_load_provenance",
+        return_value={"ok": True, "failures": []},
+    ):
+        unit = _execute_live_unit(
+            ex=ex,
+            hooks=hooks,
+            spec=spec,
+            per_unit_audits=audits,
+            executor_checkpoint_auth=stub_auth,
+        )
     assert unit.model_unit == spec.model_unit
     assert seen["donors_type"] == ["dict"]
     assert seen["execute_type"] == ["dict"]
