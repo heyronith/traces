@@ -1,0 +1,29 @@
+TRACES Q1 — B1 Independent Audit Remediation D1–D5 / M1–M2
+Synthetic CPU suite record (no pretrained / no GPU / sci auth OFF)
+
+utc=2026-11-16T00:44:50Z
+branch=q1-impl-audit
+correction_commit=1fe1d75ea590d843fcc3d0a2f347a83f317f5407
+prior_tip=009e9760fc791172de7ff1ce83c3fc26f502e687
+agent1_tested_baseline=e1569b654298cb01b59cc1e2bf02e7cd8eac4b62
+frozen_main=b1e8874f45311678e6fa241f504e7e09d4a7808c
+
+interpreter=results/q1_final_cpu_checks/.venv_tf4513/bin/python
+python=3.11.15
+numpy=2.1.3
+torch=2.5.1
+transformers=4.51.3
+peft=0.19.1
+
+f1_hash=fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed
+f1_match=PASS
+
+command=PYTHONPATH=src results/q1_final_cpu_checks/.venv_tf4513/bin/python -m pytest tests/test_q1_cpu_infrastructure.py tests/test_q1_audit_corrections.py tests/test_q1_reaudit_s1_r10.py tests/test_q1_phase2_engineering.py tests/test_q1_phase2_audit_corrections.py tests/test_q1_final_phase2_d1_d8.py tests/test_q1_execution_safety_corrections.py tests/test_q1_independent_audit_remediation.py tests/test_q1_post_audit_e1_e4.py tests/test_q1_failclosed_s1_s2.py tests/test_q1_s2_audit_corrections.py tests/test_q1_b1_production_pipeline.py tests/test_q1_b1_corrections_c1_c8.py tests/test_q1_b1_corrections_c9_c12.py tests/test_q1_b1_audit_remediation_d1_d5.py tests/test_q1_b3_runtime_provenance.py tests/test_q1_tiny_gemma_architecture.py --tb=line
+
+result=281 passed, 12 skipped in 59.44s
+exit_code=0
+
+adversarial_module=tests/test_q1_b1_audit_remediation_d1_d5.py
+adversarial_focus=D1 downstream/upstream separation; D2 base seven-target load; D3 frozen prompt order; D4 canonical CT/TC; D5 local snapshot bind; M1 observation persistence; M2 independent catalog; e2e mock path; F1
+
+restrictions_honored=no_pretrained_loads,no_model_forwards,no_gpu,no_checkpoint_downloads,no_expenditure,no_scientific_outcomes,no_protocol_amendments,no_merge_to_main,sci_auth_OFF
