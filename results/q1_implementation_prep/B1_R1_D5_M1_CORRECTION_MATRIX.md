@@ -4,7 +4,7 @@
 **Correction baseline (prior D1–D5 tip):** `1fe1d75ea590d843fcc3d0a2f347a83f317f5407`  
 **Prior handoff tip:** `914073bb8d8112671cca025714cf78b546dc189a`  
 **Correction commit (code):** `3b7821348f259ad00bd9a031af9eab72d14ad639`  
-**Clean tested tip:** `9d400eea6b2d0ad923fc9eed1ebf03bcdffdc4c2`  
+**Clean tested tip:** `aab5aa7712797a438611b6ccde5061eee1b70113`  
 **Frozen main:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`  
 **Scientific authorization:** OFF  
 **No pretrained loads / GPU / downloads / protocol amendments / merge to main.**

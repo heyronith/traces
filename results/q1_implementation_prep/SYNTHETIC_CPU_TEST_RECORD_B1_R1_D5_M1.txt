@@ -5,7 +5,7 @@ utc=2026-11-16T01:38:59Z
 branch=q1-impl-audit
 correction_commit=3b7821348f259ad00bd9a031af9eab72d14ad639
 correction_tree=a6aa064ae16030a3ae83bdf3407bcd2b72eb3d8e
-clean_tested_tip=9d400eea6b2d0ad923fc9eed1ebf03bcdffdc4c2
+clean_tested_tip=aab5aa7712797a438611b6ccde5061eee1b70113
 prior_handoff_tip=914073bb8d8112671cca025714cf78b546dc189a
 correction_baseline=1fe1d75ea590d843fcc3d0a2f347a83f317f5407
 frozen_main=b1e8874f45311678e6fa241f504e7e09d4a7808c
@@ -30,3 +30,4 @@ adversarial_module=tests/test_q1_b1_remediation_r1_d5_m1.py
 adversarial_focus=R1 CORE_TRIPLE + crossfit upstream-only; D5 multi-subfolder provenance fail-closed; M1 production persistence no skip bypass; F1; non-forward production-path integration via b1_production_pipeline + R1 catalog assemble
 
 restrictions_honored=no_pretrained_loads,no_model_forwards,no_gpu,no_checkpoint_downloads,no_expenditure,no_scientific_outcomes,no_protocol_amendments,no_merge_to_main,sci_auth_OFF
+branch_tip_note=Agent1_checkout_origin_q1-impl-audit_HEAD
