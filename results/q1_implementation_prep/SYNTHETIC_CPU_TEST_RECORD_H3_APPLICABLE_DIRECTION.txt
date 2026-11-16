@@ -6,6 +6,7 @@ branch=q1-impl-audit
 baseline=0adfcc1157c6bb56bd8389a05bbaf4da3c57e35e
 correction_commit=5fd62ff33f09b93b113996e778bd425f2bad50fb
 correction_tree=4c28ec7937e32f232814a51c28a9965b5994985f
+clean_tested_tip=99c1e5ac143a2c137151c8d2a2114fcda21b412c
 frozen_main=b1e8874f45311678e6fa241f504e7e09d4a7808c
 
 interpreter=results/q1_final_cpu_checks/.venv_tf4513/bin/python
