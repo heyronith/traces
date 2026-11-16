@@ -419,38 +419,431 @@ def h2_component_coverage(
     }
 
 
-def h3_top2_conservation(
-    top2_by_seed: dict[Any, frozenset[tuple[int, int]]],
+def _k_star_le_2_ok(k_star: Mapping[str, Any] | None) -> bool:
+    if not isinstance(k_star, Mapping):
+        return False
+    return bool(k_star.get("k_star_le_2")) and not k_star.get("definitive_refused")
+
+
+def _safe_top2_from_effects(
+    head_effects: Mapping[tuple[int, int], np.ndarray] | None,
     *,
-    require_five_seeds: bool = True,
+    n_eligible: int,
+) -> tuple[frozenset[tuple[int, int]] | None, dict[str, Any]]:
+    """Compute unordered top-2 from a complete upstream signed ranking, or fail."""
+    if head_effects is None:
+        return None, {"ok": False, "failures": ["head effects missing"]}
+    from traces.q1.component_sets import validate_complete_signed_ranking
+
+    chk = validate_complete_signed_ranking(head_effects, n_eligible=n_eligible)
+    if not chk["ok"]:
+        return None, chk
+    # Refuse downstream contamination even if caller passed extras somehow
+    upstream_only = {
+        k: v for k, v in head_effects.items() if k in EXPECTED_UPSTREAM_HEADS
+    }
+    if len(upstream_only) != 152:
+        return None, {
+            "ok": False,
+            "failures": ["upstream map must be exactly 152 heads after filtering"],
+        }
+    try:
+        top2 = top2_heads_from_mean_effects(
+            upstream_only,
+            require_complete_upstream=True,
+            n_eligible=n_eligible,
+        )
+    except ValueError as e:
+        return None, {"ok": False, "failures": [str(e)]}
+    return top2, {"ok": True, "failures": []}
+
+
+def assess_unit_h3_direction_support(
+    *,
+    route_class: str,
+    h1_full_state: str,
+    denom_fwd_ok: bool,
+    denom_rev_ok: bool,
+    head_effects_fwd: Mapping[tuple[int, int], np.ndarray] | None,
+    head_effects_rev: Mapping[tuple[int, int], np.ndarray] | None,
+    crossfit_fwd: Mapping[str, Any] | None,
+    crossfit_rev: Mapping[str, Any] | None,
+    n_eligible: int,
+    gates_passed: bool = True,
 ) -> dict[str, Any]:
-    """H3a/H3b only when exactly five distinct primary seeds with valid top-2 sets."""
-    seed_check = validate_five_primary_seeds(top2_by_seed, expected_n=5)
-    if require_five_seeds and not seed_check["ok"]:
+    """Per-seed applicable-direction H3 evidence (owner-approved H3-B).
+
+    Full seed H3 support requires gates, explicit H1-fail, direction-appropriate
+    denominator + complete 152-head ranking + frozen k*≤2, and for R-moved
+    identical unordered forward/reverse top-2 sets. Never invents a default pair.
+    """
+    top2_fwd, fwd_rank = _safe_top2_from_effects(
+        head_effects_fwd, n_eligible=n_eligible
+    )
+    top2_rev, rev_rank = _safe_top2_from_effects(
+        head_effects_rev, n_eligible=n_eligible
+    )
+    k_fwd = _k_star_le_2_ok((crossfit_fwd or {}).get("k_star"))
+    k_rev = _k_star_le_2_ok((crossfit_rev or {}).get("k_star"))
+
+    out: dict[str, Any] = {
+        "full_h3_eligible": False,
+        "top2_for_h3": None,
+        "top2_forward": sorted(top2_fwd) if top2_fwd is not None else None,
+        "top2_reverse": sorted(top2_rev) if top2_rev is not None else None,
+        "applicable_directions": [],
+        "route_class": route_class,
+        "h1_state": h1_full_state,
+        "gates_passed": gates_passed,
+        "denom_fwd_ok": bool(denom_fwd_ok),
+        "denom_rev_ok": bool(denom_rev_ok),
+        "ranking_fwd_ok": bool(fwd_rank.get("ok")),
+        "ranking_rev_ok": bool(rev_rank.get("ok")),
+        "k_star_le_2_fwd": k_fwd,
+        "k_star_le_2_rev": k_rev,
+        "rmoved_top2_agree": None,
+        "reason": None,
+        "support_class": "non_supporting",
+    }
+
+    if not gates_passed:
+        out["reason"] = "gate-failed; no full H3 support"
+        out["support_class"] = "gate_failed"
+        return out
+
+    if route_class not in {"R-and", "R-or", "R-moved"}:
+        out["reason"] = (
+            f"route_class {route_class} inapplicable for full H3 "
+            "(R-tag/R-intermediate/Indeterminate)"
+        )
+        out["support_class"] = "route_inapplicable"
+        out["applicable_directions"] = []
+        return out
+
+    if h1_full_state != "H1-fail":
+        out["reason"] = (
+            f"full H3 requires explicit H1-fail (got {h1_full_state!r}); "
+            "H1-indeterminate/H1-pass never support H3"
+        )
+        out["support_class"] = "h1_not_fail"
+        if route_class == "R-and":
+            out["applicable_directions"] = ["forward"]
+        elif route_class == "R-or":
+            out["applicable_directions"] = ["reverse"]
+        else:
+            out["applicable_directions"] = ["forward", "reverse"]
+        return out
+
+    if route_class == "R-and":
+        out["applicable_directions"] = ["forward"]
+        if not denom_fwd_ok:
+            out["reason"] = "R-and forward route-denominator gate failed"
+            return out
+        if not fwd_rank.get("ok") or top2_fwd is None:
+            out["reason"] = "R-and incomplete forward 152-head ranking"
+            return out
+        if not k_fwd:
+            out["reason"] = "R-and forward k*≤2 not met (frozen F2 bounds)"
+            return out
+        out["full_h3_eligible"] = True
+        out["top2_for_h3"] = top2_fwd
+        out["support_class"] = "full"
+        out["reason"] = None
+        return out
+
+    if route_class == "R-or":
+        out["applicable_directions"] = ["reverse"]
+        if not denom_rev_ok:
+            out["reason"] = "R-or reverse route-denominator gate failed"
+            return out
+        if not rev_rank.get("ok") or top2_rev is None:
+            out["reason"] = "R-or incomplete reverse 152-head ranking"
+            return out
+        if not k_rev:
+            out["reason"] = "R-or reverse k*≤2 not met (frozen F2 bounds)"
+            return out
+        out["full_h3_eligible"] = True
+        out["top2_for_h3"] = top2_rev
+        out["support_class"] = "full"
+        out["reason"] = None
+        return out
+
+    # R-moved: both directions independently; identical unordered top-2 required
+    out["applicable_directions"] = ["forward", "reverse"]
+    reasons: list[str] = []
+    if not denom_fwd_ok:
+        reasons.append("forward route-denominator gate failed")
+    if not denom_rev_ok:
+        reasons.append("reverse route-denominator gate failed")
+    if not fwd_rank.get("ok") or top2_fwd is None:
+        reasons.append("incomplete forward 152-head ranking")
+    if not rev_rank.get("ok") or top2_rev is None:
+        reasons.append("incomplete reverse 152-head ranking")
+    if not k_fwd:
+        reasons.append("forward k*≤2 not met")
+    if not k_rev:
+        reasons.append("reverse k*≤2 not met")
+    agree = (
+        top2_fwd is not None
+        and top2_rev is not None
+        and top2_fwd == top2_rev
+    )
+    out["rmoved_top2_agree"] = agree if (top2_fwd is not None and top2_rev is not None) else None
+    if top2_fwd is not None and top2_rev is not None and not agree:
+        reasons.append(
+            "R-moved forward/reverse top-2 disagree — directional/partial only"
+        )
+        out["support_class"] = "directional_partial"
+    if reasons:
+        out["reason"] = "; ".join(reasons)
+        return out
+    out["full_h3_eligible"] = True
+    out["top2_for_h3"] = top2_fwd
+    out["support_class"] = "full"
+    out["reason"] = None
+    return out
+
+
+def h3_study_level_from_seed_records(
+    seed_records: Mapping[Any, Mapping[str, Any]],
+    *,
+    expected_roster: Sequence[Any] | None = None,
+    study_inconclusive: bool = False,
+) -> dict[str, Any]:
+    """Study-level H3a/H3b from per-seed eligibility records (fixed five identities).
+
+    §5.4(4): ≥4 of 5 primary models must individually qualify. Inapplicable /
+    nonqualifying seeds count as non-supporting and do not invent H3b variation.
+    §5.4(3): study-level INCONCLUSIVE blocks full H3 claims (precedence).
+    No invented H3a/H3b precedence when both criteria hold — report both.
+    """
+    roster = list(expected_roster) if expected_roster is not None else list(seed_records.keys())
+    failures: list[str] = []
+    if len(roster) != 5:
+        failures.append(f"expected_roster must have exactly 5 primary identities, got {len(roster)}")
+    if len(set(roster)) != len(roster):
+        failures.append("duplicate identities in expected_roster")
+    for sid in roster:
+        if sid not in seed_records:
+            failures.append(f"missing seed record for roster identity {sid!r}")
+
+    non_supporting: dict[str, Any] = {}
+    qualifying_sets: dict[Any, frozenset[tuple[int, int]]] = {}
+    per_seed: dict[str, Any] = {}
+    for sid in roster:
+        rec = dict(seed_records.get(sid) or {})
+        eligible = bool(rec.get("full_h3_eligible"))
+        top2 = rec.get("top2_for_h3")
+        if isinstance(top2, list):
+            top2 = frozenset(tuple(x) for x in top2)
+        if eligible and isinstance(top2, frozenset) and len(top2) == 2:
+            qualifying_sets[sid] = top2
+            per_seed[str(sid)] = {
+                "full_h3_eligible": True,
+                "top2": sorted(top2),
+                "reason": None,
+                "route_class": rec.get("route_class"),
+                "support_class": rec.get("support_class", "full"),
+            }
+        else:
+            reason = rec.get("reason") or (
+                "non-supporting / inapplicable for full H3"
+            )
+            non_supporting[str(sid)] = reason
+            per_seed[str(sid)] = {
+                "full_h3_eligible": False,
+                "top2": sorted(top2) if isinstance(top2, frozenset) else rec.get("top2_for_h3"),
+                "top2_forward": rec.get("top2_forward"),
+                "top2_reverse": rec.get("top2_reverse"),
+                "reason": reason,
+                "route_class": rec.get("route_class"),
+                "support_class": rec.get("support_class", "non_supporting"),
+            }
+
+    n_qualifying = len(qualifying_sets)
+    if failures:
         return {
             "H3a_count": 0,
+            "H3a_set": None,
             "varies": False,
-            "n_seeds": seed_check["n_seeds"],
+            "n_seeds": len(roster),
+            "n_qualifying": n_qualifying,
             "indeterminate": True,
             "H3a_eligible": False,
             "H3b_eligible": False,
-            "reason": "; ".join(seed_check["failures"]),
-            "seed_validation": seed_check,
+            "H3a": None,
+            "H3b": None,
+            "reason": "; ".join(failures),
+            "non_supporting": non_supporting,
+            "per_seed": per_seed,
+            "study_inconclusive_precedence": False,
+            "qualifying_seeds": [],
         }
-    sets = list(top2_by_seed.values())
-    c = Counter(sets)
+
+    if n_qualifying < 4:
+        base = {
+            "H3a_count": 0,
+            "H3a_set": None,
+            "varies": False,
+            "n_seeds": 5,
+            "n_qualifying": n_qualifying,
+            "indeterminate": False,
+            "H3a_eligible": False,
+            "H3b_eligible": False,
+            "H3a": None,
+            "H3b": None,
+            "reason": (
+                f"only {n_qualifying} of 5 primary models individually qualify "
+                "for full H3 (§5.4(4) requires ≥4)"
+            ),
+            "non_supporting": non_supporting,
+            "per_seed": per_seed,
+            "study_inconclusive_precedence": False,
+            "qualifying_seeds": [str(s) for s in qualifying_sets],
+        }
+        if study_inconclusive:
+            base["study_inconclusive_precedence"] = True
+            base["reason"] = (
+                "study-level INCONCLUSIVE precedence (§5.4(3)) blocks full H3; "
+                + str(base["reason"])
+            )
+        return base
+
+    c = Counter(qualifying_sets.values())
     best_set, best_count = c.most_common(1)[0]
-    return {
+    varies = len(c) > 1
+    eligible = True
+    result = {
         "H3a_count": best_count,
         "H3a_set": best_set,
-        "varies": len(c) > 1,
-        "n_seeds": len(sets),
+        "varies": varies,
+        "n_seeds": 5,
+        "n_qualifying": n_qualifying,
         "indeterminate": False,
-        "H3a_eligible": True,
-        "H3b_eligible": True,
+        "H3a_eligible": eligible,
+        "H3b_eligible": eligible,
+        "H3a": None,
+        "H3b": None,
         "reason": None,
-        "seed_validation": seed_check,
+        "non_supporting": non_supporting,
+        "per_seed": per_seed,
+        "study_inconclusive_precedence": False,
+        "qualifying_seeds": [str(s) for s in qualifying_sets],
+        "qualifying_set_counts": {
+            str(sorted(s)): n for s, n in c.items()
+        },
     }
+    if study_inconclusive:
+        result["H3a_eligible"] = False
+        result["H3b_eligible"] = False
+        result["study_inconclusive_precedence"] = True
+        result["reason"] = (
+            "study-level INCONCLUSIVE precedence (§5.4(3)) blocks full H3 claims"
+        )
+        result["H3a"] = None
+        result["H3b"] = None
+        return result
+
+    # Transparent dual reporting — no invented H3a/H3b precedence
+    if best_count >= 4:
+        result["H3a"] = "supported"
+    if varies:
+        result["H3b"] = "supported"
+    return result
+
+
+def h3_top2_conservation(
+    top2_by_seed: dict[Any, frozenset[tuple[int, int]] | None],
+    *,
+    require_five_seeds: bool = True,
+    nonqualifying_seeds: Mapping[Any, str] | None = None,
+    expected_roster: Sequence[Any] | None = None,
+    study_inconclusive: bool = False,
+) -> dict[str, Any]:
+    """Study-level H3 conservation over a fixed five-seed primary roster.
+
+    Qualifying entries supply frozenset top-2 sets. ``None`` values or keys listed
+    in ``nonqualifying_seeds`` count as non-supporting (not missing-data erasure
+    of a 4-of-5 claim). Legacy call sites that pass exactly five valid sets keep
+    prior conservation counting; partial maps without a roster remain ineligible.
+    """
+    nonqual = dict(nonqualifying_seeds or {})
+    if expected_roster is not None:
+        roster = list(expected_roster)
+    elif require_five_seeds:
+        # Legacy: exactly five present keys required unless Nones mark nonqualifying
+        roster = list(top2_by_seed.keys())
+        if any(v is None for v in top2_by_seed.values()) or nonqual:
+            # Allow 4 qualifying + nonqualifying markers when map has 5 slots
+            pass
+        else:
+            seed_check = validate_five_primary_seeds(
+                {k: v for k, v in top2_by_seed.items() if isinstance(v, frozenset)},
+                expected_n=5,
+            )
+            if not seed_check["ok"]:
+                return {
+                    "H3a_count": 0,
+                    "varies": False,
+                    "n_seeds": seed_check["n_seeds"],
+                    "n_qualifying": 0,
+                    "indeterminate": True,
+                    "H3a_eligible": False,
+                    "H3b_eligible": False,
+                    "H3a": None,
+                    "H3b": None,
+                    "reason": "; ".join(seed_check["failures"]),
+                    "seed_validation": seed_check,
+                    "non_supporting": {str(k): "absent_from_map" for k in []},
+                    "per_seed": {},
+                    "study_inconclusive_precedence": False,
+                    "qualifying_seeds": [],
+                }
+    else:
+        roster = list(top2_by_seed.keys())
+
+    records: dict[Any, dict[str, Any]] = {}
+    for sid in roster:
+        if sid in nonqual:
+            records[sid] = {
+                "full_h3_eligible": False,
+                "top2_for_h3": None,
+                "reason": nonqual[sid],
+                "support_class": "non_supporting",
+            }
+            continue
+        val = top2_by_seed.get(sid)
+        if isinstance(val, frozenset) and len(val) == 2:
+            records[sid] = {
+                "full_h3_eligible": True,
+                "top2_for_h3": val,
+                "reason": None,
+                "support_class": "full",
+            }
+        else:
+            records[sid] = {
+                "full_h3_eligible": False,
+                "top2_for_h3": val if isinstance(val, frozenset) else None,
+                "reason": nonqual.get(sid, "missing or invalid top-2"),
+                "support_class": "non_supporting",
+            }
+    # Include any nonqual keys not already on roster
+    for sid, reason in nonqual.items():
+        if sid not in records:
+            records[sid] = {
+                "full_h3_eligible": False,
+                "top2_for_h3": None,
+                "reason": reason,
+                "support_class": "non_supporting",
+            }
+            if sid not in roster and expected_roster is None and len(roster) < 5:
+                roster.append(sid)
+
+    return h3_study_level_from_seed_records(
+        records,
+        expected_roster=roster if (expected_roster is not None or len(roster) == 5) else roster,
+        study_inconclusive=study_inconclusive,
+    )
 
 
 def top2_heads_from_mean_effects(

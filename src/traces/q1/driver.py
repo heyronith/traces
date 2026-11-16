@@ -30,18 +30,17 @@ from traces.q1.analysis import (
     study_level_decision,
 )
 from traces.q1.analysis_ext import (
+    assess_unit_h3_direction_support,
     classify_k_star,
     component_route_share_intervals,
     crossfit_evaluate_topk,
     h1_bootstrap_shares,
     h2_component_coverage,
-    h3_top2_conservation,
+    h3_study_level_from_seed_records,
     route_denominator_gate,
     selection_key,
-    top2_heads_from_mean_effects,
 )
 from traces.q1.component_sets import (
-    validate_complete_signed_ranking,
     validate_head_effect_map,
     validate_pair_effect_map,
 )
@@ -227,7 +226,14 @@ def run_model_unit_analysis(
     *,
     top2_by_seed: Mapping[Any, frozenset[tuple[int, int]]] | None = None,
 ) -> DriverResult:
-    """Steps 6–11 of R10 for one model unit (precomputed margins/effects)."""
+    """Steps 6–11 of R10 for one model unit (precomputed margins/effects).
+
+    ``top2_by_seed`` is accepted for backward compatibility but is **ignored** for
+    H3 direction selection (owner-approved H3-B). Per-unit H3 evidence is computed
+    from this unit's gates/route/H1/F2 only; study-level H3a/H3b are aggregated in
+    ``run_study`` from eligible seeds.
+    """
+    _ = top2_by_seed  # legacy group map — never authoritative for H3 direction
     elig_ids = [pid for pid, m in zip(unit.prompt_ids, unit.eligible_mask) if m]
     if len(elig_ids) < 1:
         return DriverResult(
@@ -235,7 +241,16 @@ def run_model_unit_analysis(
             gates={"passed": False, "reasons": ["empty eligible set"]},
             route={"route_class": "Indeterminate"},
             h1={"full_H1": "H1-indeterminate", "reason": "empty eligible set"},
-            h2_h3={"H2": None, "H3a": None, "H3b": None},
+            h2_h3={
+                "H2": None,
+                "H3a": None,
+                "H3b": None,
+                "h3_unit": {
+                    "full_h3_eligible": False,
+                    "reason": "empty eligible set",
+                    "support_class": "gate_failed",
+                },
+            },
             crossfit={"indeterminate": True, "reason": "empty eligible set"},
             meta={"fail_closed": True},
         )
@@ -260,7 +275,19 @@ def run_model_unit_analysis(
             gates=asdict(gates),
             route={**route, "route_class": "gate-failed"},
             h1={"full_H1": "inapplicable", "reason": "gate-failed"},
-            h2_h3={},
+            h2_h3={
+                "H2": None,
+                "H3a": None,
+                "H3b": None,
+                "h3_unit": {
+                    "full_h3_eligible": False,
+                    "reason": "gate-failed; no full H3 support",
+                    "support_class": "gate_failed",
+                    "route_class": "gate-failed",
+                    "h1_state": "inapplicable",
+                    "gates_passed": False,
+                },
+            },
             crossfit={"indeterminate": True, "reason": "gate-failed"},
             meta={"gate_failed": True},
         )
@@ -491,28 +518,29 @@ def run_model_unit_analysis(
         "applicable_directions": list(applicable_directions),
     }
 
-    # H3: only with validated five-seed map; partial maps cannot support H3a/H3b
-    if top2_by_seed is None:
-        h3cons = h3_top2_conservation({}, require_five_seeds=True)
-        h3_note = "no five-seed top2_by_seed supplied; H3 ineligible"
-        h3_count = 0
-        h3_varies = False
-    else:
-        validated: dict[Any, frozenset[tuple[int, int]]] = {}
-        for seed_id, fs in top2_by_seed.items():
-            if isinstance(fs, frozenset) and len(fs) == 2:
-                validated[seed_id] = fs
-        h3cons = h3_top2_conservation(validated, require_five_seeds=True)
-        h3_note = h3cons.get("reason")
-        if h3cons.get("H3a_eligible"):
-            h3_count = int(h3cons.get("H3a_count") or 0)
-            h3_varies = bool(h3cons.get("varies"))
-        else:
-            h3_count = 0
-            h3_varies = False
+    # Per-unit H3: applicable-direction evidence only (study H3a/H3b aggregated later)
+    h3_unit = assess_unit_h3_direction_support(
+        route_class=str(route_class),
+        h1_full_state=str(h1.get("full_H1")),
+        denom_fwd_ok=bool(denom_fwd.get("ok")),
+        denom_rev_ok=bool(denom_rev.get("ok")),
+        head_effects_fwd=unit.head_effects_fwd,
+        head_effects_rev=unit.head_effects_rev,
+        crossfit_fwd=crossfit_fwd,
+        crossfit_rev=crossfit_rev,
+        n_eligible=len(elig_ids),
+        gates_passed=True,
+    )
+    # Serialize frozenset top2 for JSON-friendly meta
+    if isinstance(h3_unit.get("top2_for_h3"), frozenset):
+        h3_unit = {
+            **h3_unit,
+            "top2_for_h3": sorted(h3_unit["top2_for_h3"]),
+            "top2_for_h3_frozenset": h3_unit["top2_for_h3"],
+        }
 
     k_star = crossfit.get("k_star") or {}
-    # Refuse H2/H3 support from incomplete k* scans
+    # Refuse H2 support from incomplete k* scans; unit-level H3a/H3b stay unset
     k_le2 = bool(k_star.get("k_star_le_2")) and not k_star.get("definitive_refused")
     k_gt10 = bool(k_star.get("k_star_gt_10")) and not k_star.get("definitive_refused")
     h2h3 = evaluate_h2_h3(
@@ -520,16 +548,24 @@ def run_model_unit_analysis(
         k_star_gt_10=k_gt10,
         h1_state=str(h1.get("full_H1")),
         all_component_share_upper_below_025=all_upper_below,
-        top2_set_conservation_seeds=h3_count,
-        top2_varies_across_seeds=h3_varies,
+        top2_set_conservation_seeds=0,
+        top2_varies_across_seeds=False,
     )
-    if h3cons.get("H3a_eligible") is False:
-        h2h3["H3a"] = None
-        h2h3["H3b"] = None
+    # Study-level H3 only — never infer supported H3a/H3b from one unit alone
+    h2h3["H3a"] = None
+    h2h3["H3b"] = None
     h2h3["h2_meta"] = h2_meta
+    h2h3["h3_unit"] = {
+        k: v for k, v in h3_unit.items() if k != "top2_for_h3_frozenset"
+    }
     h2h3["h3_conservation"] = {
-        **{k: (sorted(v) if isinstance(v, frozenset) else v) for k, v in h3cons.items()},
-        "note": h3_note,
+        "note": (
+            "per-unit analysis defers H3a/H3b to run_study aggregation over the "
+            "fixed five primary identities (applicable-direction H3-B)"
+        ),
+        "H3a_eligible": False,
+        "H3b_eligible": False,
+        "deferred_to_study": True,
     }
 
     return DriverResult(
@@ -916,37 +952,65 @@ def run_study(
         }
 
     # --- Primary confirmatory (after exploratory stop clear) ---
+    # H3-B: analyze each unit first (gates/route/H1/F2), then aggregate eligible
+    # applicable-direction top-2 sets. Never precompute a forward-only group map.
     primary = by_role[PRIMARY_ROLE]
-    top2_by_seed: dict[str, frozenset[tuple[int, int]]] = {}
-    ranking_ok = True
-    for u in primary:
-        n_el = int(u.eligible_mask.sum())
-        chk = validate_complete_signed_ranking(u.head_effects_fwd, n_eligible=n_el)
-        if not chk["ok"]:
-            ranking_ok = False
-            top2_by_seed = {}
-            break
-        top2_by_seed[u.model_unit] = top2_heads_from_mean_effects(
-            u.head_effects_fwd,
-            require_complete_upstream=True,
-            n_eligible=n_el,
-        )
+    from traces.q1.frozen_artifacts import REQUIRED_PRIMARY_SEEDS
 
-    # M3: preregistered five-seed study-level aggregation — use gate-aware labels
     study_labels: list[str] = []
+    primary_results: list[dict[str, Any]] = []
+    h3_seed_records: dict[str, dict[str, Any]] = {}
+    h3_top2_eligible: dict[str, list] = {}
+    h3_direction_meta: dict[str, Any] = {}
+
     for u in primary:
         res = run_model_unit_analysis(
             u,
             held_out_ids_allocation_order,
-            top2_by_seed=top2_by_seed if ranking_ok and len(top2_by_seed) == 5 else None,
+            top2_by_seed=None,
         )
         d = res.to_dict()
         d["role"] = PRIMARY_ROLE
+        primary_results.append(d)
         per_unit.append(d)
         if res.meta.get("gate_failed") or not res.gates.get("passed", True):
             study_labels.append("gate-failed")
         else:
             study_labels.append(res.route.get("route_class", "Indeterminate"))
+
+        h3u = (res.h2_h3 or {}).get("h3_unit") or {}
+        # Restore frozenset for aggregation when serialized as sorted pairs
+        top2_raw = h3u.get("top2_for_h3")
+        top2_fs: frozenset[tuple[int, int]] | None = None
+        if isinstance(top2_raw, frozenset) and len(top2_raw) == 2:
+            top2_fs = top2_raw
+        elif isinstance(top2_raw, list) and len(top2_raw) == 2:
+            try:
+                top2_fs = frozenset(tuple(x) for x in top2_raw)
+            except TypeError:
+                top2_fs = None
+        rec = {
+            **h3u,
+            "full_h3_eligible": bool(h3u.get("full_h3_eligible")) and top2_fs is not None,
+            "top2_for_h3": top2_fs,
+        }
+        h3_seed_records[u.model_unit] = rec
+        h3_direction_meta[u.model_unit] = {
+            "route_class": h3u.get("route_class") or res.route.get("route_class"),
+            "applicable_directions": h3u.get("applicable_directions"),
+            "top2_forward": h3u.get("top2_forward"),
+            "top2_reverse": h3u.get("top2_reverse"),
+            "full_h3_eligible": rec["full_h3_eligible"],
+            "support_class": h3u.get("support_class"),
+            "reason": h3u.get("reason"),
+            "h1_state": h3u.get("h1_state") or (res.h1 or {}).get("full_H1"),
+            "k_star_le_2_fwd": h3u.get("k_star_le_2_fwd"),
+            "k_star_le_2_rev": h3u.get("k_star_le_2_rev"),
+            "rmoved_top2_agree": h3u.get("rmoved_top2_agree"),
+        }
+        if rec["full_h3_eligible"] and top2_fs is not None:
+            h3_top2_eligible[u.model_unit] = sorted(top2_fs)
+
         sink.add_condition(
             ConditionRecord(
                 condition_id="primary_analysis_complete",
@@ -969,9 +1033,11 @@ def run_study(
     for u in by_role[INTEGRITY_ROLE]:
         per_unit.append({"model_unit": u.model_unit, "role": u.role, "status": "recorded"})
 
-    study = None
+    study: Any = None
+    study_inconclusive = False
     if len(study_labels) == 5:
         study = study_level_decision(study_labels)
+        study_inconclusive = study == "INCONCLUSIVE"
     elif len(study_labels) > 0:
         # Refuse canonical study-level on partial primary set
         study = {
@@ -982,12 +1048,48 @@ def run_study(
             "reason": "preregistered study-level requires exactly 5 primary seeds",
         }
 
+    # Fixed five-identity roster (l19 seeds 42–46). Never select best-of results.
+    roster_ids = [u.model_unit for u in primary]
+    expected_ids = [f"primary_l19_seed{s}" for s in REQUIRED_PRIMARY_SEEDS]
+    if len(roster_ids) == 5 and sorted(roster_ids) == sorted(expected_ids):
+        h3_roster = expected_ids
+    else:
+        # Still evaluate the observed primary identities if count==5; else ineligible
+        h3_roster = roster_ids
+
+    h3_study = h3_study_level_from_seed_records(
+        h3_seed_records,
+        expected_roster=h3_roster if len(h3_roster) == 5 else list(h3_seed_records.keys()),
+        study_inconclusive=study_inconclusive,
+    )
+    # Preserve study_level string/partial-dict contract; H3 lives in h3_study.
+
+    # Annotate primary unit dicts with study-level H3 (claims remain study-scoped)
+    for d in primary_results:
+        hh = d.get("h2_h3") or {}
+        hh["H3a"] = h3_study.get("H3a")
+        hh["H3b"] = h3_study.get("H3b")
+        hh["h3_conservation"] = {
+            k: (sorted(v) if isinstance(v, frozenset) else v)
+            for k, v in h3_study.items()
+        }
+        hh["h3_conservation"]["note"] = (
+            "study-level applicable-direction aggregation (H3-B); "
+            "per-seed evidence in h3_unit / h3_direction_by_seed"
+        )
+        d["h2_h3"] = hh
+
     return {
         "per_unit": per_unit + unknown,
         "study_level": study,
         "exploratory_stop": stop,
-        "h3_top2_by_seed": {k: sorted(v) for k, v in top2_by_seed.items()},
-        "h3_ranking_complete": ranking_ok and len(top2_by_seed) == 5,
+        "h3_top2_by_seed": h3_top2_eligible,
+        "h3_direction_by_seed": h3_direction_meta,
+        "h3_study": {
+            k: (sorted(v) if isinstance(v, frozenset) else v)
+            for k, v in h3_study.items()
+        },
+        "h3_ranking_complete": bool(h3_study.get("H3a_eligible") or h3_study.get("n_qualifying", 0) >= 1),
         "allocation": {
             "held_out_n": len(held_out_ids_allocation_order),
             "held_out_expected": N_HO,

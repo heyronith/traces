@@ -327,9 +327,16 @@ def test_study_five_seed_top2_actual_sets():
     held = units[3].prompt_ids + [f"h{i}" for i in range(160)]
     out = run_study(units, held, exploratory_single_bos_ranks=[1, 2, 3])
     assert out["exploratory_stop"]["confirmatory_blocked"] is False
-    assert len(out["h3_top2_by_seed"]) == 5
-    for _uid, pair in out["h3_top2_by_seed"].items():
-        assert (15, 6) in [tuple(x) if isinstance(x, list) else x for x in pair] or len(pair) == 2
+    # H3-B: direction metadata for all five primary identities; eligible top-2
+    # map may be smaller when seeds are non-supporting (no forward-only fill).
+    assert "h3_direction_by_seed" in out
+    assert len(out["h3_direction_by_seed"]) == 5
+    assert "h3_study" in out
+    for _uid, meta in out["h3_direction_by_seed"].items():
+        assert "route_class" in meta
+        assert "full_h3_eligible" in meta
+    for _uid, pair in out.get("h3_top2_by_seed", {}).items():
+        assert len(pair) == 2
 
 
 # --- Scientific auth gates ---
