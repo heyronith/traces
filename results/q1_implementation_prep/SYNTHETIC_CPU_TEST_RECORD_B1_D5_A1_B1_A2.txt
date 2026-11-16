@@ -5,6 +5,7 @@ utc=2026-11-16T03:12:33Z
 branch=q1-impl-audit
 correction_commit=3730e892ab3f4f839570b8b4d8710a63f86efc52
 correction_tree=6a133d8e3a52fe7bd3c652ec1770ac419665c6d1
+clean_tested_tip=30863ebd52c41ab15a9484556f2043bc1c5363a2
 baseline=11165f7c5a3a4db31fff5ccdba450c6b0ee8b128
 prior_published_tip=e6e7af19f4a33ae7fd33cc598dcbe92787658e91
 frozen_main=b1e8874f45311678e6fa241f504e7e09d4a7808c

@@ -31,3 +31,5 @@ Standard Hugging Face cache snapshots may contain symlinks. The approved loading
 | Real B3 checkpoint hashes / owner pin | **not set** |
 | F5 / H3 / B2 / runtime lock / tiny-Gemma auth | unresolved |
 | Scientific readiness | **not claimed** |
+
+**Clean tested tip:** `30863ebd52c41ab15a9484556f2043bc1c5363a2`
