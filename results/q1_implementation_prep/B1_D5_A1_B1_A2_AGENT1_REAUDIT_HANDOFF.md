@@ -21,7 +21,8 @@ Suite record: `results/q1_implementation_prep/SYNTHETIC_CPU_TEST_RECORD_B1_D5_A1
 | Code baseline | `11165f7c5a3a4db31fff5ccdba450c6b0ee8b128` |
 | Prior published tip | `e6e7af19f4a33ae7fd33cc598dcbe92787658e91` |
 | Frozen main | `b1e8874f45311678e6fa241f504e7e09d4a7808c` |
-| Clean tested tip (suite + handoff) |  |
+| Clean tested tip (suite + handoff) | `30863ebd52c41ab15a9484556f2043bc1c5363a2` |
+| Publish tip | `03ba3ba4690f918b3a2fa1b30adeec376c7aed28` |
 
 Suite was run on clean committed correction tree `3730e89` / `6a133d8`.
 
