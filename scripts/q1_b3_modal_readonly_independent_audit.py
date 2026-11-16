@@ -63,7 +63,7 @@ APPROVED_VERIFIER_RELPATH = (
     "scripts/q1_b3_agent1_independent_volume_verifier.py"
 )
 # Empty / placeholder until Agent 1 publishes the approved source digest.
-APPROVED_VERIFIER_SHA256 = ""
+APPROVED_VERIFIER_SHA256 = "83eb9656700adc82be96beff289612f5aba05e43fe23a3c5c0aac6b4ffb50afa"
 
 # CPU-only, bounded under cumulative $10 B3 cap (hash-only; no download).
 AUDIT_CPU_CORES = 2.0
