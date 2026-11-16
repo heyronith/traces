@@ -471,6 +471,11 @@ def _safe_top2_from_effects(
     return top2, {"ok": True, "failures": []}
 
 
+FROZEN_H3_ROUTE_CLASSES = frozenset(
+    {"R-moved", "R-and", "R-or", "R-tag", "R-intermediate", "Indeterminate"}
+)
+
+
 def assess_unit_h3_direction_support(
     *,
     route_class: str,
@@ -489,9 +494,12 @@ def assess_unit_h3_direction_support(
     Endpoint statuses (owner-approved):
       full_qualifying | h3_indeterminate | determinate_non_support | gate_failed
 
-    Full qualifying requires gates, explicit H1-fail, direction-appropriate
-    denominator + complete 152-head ranking + frozen k*≤2, and for R-moved
-    identical unordered forward/reverse top-2. Never invents a default pair.
+    Decisive-over-uncertain (owner 2026-11-16): fully observed definitive
+    disqualifiers (complete R-moved top-2 disagreement; definitive k*>10) take
+    precedence over independent H1-indeterminate or undetermined k* for the
+    **H3 endpoint only**; uncertain evidence is still disclosed. Unknown route
+    labels raise ``ValueError`` (technical fail-closed), never scientific
+    determinate non-support.
     """
     top2_fwd, fwd_rank = _safe_top2_from_effects(
         head_effects_fwd, n_eligible=n_eligible
@@ -528,6 +536,7 @@ def assess_unit_h3_direction_support(
         "support_class": "non_supporting",
         "h3_endpoint_status": "determinate_non_support",
         "uncertainty_kind": None,
+        "preserved_uncertainty": None,
     }
 
     def _finish(
@@ -537,6 +546,7 @@ def assess_unit_h3_direction_support(
         reason: str,
         uncertainty_kind: str | None = None,
         directions: list[str] | None = None,
+        preserved_uncertainty: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         out["h3_endpoint_status"] = status
         out["support_class"] = support_class
@@ -544,6 +554,8 @@ def assess_unit_h3_direction_support(
         out["uncertainty_kind"] = uncertainty_kind
         if directions is not None:
             out["applicable_directions"] = directions
+        if preserved_uncertainty is not None:
+            out["preserved_uncertainty"] = dict(preserved_uncertainty)
         out["full_h3_eligible"] = False
         out["top2_for_h3"] = None
         return out
@@ -553,6 +565,13 @@ def assess_unit_h3_direction_support(
             status="gate_failed",
             support_class="gate_failed",
             reason="gate-failed; no full H3 support",
+        )
+
+    if route_class not in FROZEN_H3_ROUTE_CLASSES:
+        raise ValueError(
+            f"unknown route_class {route_class!r} — refuse scientific H3 "
+            f"endpoint; frozen vocabulary is {sorted(FROZEN_H3_ROUTE_CLASSES)} "
+            "(technical fail-closed; not determinate_non_support)"
         )
 
     if route_class == "Indeterminate":
@@ -573,13 +592,6 @@ def assess_unit_h3_direction_support(
             ),
         )
 
-    if route_class not in {"R-and", "R-or", "R-moved"}:
-        return _finish(
-            status="determinate_non_support",
-            support_class="route_inapplicable",
-            reason=f"route_class {route_class} inapplicable for full H3",
-        )
-
     if route_class == "R-and":
         directions = ["forward"]
     elif route_class == "R-or":
@@ -588,115 +600,32 @@ def assess_unit_h3_direction_support(
         directions = ["forward", "reverse"]
     out["applicable_directions"] = directions
 
-    if h1_full_state == "H1-indeterminate":
-        return _finish(
-            status="h3_indeterminate",
-            support_class="h1_not_fail",
-            reason="H1-indeterminate on applicable route — H3-indeterminate",
-            uncertainty_kind="h1_indeterminate",
-            directions=directions,
-        )
-    if h1_full_state == "H1-pass":
+    def _uncertainty_payload() -> dict[str, Any]:
+        return {
+            "h1_state": h1_full_state,
+            "k_star_band_fwd": band_fwd,
+            "k_star_band_rev": band_rev,
+            "top2_forward": out["top2_forward"],
+            "top2_reverse": out["top2_reverse"],
+            "rmoved_top2_agree": out["rmoved_top2_agree"],
+        }
+
+    # --- Denominator applicability (before decisive / uncertain H3 checks) ---
+    if route_class == "R-and" and not denom_fwd_ok:
         return _finish(
             status="determinate_non_support",
-            support_class="h1_not_fail",
-            reason="explicit H1-pass — determinate non-support for H3",
+            support_class="denom_inapplicable",
+            reason="R-and forward route-denominator gate failed (direction inapplicable)",
             directions=directions,
         )
-    if h1_full_state != "H1-fail":
+    if route_class == "R-or" and not denom_rev_ok:
         return _finish(
-            status="h3_indeterminate",
-            support_class="h1_not_fail",
-            reason=f"unrecognized H1 state {h1_full_state!r} — treat as H3-indeterminate",
-            uncertainty_kind="h1_unrecognized",
+            status="determinate_non_support",
+            support_class="denom_inapplicable",
+            reason="R-or reverse route-denominator gate failed (direction inapplicable)",
             directions=directions,
         )
-
-    def _k_failure(band: str, label: str) -> dict[str, Any] | None:
-        if band == "le_2":
-            return None
-        if band == "gt_10":
-            return _finish(
-                status="determinate_non_support",
-                support_class="k_star_gt_10",
-                reason=f"{label} definitive k*>10 — determinate non-support",
-                directions=directions,
-            )
-        if band in {"undetermined"}:
-            return _finish(
-                status="h3_indeterminate",
-                support_class="k_star_undetermined",
-                reason=f"{label} k* in undetermined concentration band",
-                uncertainty_kind="k_star_undetermined",
-                directions=directions,
-            )
-        return _finish(
-            status="h3_indeterminate",
-            support_class="k_star_incomplete",
-            reason=f"{label} k* incomplete/missing — technical H3-indeterminate",
-            uncertainty_kind="technical_missing_k_star",
-            directions=directions,
-        )
-
-    if route_class == "R-and":
-        if not denom_fwd_ok:
-            return _finish(
-                status="determinate_non_support",
-                support_class="denom_inapplicable",
-                reason="R-and forward route-denominator gate failed (direction inapplicable)",
-                directions=directions,
-            )
-        if not fwd_rank.get("ok") or top2_fwd is None:
-            return _finish(
-                status="h3_indeterminate",
-                support_class="incomplete_ranking",
-                reason="R-and incomplete forward 152-head ranking",
-                uncertainty_kind="technical_missing_ranking",
-                directions=directions,
-            )
-        kf = _k_failure(band_fwd, "R-and forward")
-        if kf is not None:
-            return kf
-        out["full_h3_eligible"] = True
-        out["top2_for_h3"] = top2_fwd
-        out["support_class"] = "full"
-        out["h3_endpoint_status"] = "full_qualifying"
-        out["reason"] = None
-        return out
-
-    if route_class == "R-or":
-        if not denom_rev_ok:
-            return _finish(
-                status="determinate_non_support",
-                support_class="denom_inapplicable",
-                reason="R-or reverse route-denominator gate failed (direction inapplicable)",
-                directions=directions,
-            )
-        if not rev_rank.get("ok") or top2_rev is None:
-            return _finish(
-                status="h3_indeterminate",
-                support_class="incomplete_ranking",
-                reason="R-or incomplete reverse 152-head ranking",
-                uncertainty_kind="technical_missing_ranking",
-                directions=directions,
-            )
-        kr = _k_failure(band_rev, "R-or reverse")
-        if kr is not None:
-            return kr
-        out["full_h3_eligible"] = True
-        out["top2_for_h3"] = top2_rev
-        out["support_class"] = "full"
-        out["h3_endpoint_status"] = "full_qualifying"
-        out["reason"] = None
-        return out
-
-    # R-moved
-    out["rmoved_top2_agree"] = (
-        top2_fwd == top2_rev
-        if (top2_fwd is not None and top2_rev is not None)
-        else None
-    )
-    if not denom_fwd_ok or not denom_rev_ok:
+    if route_class == "R-moved" and (not denom_fwd_ok or not denom_rev_ok):
         failed = []
         if not denom_fwd_ok:
             failed.append("forward")
@@ -712,30 +641,143 @@ def assess_unit_h3_direction_support(
             ),
             directions=directions,
         )
-    if not fwd_rank.get("ok") or top2_fwd is None or not rev_rank.get("ok") or top2_rev is None:
-        return _finish(
-            status="h3_indeterminate",
-            support_class="incomplete_ranking",
-            reason="R-moved incomplete forward/reverse 152-head ranking",
-            uncertainty_kind="technical_missing_ranking",
-            directions=directions,
+
+    ranking_fwd_ok = bool(fwd_rank.get("ok")) and top2_fwd is not None
+    ranking_rev_ok = bool(rev_rank.get("ok")) and top2_rev is not None
+    if route_class == "R-moved":
+        out["rmoved_top2_agree"] = (
+            top2_fwd == top2_rev if (ranking_fwd_ok and ranking_rev_ok) else None
         )
-    for band, label in ((band_fwd, "R-moved forward"), (band_rev, "R-moved reverse")):
-        kf = _k_failure(band, label)
-        if kf is not None:
-            return kf
-    if top2_fwd != top2_rev:
+
+    # --- Decisive-over-uncertain: definitive disqualifiers first ---
+    # R-moved: only valid complete BOTH maps can establish top-2 disagreement
+    if (
+        route_class == "R-moved"
+        and ranking_fwd_ok
+        and ranking_rev_ok
+        and top2_fwd != top2_rev
+    ):
         return _finish(
             status="determinate_non_support",
             support_class="directional_partial",
             reason=(
                 "R-moved forward/reverse top-2 disagree — determinate non-support "
-                "(directional/partial only)"
+                "for full H3 (decisive-over-uncertain); uncertain H1/k* preserved"
             ),
             directions=directions,
+            preserved_uncertainty=_uncertainty_payload(),
         )
+
+    # Definitive k*>10 in any required direction disqualifies full H3
+    required_bands: list[tuple[str, str]] = []
+    if route_class == "R-and":
+        required_bands = [(band_fwd, "R-and forward")]
+    elif route_class == "R-or":
+        required_bands = [(band_rev, "R-or reverse")]
+    else:
+        required_bands = [
+            (band_fwd, "R-moved forward"),
+            (band_rev, "R-moved reverse"),
+        ]
+    for band, label in required_bands:
+        if band == "gt_10":
+            return _finish(
+                status="determinate_non_support",
+                support_class="k_star_gt_10",
+                reason=(
+                    f"{label} definitive k*>10 — determinate non-support for full H3 "
+                    "(decisive-over-uncertain); other-direction uncertainty preserved"
+                ),
+                directions=directions,
+                preserved_uncertainty=_uncertainty_payload(),
+            )
+
+    # Explicit H1-pass is determinate non-support (after decisive H3 checks)
+    if h1_full_state == "H1-pass":
+        return _finish(
+            status="determinate_non_support",
+            support_class="h1_not_fail",
+            reason="explicit H1-pass — determinate non-support for H3",
+            directions=directions,
+        )
+
+    # Missing/incomplete required rankings — technical, never invent disagreement
+    if route_class == "R-and" and not ranking_fwd_ok:
+        return _finish(
+            status="h3_indeterminate",
+            support_class="incomplete_ranking",
+            reason="R-and incomplete forward 152-head ranking",
+            uncertainty_kind="technical_missing_ranking",
+            directions=directions,
+        )
+    if route_class == "R-or" and not ranking_rev_ok:
+        return _finish(
+            status="h3_indeterminate",
+            support_class="incomplete_ranking",
+            reason="R-or incomplete reverse 152-head ranking",
+            uncertainty_kind="technical_missing_ranking",
+            directions=directions,
+        )
+    if route_class == "R-moved" and (not ranking_fwd_ok or not ranking_rev_ok):
+        return _finish(
+            status="h3_indeterminate",
+            support_class="incomplete_ranking",
+            reason=(
+                "R-moved incomplete forward/reverse 152-head ranking — cannot "
+                "claim observed top-2 disagreement without both valid maps"
+            ),
+            uncertainty_kind="technical_missing_ranking",
+            directions=directions,
+        )
+
+    # Remaining uncertainty without a definitive disqualifier
+    if h1_full_state == "H1-indeterminate":
+        return _finish(
+            status="h3_indeterminate",
+            support_class="h1_not_fail",
+            reason="H1-indeterminate on applicable route — H3-indeterminate",
+            uncertainty_kind="h1_indeterminate",
+            directions=directions,
+            preserved_uncertainty=_uncertainty_payload(),
+        )
+    if h1_full_state != "H1-fail":
+        return _finish(
+            status="h3_indeterminate",
+            support_class="h1_not_fail",
+            reason=f"unrecognized H1 state {h1_full_state!r} — treat as H3-indeterminate",
+            uncertainty_kind="h1_unrecognized",
+            directions=directions,
+        )
+
+    for band, label in required_bands:
+        if band == "le_2":
+            continue
+        if band == "undetermined":
+            return _finish(
+                status="h3_indeterminate",
+                support_class="k_star_undetermined",
+                reason=f"{label} k* in undetermined concentration band",
+                uncertainty_kind="k_star_undetermined",
+                directions=directions,
+                preserved_uncertainty=_uncertainty_payload(),
+            )
+        return _finish(
+            status="h3_indeterminate",
+            support_class="k_star_incomplete",
+            reason=f"{label} k* incomplete/missing — technical H3-indeterminate",
+            uncertainty_kind="technical_missing_k_star",
+            directions=directions,
+            preserved_uncertainty=_uncertainty_payload(),
+        )
+
+    # Full qualifying
+    if route_class == "R-and":
+        out["top2_for_h3"] = top2_fwd
+    elif route_class == "R-or":
+        out["top2_for_h3"] = top2_rev
+    else:
+        out["top2_for_h3"] = top2_fwd  # agrees with reverse
     out["full_h3_eligible"] = True
-    out["top2_for_h3"] = top2_fwd
     out["support_class"] = "full"
     out["h3_endpoint_status"] = "full_qualifying"
     out["reason"] = None
@@ -750,6 +792,7 @@ def _normalize_h3_endpoint_status(rec: Mapping[str, Any]) -> str:
         "h3_indeterminate",
         "determinate_non_support",
         "gate_failed",
+        "technical_invalid",
     }:
         return str(explicit)
     if bool(rec.get("full_h3_eligible")):
@@ -762,13 +805,63 @@ def _normalize_h3_endpoint_status(rec: Mapping[str, Any]) -> str:
         "k_star_incomplete",
         "incomplete_ranking",
         "route_indeterminate",
+        "technical_invalid",
     }:
-        return "h3_indeterminate"
+        return "h3_indeterminate" if sc != "technical_invalid" else "technical_invalid"
     if sc == "h1_not_fail" and rec.get("h1_state") == "H1-indeterminate":
         return "h3_indeterminate"
     if str(rec.get("route_class")) == "Indeterminate":
         return "h3_indeterminate"
     return "determinate_non_support"
+
+
+def _validate_h3_seed_record_consistency(
+    sid: Any, rec: Mapping[str, Any]
+) -> list[str]:
+    """Refuse contradictory status/eligibility/top-2 technical records."""
+    errs: list[str] = []
+    status = rec.get("h3_endpoint_status")
+    eligible = bool(rec.get("full_h3_eligible"))
+    top2 = rec.get("top2_for_h3")
+    if isinstance(top2, list):
+        try:
+            top2_fs: frozenset[tuple[int, int]] | None = frozenset(
+                tuple(x) for x in top2
+            )
+        except TypeError:
+            top2_fs = None
+            errs.append(f"{sid}: top2_for_h3 list is not a valid head-pair set")
+    elif isinstance(top2, frozenset):
+        top2_fs = top2
+    elif top2 is None:
+        top2_fs = None
+    else:
+        top2_fs = None
+        errs.append(f"{sid}: top2_for_h3 has unsupported type {type(top2)}")
+
+    if status == "full_qualifying" and not eligible:
+        errs.append(
+            f"{sid}: h3_endpoint_status=full_qualifying with full_h3_eligible=False "
+            "(contradictory technical record)"
+        )
+    if eligible and status not in {None, "full_qualifying"}:
+        errs.append(
+            f"{sid}: full_h3_eligible=True with non-qualifying status {status!r} "
+            "(contradictory technical record)"
+        )
+    if eligible or status == "full_qualifying":
+        if not isinstance(top2_fs, frozenset) or len(top2_fs) != 2:
+            errs.append(
+                f"{sid}: qualifying/full_qualifying requires exact unordered "
+                "frozenset/list of two head pairs"
+            )
+        elif any(
+            not (isinstance(p, tuple) and len(p) == 2) for p in top2_fs
+        ):
+            errs.append(f"{sid}: malformed head id in top2_for_h3")
+    if status == "technical_invalid":
+        errs.append(f"{sid}: technical_invalid H3 endpoint record")
+    return errs
 
 
 def h3_study_level_from_seed_records(
@@ -783,6 +876,7 @@ def h3_study_level_from_seed_records(
     H3-A: H3a and H3b are mutually exclusive under §5.4(4) 4-of-5 conservation.
     H3-B: H3-endpoint INCONCLUSIVE if route study INCONCLUSIVE or
     count(gate_failed + h3_indeterminate) ≥ 2 among the fixed five.
+    Contradictory technical records validation-block the study (no false H3 claim).
     """
     if roster_mismatch:
         return {
@@ -806,6 +900,7 @@ def h3_study_level_from_seed_records(
             "qualifying_seeds": [],
             "roster_mismatch": dict(roster_mismatch),
             "endpoint_counts": {},
+            "validation_blocked": False,
         }
 
     roster = list(expected_roster) if expected_roster is not None else list(seed_records.keys())
@@ -826,24 +921,44 @@ def h3_study_level_from_seed_records(
         "h3_indeterminate": 0,
         "determinate_non_support": 0,
         "gate_failed": 0,
+        "technical_invalid": 0,
     }
+    validation_errors: list[str] = []
     for sid in roster:
         rec = dict(seed_records.get(sid) or {})
+        validation_errors.extend(_validate_h3_seed_record_consistency(sid, rec))
         status = _normalize_h3_endpoint_status(rec)
-        endpoint_counts[status] = endpoint_counts.get(status, 0) + 1
-        eligible = bool(rec.get("full_h3_eligible")) and status == "full_qualifying"
+        # Never count contradictory full_qualifying+ineligible as qualifying endpoint
+        eligible_flag = bool(rec.get("full_h3_eligible"))
         top2 = rec.get("top2_for_h3")
         if isinstance(top2, list):
-            top2 = frozenset(tuple(x) for x in top2)
-        if eligible and isinstance(top2, frozenset) and len(top2) == 2:
-            qualifying_sets[sid] = top2
+            try:
+                top2 = frozenset(tuple(x) for x in top2)
+            except TypeError:
+                top2 = None
+        consistent_full = (
+            status == "full_qualifying"
+            and eligible_flag
+            and isinstance(top2, frozenset)
+            and len(top2) == 2
+        )
+        if status == "full_qualifying" and not consistent_full:
+            # Do not increment full_qualifying count for inconsistent records
+            endpoint_counts["technical_invalid"] = (
+                endpoint_counts.get("technical_invalid", 0) + 1
+            )
+        else:
+            endpoint_counts[status] = endpoint_counts.get(status, 0) + 1
+
+        if consistent_full:
+            qualifying_sets[sid] = top2  # type: ignore[assignment]
             per_seed[str(sid)] = {
                 "full_h3_eligible": True,
-                "top2": sorted(top2),
+                "top2": sorted(top2),  # type: ignore[arg-type]
                 "reason": None,
                 "route_class": rec.get("route_class"),
                 "support_class": rec.get("support_class", "full"),
-                "h3_endpoint_status": status,
+                "h3_endpoint_status": "full_qualifying",
             }
         else:
             reason = rec.get("reason") or (
@@ -858,7 +973,9 @@ def h3_study_level_from_seed_records(
                 "reason": reason,
                 "route_class": rec.get("route_class"),
                 "support_class": rec.get("support_class", "non_supporting"),
-                "h3_endpoint_status": status,
+                "h3_endpoint_status": status
+                if status != "full_qualifying"
+                else "technical_invalid",
                 "uncertainty_kind": rec.get("uncertainty_kind"),
             }
 
@@ -872,7 +989,7 @@ def h3_study_level_from_seed_records(
             "H3a_set": None,
             "varies": False,
             "n_seeds": len(roster),
-            "n_qualifying": n_qualifying,
+            "n_qualifying": 0 if extra.get("validation_blocked") else n_qualifying,
             "indeterminate": True,
             "H3a_eligible": False,
             "H3b_eligible": False,
@@ -883,12 +1000,26 @@ def h3_study_level_from_seed_records(
             "per_seed": per_seed,
             "study_inconclusive_precedence": bool(study_inconclusive),
             "h3_endpoint_inconclusive": True,
-            "h3_endpoint_decision": "INCONCLUSIVE",
-            "qualifying_seeds": [str(s) for s in qualifying_sets],
+            "h3_endpoint_decision": extra.pop(
+                "h3_endpoint_decision", "INCONCLUSIVE"
+            ),
+            "qualifying_seeds": []
+            if extra.get("validation_blocked")
+            else [str(s) for s in qualifying_sets],
             "endpoint_counts": dict(endpoint_counts),
             "minority_pairs": None,
             **extra,
         }
+
+    if validation_errors:
+        return _blocked(
+            "H3 validation-blocked: contradictory/invalid seed records — "
+            + "; ".join(validation_errors),
+            validation_blocked=True,
+            h3_endpoint_decision="VALIDATION_BLOCKED",
+            validation_errors=list(validation_errors),
+            indeterminate=True,
+        )
 
     if failures:
         return _blocked("; ".join(failures), indeterminate=True)
@@ -933,6 +1064,7 @@ def h3_study_level_from_seed_records(
             "qualifying_seeds": [str(s) for s in qualifying_sets],
             "endpoint_counts": dict(endpoint_counts),
             "minority_pairs": None,
+            "validation_blocked": False,
         }
 
     c = Counter(qualifying_sets.values())
@@ -964,6 +1096,7 @@ def h3_study_level_from_seed_records(
         "qualifying_set_counts": {str(sorted(s)): n for s, n in c.items()},
         "endpoint_counts": dict(endpoint_counts),
         "minority_pairs": minority or None,
+        "validation_blocked": False,
     }
 
     # H3-A: mutually exclusive — conserved 4/5 → H3a only; else varying → H3b only

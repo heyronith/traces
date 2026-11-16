@@ -522,18 +522,37 @@ def run_model_unit_analysis(
     }
 
     # Per-unit H3: applicable-direction evidence only (study H3a/H3b aggregated later)
-    h3_unit = assess_unit_h3_direction_support(
-        route_class=str(route_class),
-        h1_full_state=str(h1.get("full_H1")),
-        denom_fwd_ok=bool(denom_fwd.get("ok")),
-        denom_rev_ok=bool(denom_rev.get("ok")),
-        head_effects_fwd=unit.head_effects_fwd,
-        head_effects_rev=unit.head_effects_rev,
-        crossfit_fwd=crossfit_fwd,
-        crossfit_rev=crossfit_rev,
-        n_eligible=len(elig_ids),
-        gates_passed=True,
-    )
+    try:
+        h3_unit = assess_unit_h3_direction_support(
+            route_class=str(route_class),
+            h1_full_state=str(h1.get("full_H1")),
+            denom_fwd_ok=bool(denom_fwd.get("ok")),
+            denom_rev_ok=bool(denom_rev.get("ok")),
+            head_effects_fwd=unit.head_effects_fwd,
+            head_effects_rev=unit.head_effects_rev,
+            crossfit_fwd=crossfit_fwd,
+            crossfit_rev=crossfit_rev,
+            n_eligible=len(elig_ids),
+            gates_passed=True,
+        )
+    except ValueError as exc:
+        # Unknown route / technical invalid — fail closed, never rewrite to
+        # determinate_non_support (H3 second re-audit must-fix 2).
+        h3_unit = {
+            "full_h3_eligible": False,
+            "top2_for_h3": None,
+            "top2_forward": None,
+            "top2_reverse": None,
+            "applicable_directions": [],
+            "route_class": str(route_class),
+            "h1_state": str(h1.get("full_H1")),
+            "gates_passed": True,
+            "reason": str(exc),
+            "support_class": "technical_invalid",
+            "h3_endpoint_status": "technical_invalid",
+            "uncertainty_kind": "technical_invalid_route",
+            "preserved_uncertainty": None,
+        }
     # Serialize frozenset top2 for JSON-friendly meta
     if isinstance(h3_unit.get("top2_for_h3"), frozenset):
         h3_unit = {
@@ -965,24 +984,41 @@ def run_study(
     roster_ids = [u.model_unit for u in primary]
     dup_ids = sorted({i for i in roster_ids if roster_ids.count(i) > 1})
     observed_set = set(roster_ids)
+    family_failures = [
+        {"model_unit": u.model_unit, "family": u.family}
+        for u in primary
+        if u.family != "l19"
+    ]
     roster_ok = (
         len(roster_ids) == 5
         and len(observed_set) == 5
         and observed_set == expected_set
         and not dup_ids
+        and not family_failures
     )
     roster_mismatch: dict[str, Any] | None = None
     if not roster_ok:
+        reason_bits = [
+            "frozen primary roster mismatch (H3-C): require exact unordered "
+            f"set {expected_ids} each with family=='l19'; refuse canonical "
+            "route/H3 study support"
+        ]
+        if family_failures:
+            reason_bits.append(
+                "family binding failures: "
+                + ", ".join(
+                    f"{f['model_unit']} family={f['family']!r}"
+                    for f in family_failures
+                )
+            )
         roster_mismatch = {
-            "reason": (
-                "frozen primary roster mismatch (H3-C): require exact unordered "
-                f"set {expected_ids}; refuse canonical route/H3 study support"
-            ),
+            "reason": "; ".join(reason_bits),
             "expected": list(expected_ids),
             "observed": list(roster_ids),
             "missing": sorted(expected_set - observed_set),
             "unexpected": sorted(observed_set - expected_set),
             "duplicates": dup_ids,
+            "family_failures": family_failures,
             "n_observed": len(roster_ids),
         }
 
@@ -1014,7 +1050,7 @@ def run_study(
             study_labels.append(res.route.get("route_class", "Indeterminate"))
 
         h3u = (res.h2_h3 or {}).get("h3_unit") or {}
-        top2_raw = h3u.get("top2_for_h3")
+        top2_raw = h3u.get("top2_for_h3") or h3u.get("top2_for_h3_frozenset")
         top2_fs: frozenset[tuple[int, int]] | None = None
         if isinstance(top2_raw, frozenset) and len(top2_raw) == 2:
             top2_fs = top2_raw
@@ -1024,17 +1060,27 @@ def run_study(
             except TypeError:
                 top2_fs = None
         status = h3u.get("h3_endpoint_status")
-        if status not in {
+        known_statuses = {
             "full_qualifying",
             "h3_indeterminate",
             "determinate_non_support",
             "gate_failed",
-        }:
-            status = (
-                "full_qualifying"
-                if h3u.get("full_h3_eligible")
-                else "determinate_non_support"
-            )
+            "technical_invalid",
+        }
+        # Never silently rewrite unknown/invalid status into determinate_non_support
+        if status not in known_statuses:
+            status = "technical_invalid"
+            h3u = {
+                **h3u,
+                "full_h3_eligible": False,
+                "reason": (
+                    h3u.get("reason")
+                    or f"unknown/invalid h3_endpoint_status "
+                    f"{h3u.get('h3_endpoint_status')!r} — technical fail-closed"
+                ),
+                "support_class": "technical_invalid",
+                "h3_endpoint_status": "technical_invalid",
+            }
         rec = {
             **h3u,
             "full_h3_eligible": bool(h3u.get("full_h3_eligible"))
