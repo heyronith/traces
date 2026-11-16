@@ -136,6 +136,7 @@ def _spy_hooks(
         calls["load"].append(spec.model_unit)
         return {
             "model": object(),
+            "tokenizer": object(),
             "model_unit": spec.model_unit,
             "family": spec.family,
             "role": spec.role,
@@ -257,6 +258,7 @@ def test_spy_zero_confirmatory_when_incomplete_comparator(tmp_path, monkeypatch)
         calls["load"].append(spec.model_unit)
         return {
             "model": object(),
+            "tokenizer": object(),
             "model_unit": spec.model_unit,
             "family": spec.family,
             "role": spec.role,
@@ -642,6 +644,7 @@ def test_live_rejects_reused_first_unit_provenance(tmp_path, monkeypatch):
         calls.append(spec.model_unit)
         return {
             "model": object(),
+            "tokenizer": object(),
             "model_unit": first_spec.model_unit,
             "family": first_spec.family,
             "role": first_spec.role,

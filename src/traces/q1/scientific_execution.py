@@ -1083,18 +1083,99 @@ def verify_unit_donor_evidence(
     }
 
 
+# Required keys for the live load → donors → execute handoff (B1-C9).
+LOAD_CONTEXT_REQUIRED_KEYS: tuple[str, ...] = (
+    "model",
+    "tokenizer",
+    "model_unit",
+    "family",
+    "role",
+    "seed",
+    "base_revision",
+    "adapter_revision",
+    "weight_file_sha256",
+    "attn_implementation",
+    "torch_dtype",
+)
+
+
+@dataclass(frozen=True)
+class LoadContext:
+    """Typed load context passed to donor capture and unit execution (B1-C9).
+
+    Never pass a bare model object: production adapters require tokenizer and
+    unit provenance fields from the same verified load.
+    """
+
+    model: Any
+    tokenizer: Any
+    model_unit: str
+    family: str
+    role: str
+    seed: int | None
+    base_revision: Any
+    adapter_revision: Any
+    weight_file_sha256: Mapping[str, str]
+    attn_implementation: str
+    torch_dtype: str
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+    def to_mapping(self) -> dict[str, Any]:
+        out = {
+            "model": self.model,
+            "tokenizer": self.tokenizer,
+            "model_unit": self.model_unit,
+            "family": self.family,
+            "role": self.role,
+            "seed": self.seed,
+            "base_revision": self.base_revision,
+            "adapter_revision": self.adapter_revision,
+            "weight_file_sha256": dict(self.weight_file_sha256),
+            "attn_implementation": self.attn_implementation,
+            "torch_dtype": self.torch_dtype,
+        }
+        out.update(dict(self.extra))
+        return out
+
+
+def require_load_context(
+    loaded: Any, *, stage: str, spec: UnitSpec | None = None
+) -> dict[str, Any]:
+    """Fail closed unless ``loaded`` is a full load-context mapping (B1-C9).
+
+    Structural keys + non-None model/tokenizer are required here. Unit identity
+    matching against ``spec`` is enforced by ``verify_unit_load_provenance``.
+    """
+    _ = spec  # reserved for stage naming / future strict binding
+    if not isinstance(loaded, Mapping):
+        raise RuntimeError(
+            f"{stage}: load context must be a mapping with model+tokenizer; "
+            f"got {type(loaded).__name__} (bare model objects are refused)"
+        )
+    missing = [k for k in LOAD_CONTEXT_REQUIRED_KEYS if k not in loaded]
+    if missing:
+        raise RuntimeError(f"{stage}: load context missing keys {missing}")
+    if loaded.get("tokenizer") is None:
+        raise RuntimeError(f"{stage}: load context tokenizer is required")
+    if loaded.get("model") is None:
+        raise RuntimeError(f"{stage}: load context model is required")
+    return dict(loaded)
+
+
 @dataclass
 class LiveForwardHooks:
     """Typed Q1CausalRunner adapters for authorized live execution.
 
-    ``execute_unit`` must build/use ``Q1CausalRunner`` and return both boundary
-    and intervention ``ConditionOutputBundle`` objects for that unit.
+    ``load_model_for_unit`` returns a load-context mapping (model + tokenizer +
+    provenance). ``capture_donors_for_unit`` and ``execute_unit`` receive that
+    same load context — never a bare model object (B1-C9).
     """
 
     load_model_for_unit: Callable[[UnitSpec], Mapping[str, Any]] | None = None
-    capture_donors_for_unit: Callable[[UnitSpec, Any], Mapping[str, Any]] | None = None
+    capture_donors_for_unit: Callable[[UnitSpec, Mapping[str, Any]], Mapping[str, Any]] | None = None
     execute_unit: Callable[
-        [UnitSpec, Any, Any], tuple[ConditionOutputBundle, ConditionOutputBundle]
+        [UnitSpec, Mapping[str, Any], Any],
+        tuple[ConditionOutputBundle, ConditionOutputBundle],
     ] | None = None
 
 
@@ -1546,34 +1627,18 @@ def _execute_live_unit(
     Never reuses another unit's provenance validation result.
     """
     loaded = hooks.load_model_for_unit(spec)  # type: ignore[misc]
-    if not isinstance(loaded, Mapping) or "model" not in loaded:
-        raise RuntimeError(
-            f"{spec.model_unit}: load_model_for_unit must return mapping with model"
-        )
-    prov = _require_mapping_evidence(
-        loaded,
-        stage=f"load:{spec.model_unit}",
-        required_keys=(
-            "base_revision",
-            "adapter_revision",
-            "weight_file_sha256",
-            "attn_implementation",
-            "torch_dtype",
-            "model",
-            "model_unit",
-            "family",
-            "role",
-            "seed",
-        ),
+    # B1-C9: full load context (model + tokenizer + provenance) — not bare model
+    load_ctx = require_load_context(
+        loaded, stage=f"load:{spec.model_unit}", spec=spec
     )
-    unit_prov = verify_unit_load_provenance(spec, prov)
+    unit_prov = verify_unit_load_provenance(spec, load_ctx)
     if not unit_prov["ok"]:
         raise RuntimeError(
             f"{spec.model_unit}: provenance failed: "
             + "; ".join(unit_prov["failures"])
         )
 
-    donors = hooks.capture_donors_for_unit(spec, prov["model"])  # type: ignore[misc]
+    donors = hooks.capture_donors_for_unit(spec, load_ctx)  # type: ignore[misc]
     donor_ev = _require_mapping_evidence(
         donors,
         stage=f"donors:{spec.model_unit}",
@@ -1590,7 +1655,7 @@ def _execute_live_unit(
             + "; ".join(donor_check["failures"])
         )
 
-    pair = hooks.execute_unit(spec, prov["model"], donors)  # type: ignore[misc]
+    pair = hooks.execute_unit(spec, load_ctx, donors)  # type: ignore[misc]
     if (
         not isinstance(pair, tuple)
         or len(pair) != 2
@@ -1623,6 +1688,41 @@ def _execute_live_unit(
     st6.require_complete()
     assert unit is not None
 
+    # B1-C11: persist raw condition + F3 generation observations when present
+    obs_meta: dict[str, Any] | None = None
+    raw_conditions = donors.get("_condition_records") if isinstance(donors, Mapping) else None
+    raw_f3 = donors.get("_f3_outcomes") if isinstance(donors, Mapping) else None
+    if raw_conditions is not None or raw_f3 is not None:
+        from traces.q1.scientific_observations import persist_unit_scientific_observations
+
+        gen_recs = []
+        if raw_f3 is not None:
+            gen_recs = list(getattr(raw_f3, "trigger_records", []) or []) + list(
+                getattr(raw_f3, "clean_records", []) or []
+            )
+        obs_meta = persist_unit_scientific_observations(
+            ex.out_dir,
+            model_unit=spec.model_unit,
+            family=spec.family,
+            role=spec.role,
+            condition_records=list(raw_conditions or []),
+            generation_records=gen_recs,
+            load_provenance={
+                k: load_ctx[k]
+                for k in (
+                    "model_unit",
+                    "family",
+                    "role",
+                    "seed",
+                    "base_revision",
+                    "adapter_revision",
+                    "weight_file_sha256",
+                    "attn_implementation",
+                    "torch_dtype",
+                )
+            },
+        )
+
     audit = {
         "model_unit": spec.model_unit,
         "family": spec.family,
@@ -1632,11 +1732,12 @@ def _execute_live_unit(
         "donors": donor_check,
         "n_catalog_conditions": len(merged.catalog_condition_ids),
         "condition_validation": "ok",
-        "weight_file_sha256": dict(prov["weight_file_sha256"]),
-        "base_revision": prov["base_revision"],
-        "adapter_revision": prov.get("adapter_revision"),
-        "attn_implementation": prov["attn_implementation"],
-        "torch_dtype": prov["torch_dtype"],
+        "weight_file_sha256": dict(load_ctx["weight_file_sha256"]),
+        "base_revision": load_ctx["base_revision"],
+        "adapter_revision": load_ctx.get("adapter_revision"),
+        "attn_implementation": load_ctx["attn_implementation"],
+        "torch_dtype": load_ctx["torch_dtype"],
+        "observations": obs_meta,
     }
     per_unit_audits.append(audit)
     return unit

@@ -77,6 +77,7 @@ def _spy_hooks():
         calls["load"].append(spec.model_unit)
         return {
             "model": object(),
+            "tokenizer": object(),
             "model_unit": spec.model_unit,
             "family": spec.family,
             "role": spec.role,

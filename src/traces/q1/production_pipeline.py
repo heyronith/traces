@@ -91,23 +91,79 @@ class CatalogCompletenessReport:
         }
 
 
-def _verify_primary_catalog_identities(
-    conds: Sequence[Condition],
+def independent_expected_primary_condition_ids(
     *,
-    include_downstream56: bool,
+    include_downstream56: bool = True,
+) -> set[str]:
+    """Derive expected primary catalog IDs from frozen v1.3 requirements (B1-C12).
+
+    Does **not** call ``enumerate_primary_l19_conditions`` — identities are built
+    from protocol constants (152 upstream heads, 64 pairs, 19×2 layer joints,
+    crossfit k=1..10, residual sweeps 1..25 × CT/TC, optional downstream 56).
+    """
+    from traces.q1.conditions import DOWNSTREAM_LAYERS, N_HEADS
+
+    ids: set[str] = set()
+    # Boundary hybrids CT/TC (TT/CC intact are separate from catalog enumeration)
+    for hybrid in ("CT", "TC"):
+        ids.add(f"boundary_hybrid|{hybrid}")
+    for direction in ("forward", "reverse"):
+        for layer in UPSTREAM_LAYERS:
+            for h in range(N_HEADS):
+                ids.add(f"single_head|{direction}|L{layer}.h{h}")
+        for h15 in range(N_HEADS):
+            for h16 in range(N_HEADS):
+                ids.add(f"pair|{direction}|L15.h{h15}+L16.h{h16}")
+        # Frozen CORE_TRIPLE = (15,6), (16,5), (23,0)
+        ids.add(f"joint_triple|{direction}|L15.h6+L16.h5+L23.h0")
+        all_up = "+".join(
+            f"L{layer}.h{h}" for layer in UPSTREAM_LAYERS for h in range(N_HEADS)
+        )
+        ids.add(f"all_upstream|{direction}|{all_up}")
+        for k in range(1, 11):
+            ids.add(f"crossfit_topk|{direction}|k{k}")
+        for layer in UPSTREAM_LAYERS:
+            heads = "+".join(f"L{layer}.h{h}" for h in range(N_HEADS))
+            ids.add(f"layer_joint_8head|{direction}|L{layer}|{heads}")
+        if include_downstream56:
+            for layer in DOWNSTREAM_LAYERS:
+                for h in range(N_HEADS):
+                    ids.add(f"downstream_head_secondary|{direction}|L{layer}.h{h}")
+    for layer in range(1, 26):
+        for hybrid in ("CT", "TC"):
+            ids.add(f"residual_sweep_hybrid|{hybrid}|L{layer}")
+    return ids
+
+
+def independent_expected_secondary_condition_ids() -> set[str]:
+    """Independent secondary l1523 catalog IDs from frozen requirements (B1-C12)."""
+    from traces.q1.conditions import N_HEADS
+
+    ids: set[str] = set()
+    for hybrid in ("CT", "TC"):
+        ids.add(f"boundary_hybrid|{hybrid}")
+    for direction in ("forward", "reverse"):
+        for h15 in range(N_HEADS):
+            for h16 in range(N_HEADS):
+                ids.add(f"pair|{direction}|L15.h{h15}+L16.h{h16}")
+        # Nominated pair heads (15,6) and (16,5)
+        for L, h in ((15, 6), (16, 5)):
+            ids.add(f"nominated_single|{direction}|L{L}.h{h}")
+    return ids
+
+
+def _verify_catalog_against_independent_ids(
+    conds: Sequence[Condition],
+    expected_ids: set[str],
 ) -> list[str]:
-    """Exact identity checks — counts alone are insufficient (B1-C7)."""
+    """Compare enumerated catalog to independently derived IDs (B1-C12)."""
     failures: list[str] = []
-    expected = enumerate_primary_l19_conditions(
-        include_downstream56=include_downstream56
-    )
     got_ids = {condition_id_for(c) for c in conds}
-    exp_ids = {condition_id_for(c) for c in expected}
-    missing = sorted(exp_ids - got_ids)
-    extra = sorted(got_ids - exp_ids)
+    missing = sorted(expected_ids - got_ids)
+    extra = sorted(got_ids - expected_ids)
     if missing:
         failures.append(
-            f"catalog missing {len(missing)} exact identities "
+            f"catalog missing {len(missing)} independent identities "
             f"(e.g. {missing[:3]})"
         )
     if extra:
@@ -115,29 +171,53 @@ def _verify_primary_catalog_identities(
             f"catalog has {len(extra)} substituted/extra identities "
             f"(e.g. {extra[:3]})"
         )
-
+    # Structural checks that survive count-preserving substitutions
+    single = [c for c in conds if c.kind == "single_head"]
+    fwd_heads = {
+        (int(h.layer), int(h.head_index))
+        for c in single
+        if c.direction == "forward"
+        for h in c.heads
+    }
+    rev_heads = {
+        (int(h.layer), int(h.head_index))
+        for c in single
+        if c.direction == "reverse"
+        for h in c.heads
+    }
+    if fwd_heads and fwd_heads != EXPECTED_UPSTREAM_HEADS:
+        failures.append(
+            f"single_head forward heads != 152 upstream "
+            f"(got {len(fwd_heads)})"
+        )
+    if rev_heads and rev_heads != EXPECTED_UPSTREAM_HEADS:
+        failures.append(
+            f"single_head reverse heads != 152 upstream "
+            f"(got {len(rev_heads)})"
+        )
+    pairs = [c for c in conds if c.kind == "pair"]
+    pair_keys = {
+        (int(c.heads[0].head_index), int(c.heads[1].head_index))
+        for c in pairs
+        if c.direction == "forward" and len(c.heads) == 2
+    }
+    if pairs and pair_keys != EXPECTED_L15_L16_PAIRS:
+        failures.append(
+            f"pair forward identities != 64 L15×L16 (got {len(pair_keys)})"
+        )
     layer_joint = [c for c in conds if c.kind == "layer_joint_8head"]
     layers_fwd = {
         c.layer for c in layer_joint if c.direction == "forward" and c.layer is not None
     }
-    layers_rev = {
-        c.layer for c in layer_joint if c.direction == "reverse" and c.layer is not None
-    }
-    expected_layers = set(UPSTREAM_LAYERS)
-    if layers_fwd != expected_layers:
+    if layer_joint and layers_fwd != set(UPSTREAM_LAYERS):
         failures.append(
             f"layer_joint_8head forward layers {sorted(layers_fwd)} "
-            f"!= upstream {sorted(expected_layers)}"
+            f"!= upstream {list(UPSTREAM_LAYERS)}"
         )
-    if layers_rev != expected_layers:
-        failures.append(
-            f"layer_joint_8head reverse layers {sorted(layers_rev)} "
-            f"!= upstream {sorted(expected_layers)}"
-        )
-    if len(layer_joint) != 2 * len(UPSTREAM_LAYERS):
+    if layer_joint and len(layer_joint) != 2 * len(UPSTREAM_LAYERS):
         failures.append(
             f"layer_joint_8head count {len(layer_joint)} != "
-            f"{2 * len(UPSTREAM_LAYERS)} (19 layers × 2 dirs)"
+            f"{2 * len(UPSTREAM_LAYERS)}"
         )
     return failures
 
@@ -160,11 +240,10 @@ def verify_frozen_catalog_completeness(
                 "include_downstream56=False omits secondary 56-head scans — "
                 "refuse silent omission for primary confirmatory catalog"
             )
-        failures.extend(
-            _verify_primary_catalog_identities(
-                conds, include_downstream56=include_downstream56
-            )
+        expected_ids = independent_expected_primary_condition_ids(
+            include_downstream56=include_downstream56
         )
+        failures.extend(_verify_catalog_against_independent_ids(conds, expected_ids))
     elif family == "l1523":
         conds = enumerate_secondary_l1523_conditions()
         minima = {
@@ -172,6 +251,8 @@ def verify_frozen_catalog_completeness(
             "pair": 2 * len(EXPECTED_L15_L16_PAIRS),
             "nominated_single": 4,  # 2 heads × 2 dirs
         }
+        expected_ids = independent_expected_secondary_condition_ids()
+        failures.extend(_verify_catalog_against_independent_ids(conds, expected_ids))
     elif family == "base":
         # Adapter-off baseline: no intervention catalog (B1-C5).
         return CatalogCompletenessReport(
@@ -1319,6 +1400,11 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
 
     def donors(spec: UnitSpec, loaded: Any) -> Mapping[str, Any]:
         require_scientific_authorization()
+        from traces.q1.scientific_execution import require_load_context
+
+        load_ctx = require_load_context(
+            loaded, stage=f"donors:{spec.model_unit}", spec=spec
+        )
         if config.prompt_builder is None:
             raise RuntimeError(
                 "production donor capture requires prompt_builder "
@@ -1326,12 +1412,8 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
             )
         from traces.q1.causal_runner import Q1CausalRunner
 
-        model = loaded["model"] if isinstance(loaded, Mapping) else loaded
-        tokenizer = (
-            loaded.get("tokenizer") if isinstance(loaded, Mapping) else None
-        )
-        if tokenizer is None:
-            raise RuntimeError("loaded unit missing tokenizer")
+        model = load_ctx["model"]
+        tokenizer = load_ctx["tokenizer"]
         alloc = (
             config.development_ids
             if spec.role == "exploratory_dev"
@@ -1364,11 +1446,16 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
 
     def _execute_unit_impl(spec: UnitSpec, loaded: Any, donor_evidence: Any) -> tuple:
         require_scientific_authorization()
+        from traces.q1.scientific_execution import require_load_context
+
+        load_ctx = require_load_context(
+            loaded, stage=f"execute:{spec.model_unit}", spec=spec
+        )
         bank = donor_evidence["_bank"]
         runner = donor_evidence["_runner"]
         prompts = donor_evidence["_prompts"]
-        model = loaded["model"] if isinstance(loaded, Mapping) else loaded
-        tokenizer = loaded["tokenizer"]
+        model = load_ctx["model"]
+        tokenizer = load_ctx["tokenizer"]
         alloc = [p.instruction_id for p in prompts]
 
         # F3 with frozen full payload — retain raw outcomes (B1-C6)
@@ -1415,6 +1502,8 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
                             spec=spec,
                         )
                     )
+            donor_evidence["_condition_records"] = intact
+            donor_evidence["_f3_outcomes"] = f3
             return assemble_adapter_off_baseline_bundles(
                 spec=spec, prompt_ids=alloc, intact_records=intact, f3=f3
             )
@@ -1476,6 +1565,8 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
             )
 
         rates = f3.rates()
+        donor_evidence["_condition_records"] = records
+        donor_evidence["_f3_outcomes"] = f3
         return assemble_bundles_from_condition_records(
             model_unit=spec.model_unit,
             family=spec.family,

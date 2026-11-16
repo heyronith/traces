@@ -131,6 +131,47 @@ def lookup_joint_effect(
     return None
 
 
+def validate_fold_eval_joint_effects(
+    arr: Any,
+    *,
+    n_eligible: int,
+    eval_idx: Sequence[int],
+    name: str,
+) -> list[str]:
+    """Fold-aware joint validation (B1-C10).
+
+    Requires finite measured effects at every opposite-fold evaluation index.
+    Allows NaN / unmeasured positions outside the evaluation fold.
+    Never treats missing eval measurements as zeros.
+    """
+    failures: list[str] = []
+    try:
+        a = np.asarray(arr, dtype=np.float64)
+    except (TypeError, ValueError) as e:
+        return [f"{name}: not array-convertible ({e})"]
+    if a.ndim != 1:
+        failures.append(f"{name}: expected 1-d, got shape {a.shape}")
+        return failures
+    if len(a) != int(n_eligible):
+        failures.append(f"{name}: length {len(a)} != n_eligible {n_eligible}")
+        return failures
+    idx = [int(i) for i in eval_idx]
+    if not idx:
+        failures.append(f"{name}: empty evaluation fold indices")
+        return failures
+    if any(i < 0 or i >= len(a) for i in idx):
+        failures.append(f"{name}: eval index out of range")
+        return failures
+    measured = a[np.asarray(idx, dtype=int)]
+    if not np.all(np.isfinite(measured)):
+        n_bad = int(np.sum(~np.isfinite(measured)))
+        failures.append(
+            f"{name}: {n_bad}/{len(idx)} required opposite-fold evaluation "
+            "positions are nonfinite — refusing zero substitution"
+        )
+    return failures
+
+
 def crossfit_evaluate_topk(
     *,
     head_effects_fold_a: dict[tuple[int, int], float],
@@ -148,6 +189,10 @@ def crossfit_evaluate_topk(
     Bootstrap holds selections fixed and resamples within each evaluation fold.
     Invalid bootstrap denominators are recorded as nonfinite replicates without
     silently dropping them from the inference sample size accounting.
+
+    Joint arrays may contain unmeasured (NaN) entries outside the evaluation
+    fold; fold-aware validation (B1-C10) requires finite values only at the
+    opposite-fold evaluation positions.
     """
     if draws.crossfit_indeterminate or draws.fold_a is None or draws.fold_b is None:
         return {
@@ -186,16 +231,25 @@ def crossfit_evaluate_topk(
             "selection_from_b": sel_from_b,
         }
 
-    for label, arr in (("joint_sel_a", joint_sel_a), ("joint_sel_b", joint_sel_b)):
-        fails = validate_effect_vector(arr, n_eligible=n_el, name=label)
-        if fails:
-            return {
-                "indeterminate": True,
-                "reason": "; ".join(fails),
-                "k": k,
-                "selection_from_a": sel_from_a,
-                "selection_from_b": sel_from_b,
-            }
+    # Selection from A is evaluated on fold B; selection from B on fold A
+    fails_a = validate_fold_eval_joint_effects(
+        joint_sel_a, n_eligible=n_el, eval_idx=b_idx, name="joint_sel_a(eval=B)"
+    )
+    fails_b = validate_fold_eval_joint_effects(
+        joint_sel_b, n_eligible=n_el, eval_idx=a_idx, name="joint_sel_b(eval=A)"
+    )
+    if fails_a or fails_b:
+        return {
+            "indeterminate": True,
+            "reason": "; ".join(fails_a + fails_b),
+            "k": k,
+            "selection_from_a": sel_from_a,
+            "selection_from_b": sel_from_b,
+            "selection_direction_note": (
+                "joint_sel_a=selected_on_A_eval_on_B; "
+                "joint_sel_b=selected_on_B_eval_on_A"
+            ),
+        }
 
     eff_b = joint_sel_a[b_idx]
     eff_a = joint_sel_b[a_idx]

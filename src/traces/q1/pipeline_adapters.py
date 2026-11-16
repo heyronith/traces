@@ -611,6 +611,7 @@ def build_live_hooks_from_record_provider(
 
         return {
             "model": object(),
+            "tokenizer": object(),
             "model_unit": spec.model_unit,
             "family": spec.family,
             "role": spec.role,
