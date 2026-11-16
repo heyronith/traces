@@ -28,7 +28,8 @@ FROZEN_TOKENIZER_IDENTITY = {
 
 # Protocol §11 confirmatory tokenizer/template file SHA-256 pins (byte-identical
 # across the seven confirmatory subfolders). Production loads must match these
-# when authenticating the tokenizer files actually used.
+# when authenticating the tokenizer files actually used. Do not alter these
+# frozen digests. Includes all four §11 files (D5-B).
 FROZEN_SECTION11_TOKENIZER_SHA256: dict[str, str] = {
     "tokenizer.model": (
         "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2"
@@ -39,11 +40,20 @@ FROZEN_SECTION11_TOKENIZER_SHA256: dict[str, str] = {
     "chat_template.jinja": (
         "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6"
     ),
+    "special_tokens_map.json": (
+        "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680"
+    ),
 }
 
 REQUIRED_TOKENIZER_TEMPLATE_FILES: tuple[str, ...] = tuple(
     FROZEN_SECTION11_TOKENIZER_SHA256.keys()
 )
+assert set(REQUIRED_TOKENIZER_TEMPLATE_FILES) == {
+    "tokenizer.model",
+    "tokenizer_config.json",
+    "chat_template.jinja",
+    "special_tokens_map.json",
+}
 
 
 @dataclass
@@ -275,6 +285,26 @@ def _reject_path_escape(root: Path, rel: str) -> Path:
     return candidate
 
 
+def _reject_symlink(path: Path, *, label: str) -> None:
+    """Refuse directory or file symlinks, including cross-seed links (D5-A)."""
+    if path.is_symlink():
+        raise RuntimeError(
+            f"symlink refused for {label}: {path} — refuse cross-seed / "
+            "escape via symlink (D5-A)"
+        )
+    # Also refuse if any path component under the leaf is a symlink
+    try:
+        for parent in [path, *path.parents]:
+            if parent.is_symlink():
+                raise RuntimeError(
+                    f"symlink in path refused for {label}: {parent} (D5-A)"
+                )
+    except RuntimeError:
+        raise
+    except OSError as e:
+        raise RuntimeError(f"symlink inspection failed for {label}: {e}") from e
+
+
 def resolve_unit_adapter_subfolder_dir(
     adapter_snapshot_dir: Path | str,
     subfolder: str,
@@ -283,16 +313,34 @@ def resolve_unit_adapter_subfolder_dir(
     root = Path(adapter_snapshot_dir)
     if not root.is_dir():
         raise RuntimeError(f"adapter snapshot dir missing: {root}")
+    _reject_symlink(root, label="adapter snapshot root")
     if not subfolder or not str(subfolder).strip():
         raise RuntimeError("adapter subfolder required — refuse root fallback")
-    # Validate subfolder segments (no traversal)
-    sf = _reject_path_escape(root, subfolder)
-    if not sf.is_dir():
+    # Validate subfolder segments (no traversal) before existence check
+    rel_path = Path(subfolder)
+    if rel_path.is_absolute() or ".." in rel_path.parts:
+        raise RuntimeError(f"path traversal forbidden in subfolder: {subfolder!r}")
+    # Walk components and refuse symlinks before resolve() follows them
+    cur = root
+    for part in rel_path.parts:
+        cur = cur / part
+        if cur.is_symlink():
+            raise RuntimeError(
+                f"symlink refused for adapter subfolder component {part!r} "
+                f"under {subfolder!r} (D5-A)"
+            )
+        if not cur.exists():
+            raise RuntimeError(
+                f"missing required adapter subfolder {subfolder!r} under {root} — "
+                "refuse silent fallback to adapter root or another seed (D5)"
+            )
+    if not cur.is_dir():
         raise RuntimeError(
             f"missing required adapter subfolder {subfolder!r} under {root} — "
             "refuse silent fallback to adapter root or another seed (D5)"
         )
-    return sf
+    _reject_symlink(cur, label=f"adapter subfolder {subfolder!r}")
+    return cur
 
 
 def inventory_unit_weight_files(
@@ -313,14 +361,52 @@ def inventory_unit_weight_files(
         raise RuntimeError(f"base snapshot dir missing: {base_root}")
     if not ad_dir.is_dir():
         raise RuntimeError(f"adapter subfolder dir missing: {ad_dir}")
+    _reject_symlink(base_root, label="base snapshot")
+    _reject_symlink(ad_dir, label="adapter subfolder")
 
     def _weights(d: Path) -> list[str]:
         files: list[str] = []
         for pat in ("*.safetensors", "*.bin", "*.pt"):
-            files.extend(str(x.resolve()) for x in d.glob(pat) if x.is_file())
+            for x in d.glob(pat):
+                if not x.is_file():
+                    continue
+                if x.is_symlink():
+                    raise RuntimeError(
+                        f"symlink refused in weight inventory: {x} (D5-A)"
+                    )
+                files.append(str(x.resolve()))
         return sorted(set(files))
 
     return {"base": _weights(base_root), "adapter": _weights(ad_dir)}
+
+
+def inventory_load_relevant_files(
+    *,
+    base_snapshot_dir: Path | str,
+    adapter_subfolder_dir: Path | str,
+) -> dict[str, list[str]]:
+    """Inventory every load-relevant file (weights + configs + tokenizer) (D5-B)."""
+    from traces.q1.checkpoint_trust import LOADABLE_SUFFIXES
+
+    base_root = Path(base_snapshot_dir)
+    ad_dir = Path(adapter_subfolder_dir)
+    _reject_symlink(base_root, label="base snapshot")
+    _reject_symlink(ad_dir, label="adapter subfolder")
+
+    def _loadable(d: Path) -> list[str]:
+        out: list[str] = []
+        for x in sorted(d.iterdir()):
+            if not x.is_file():
+                continue
+            if x.is_symlink():
+                raise RuntimeError(
+                    f"symlink refused in load-relevant inventory: {x} (D5-A)"
+                )
+            if x.suffix in LOADABLE_SUFFIXES or x.name.endswith(".model"):
+                out.append(str(x.resolve()))
+        return out
+
+    return {"base": _loadable(base_root), "adapter": _loadable(ad_dir)}
 
 
 def _split_manifest_roles(
@@ -359,18 +445,23 @@ def verify_files_under_snapshot(
     digests: dict[str, str] = {}
     for rel, expected in expected_sha256_by_relpath.items():
         try:
+            # Containment without following symlinks for the leaf check
+            rel_path = Path(rel)
+            if rel_path.is_absolute() or ".." in rel_path.parts:
+                raise RuntimeError(f"path traversal forbidden: {rel!r}")
+            path = root / rel_path
+            if path.is_symlink():
+                raise RuntimeError(
+                    f"symlink refused for snapshot file {rel!r} (D5-A)"
+                )
             path = _reject_path_escape(root, rel)
+            _reject_symlink(path, label=f"{role_prefix}:{rel}")
         except RuntimeError as e:
             failures.append(str(e))
             continue
         if not path.is_file():
             failures.append(f"missing snapshot file: {rel}")
             continue
-        if path.is_symlink():
-            # Resolve already checked containment; still record symlink use
-            if not path.resolve().is_file():
-                failures.append(f"symlink target missing for {rel}")
-                continue
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         digests[f"{role_prefix}:{rel}"] = digest
         if digest != str(expected):
@@ -394,6 +485,16 @@ def require_tokenizer_and_template_files(
     root = Path(adapter_subfolder_dir)
     if not root.is_dir():
         raise RuntimeError(f"adapter subfolder dir missing for tokenizer check: {root}")
+    _reject_symlink(root, label="tokenizer adapter subfolder")
+    from traces.q1.checkpoint_trust import FORBIDDEN_ADAPTER_LOAD_FILES
+
+    for banned in FORBIDDEN_ADAPTER_LOAD_FILES:
+        banned_path = root / banned
+        if banned_path.exists():
+            raise RuntimeError(
+                f"competing tokenizer source present: {banned} — refuse "
+                "unverified tokenizer.json / alternate tokenizer (D5-B)"
+            )
     pins = dict(expected_sha256 or FROZEN_SECTION11_TOKENIZER_SHA256)
     for name in REQUIRED_TOKENIZER_TEMPLATE_FILES:
         if name not in pins:
@@ -404,6 +505,9 @@ def require_tokenizer_and_template_files(
     failures: list[str] = []
     for name in REQUIRED_TOKENIZER_TEMPLATE_FILES:
         path = root / name
+        if path.is_symlink():
+            failures.append(f"symlink refused for tokenizer/template file: {name}")
+            continue
         if not path.is_file():
             failures.append(f"missing required tokenizer/template file: {name}")
             continue
@@ -510,6 +614,43 @@ def assert_load_uses_verified_snapshot_bytes(
     return {"ok": True, "computed_sha256": computed}
 
 
+def _verify_adapter_config_scaling(adapter_dir: Path, *, computed: dict[str, str]) -> dict[str, Any]:
+    """Authenticate adapter_config.json bytes and record LoRA scaling fields (D5-B)."""
+    cfg_path = adapter_dir / "adapter_config.json"
+    if cfg_path.is_symlink():
+        raise RuntimeError("symlink refused for adapter_config.json (D5-A)")
+    if not cfg_path.is_file():
+        raise RuntimeError("adapter_config.json missing — refuse load (D5-B)")
+    raw = cfg_path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    computed["adapter_config.json"] = digest
+    try:
+        cfg = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise RuntimeError(f"adapter_config.json unreadable: {e}") from e
+    if not isinstance(cfg, dict):
+        raise RuntimeError("adapter_config.json must be a JSON object")
+    if cfg.get("use_topk") is True:
+        raise RuntimeError("Q1 refuses use_topk=true adapters")
+    if "r" not in cfg or "lora_alpha" not in cfg:
+        raise RuntimeError(
+            "adapter_config.json missing LoRA scaling fields r / lora_alpha (D5-B)"
+        )
+    try:
+        r = int(cfg["r"])
+        alpha = int(cfg["lora_alpha"])
+        scaling = float(alpha) / float(r) if r else None
+    except (TypeError, ValueError, ZeroDivisionError) as e:
+        raise RuntimeError(f"invalid LoRA scaling in adapter_config.json: {e}") from e
+    return {
+        "ok": True,
+        "sha256": digest,
+        "r": r,
+        "lora_alpha": alpha,
+        "lora_scaling": scaling,
+    }
+
+
 def bind_unit_checkpoint_provenance(
     *,
     family: str,
@@ -519,14 +660,26 @@ def bind_unit_checkpoint_provenance(
     adapter_snapshot_dir: Path | str,
     expected_sha256_by_relpath: Mapping[str, str],
     require_section11_tokenizer_pins: bool = True,
+    require_authoritative_trust: bool = False,
+    trust_auth: Any | None = None,
 ) -> dict[str, Any]:
-    """Single fail-closed unit↔checkpoint provenance contract (D5).
+    """Single fail-closed unit↔checkpoint provenance contract (D5 / D5-A / D5-B).
 
     Binds the requested family/seed/subfolder to verified local snapshot bytes,
-    inventories the unit subfolder, authenticates tokenizer/template files, and
-    returns **computed** digests only. Never invents hashes or falls back to
-    caller-expected digests.
+    inventories load-relevant files against an exact pinned inventory,
+    authenticates tokenizer/template + adapter_config, and returns **computed**
+    digests only. Never invents hashes or falls back to caller-expected digests.
+
+    When ``require_authoritative_trust=True``, ``trust_auth`` must be a
+    successful ``CheckpointManifestAuth`` (production_unlocked or
+    engineering_only). Arbitrary caller manifests alone are not authoritative.
     """
+    from traces.q1.checkpoint_trust import (
+        FORBIDDEN_ADAPTER_LOAD_FILES,
+        REQUIRED_ADAPTER_LOAD_FILES,
+        REQUIRED_BASE_LOAD_FILES,
+    )
+
     if family == "base":
         expected_sf = "l19/seed42"
     elif family in {"l19", "l1523"} and seed is not None:
@@ -538,20 +691,46 @@ def bind_unit_checkpoint_provenance(
             f"subfolder {subfolder!r} does not match frozen unit identity "
             f"{expected_sf!r} (D5)"
         )
-    if expected_sf not in required_adapter_subfolders() and family != "base":
-        # base uses l19/seed42 which is in the ten
-        pass
     if expected_sf not in required_adapter_subfolders():
         raise RuntimeError(
             f"subfolder {expected_sf!r} is not one of the ten scientific "
             f"adapter identities (D5)"
         )
 
+    if require_authoritative_trust:
+        if trust_auth is None or not getattr(trust_auth, "ok", False):
+            raise RuntimeError(
+                "authoritative checkpoint trust auth required — refuse "
+                "caller-supplied manifest as independent proof (D5-A)"
+            )
+        # production_unlocked OR engineering_only+ok; never silent caller dict
+        if not (
+            getattr(trust_auth, "production_unlocked", False)
+            or getattr(trust_auth, "engineering_only", False)
+        ):
+            raise RuntimeError(
+                "checkpoint trust auth is neither production_unlocked nor "
+                "engineering_only — refuse (D5-A)"
+            )
+
     if not expected_sha256_by_relpath:
         raise RuntimeError(
             "authoritative unit weight manifest unavailable — block load without "
             "inventing hashes (D5)"
         )
+
+    # Reject traversal / malformed keys up front
+    for key in expected_sha256_by_relpath:
+        role_key = str(key)
+        if ":" in role_key:
+            rel = role_key.split(":", 1)[1]
+        else:
+            rel = role_key
+        try:
+            if Path(rel).is_absolute() or ".." in Path(rel).parts:
+                raise RuntimeError(f"malformed / traversal manifest key: {key!r}")
+        except RuntimeError:
+            raise
 
     snapshot_bind = assert_load_uses_verified_snapshot_bytes(
         base_snapshot_dir=base_snapshot_dir,
@@ -560,21 +739,40 @@ def bind_unit_checkpoint_provenance(
         required_adapter_subfolder=subfolder,
     )
     adapter_dir = resolve_unit_adapter_subfolder_dir(adapter_snapshot_dir, subfolder)
-    inventory = inventory_unit_weight_files(
+    base_root = Path(base_snapshot_dir)
+    _reject_symlink(base_root, label="base snapshot")
+
+    weight_inventory = inventory_unit_weight_files(
         base_snapshot_dir=base_snapshot_dir,
         adapter_subfolder_dir=adapter_dir,
     )
-    if not inventory["base"]:
-        raise RuntimeError("base weight inventory empty after unit bind (D5)")
-    if not inventory["adapter"]:
+    load_inventory = inventory_load_relevant_files(
+        base_snapshot_dir=base_snapshot_dir,
+        adapter_subfolder_dir=adapter_dir,
+    )
+    if not weight_inventory["base"] or not weight_inventory["adapter"]:
         raise RuntimeError(
-            f"adapter weight inventory empty for subfolder {subfolder!r} (D5)"
+            f"weight inventory empty for subfolder {subfolder!r} (D5)"
         )
 
-    # Authenticate inventoried files against unit manifest (snapshot-relative)
     base_exp, ad_exp = _split_manifest_roles(expected_sha256_by_relpath)
     computed = dict(snapshot_bind["computed_sha256"])
     sf_prefix = subfolder.rstrip("/") + "/"
+
+    # Exact inventory: every load-relevant on-disk file must be listed; required
+    # names must be present (D5-B).
+    for name in REQUIRED_BASE_LOAD_FILES:
+        if name not in base_exp and not any(Path(k).name == name for k in base_exp):
+            raise RuntimeError(
+                f"authoritative inventory missing required base file {name} (D5-B)"
+            )
+    for name in REQUIRED_ADAPTER_LOAD_FILES:
+        rel = f"{subfolder.rstrip('/')}/{name}"
+        if rel not in ad_exp:
+            raise RuntimeError(
+                f"authoritative inventory missing required adapter file "
+                f"adapter:{rel} (D5-B)"
+            )
 
     def _match_base(name: str) -> str:
         if name in base_exp:
@@ -590,13 +788,12 @@ def bind_unit_checkpoint_provenance(
         rel = f"{subfolder.rstrip('/')}/{name}"
         if rel in ad_exp:
             return rel
-        # Refuse bare-filename matches that could bind another seed's bytes
         raise RuntimeError(
             f"inventoried adapter file not in unit manifest as "
-            f"adapter:{rel!r}: {name} (refuse cross-seed / root bind)"
+            f"adapter:{rel!r}: {name} (refuse cross-seed / unlisted loadable)"
         )
 
-    for abs_path in inventory["base"]:
+    for abs_path in load_inventory["base"]:
         name = Path(abs_path).name
         matched = _match_base(name)
         digest = hashlib.sha256(Path(abs_path).read_bytes()).hexdigest()
@@ -607,8 +804,12 @@ def bind_unit_checkpoint_provenance(
             )
         computed[f"inventory:base:{matched}"] = digest
 
-    for abs_path in inventory["adapter"]:
+    for abs_path in load_inventory["adapter"]:
         name = Path(abs_path).name
+        if name in FORBIDDEN_ADAPTER_LOAD_FILES:
+            raise RuntimeError(
+                f"competing tokenizer source present: {name} (D5-B)"
+            )
         matched = _match_adapter(name)
         if not matched.startswith(sf_prefix):
             raise RuntimeError(
@@ -622,16 +823,43 @@ def bind_unit_checkpoint_provenance(
             )
         computed[f"inventory:adapter:{matched}"] = digest
 
+    # Manifest must not list files absent from disk for this unit's load set
+    listed_adapter_names = {Path(k).name for k in ad_exp if k.startswith(sf_prefix)}
+    disk_adapter_names = {Path(p).name for p in load_inventory["adapter"]}
+    missing_on_disk = listed_adapter_names - disk_adapter_names
+    # Allow manifest to list only required load files; extras on disk already fail
+    # via _match_adapter. Missing listed required files:
+    for name in REQUIRED_ADAPTER_LOAD_FILES:
+        if name not in disk_adapter_names:
+            raise RuntimeError(
+                f"required load file missing on disk: {name} under {subfolder} (D5-B)"
+            )
+    _ = missing_on_disk  # extras listed but absent: caught by snapshot verify
+
+    tok_pins = (
+        FROZEN_SECTION11_TOKENIZER_SHA256
+        if require_section11_tokenizer_pins
+        else {
+            name: ad_exp[f"{subfolder.rstrip('/')}/{name}"]
+            for name in REQUIRED_TOKENIZER_TEMPLATE_FILES
+            if f"{subfolder.rstrip('/')}/{name}" in ad_exp
+        }
+    )
     tok = require_tokenizer_and_template_files(
         adapter_dir,
-        expected_sha256=(
-            FROZEN_SECTION11_TOKENIZER_SHA256
-            if require_section11_tokenizer_pins
-            else None
-        ),
+        expected_sha256=tok_pins if tok_pins else None,
     )
     for name, digest in tok["files"].items():
         computed[f"tokenizer:{name}"] = digest
+
+    adapter_cfg = _verify_adapter_config_scaling(adapter_dir, computed=computed)
+    # Cross-check adapter_config digest against authoritative inventory
+    cfg_rel = f"{subfolder.rstrip('/')}/adapter_config.json"
+    if cfg_rel in ad_exp and adapter_cfg["sha256"] != ad_exp[cfg_rel]:
+        raise RuntimeError(
+            f"adapter_config.json digest mismatch vs inventory (D5-B): "
+            f"{adapter_cfg['sha256']} != {ad_exp[cfg_rel]}"
+        )
 
     local_paths = resolve_local_snapshot_load_paths(
         base_snapshot_dir=base_snapshot_dir,
@@ -649,9 +877,60 @@ def bind_unit_checkpoint_provenance(
         "seed": seed,
         "subfolder": subfolder,
         "adapter_subfolder_dir": str(adapter_dir),
-        "inventory": inventory,
+        "inventory": weight_inventory,
+        "load_relevant_inventory": load_inventory,
         "local_paths": local_paths,
         "tokenizer_template_files": tok,
+        "adapter_config": adapter_cfg,
         "computed_sha256": computed,
         "snapshot_byte_binding": snapshot_bind,
+        "trust": {
+            "require_authoritative_trust": require_authoritative_trust,
+            "production_unlocked": bool(
+                getattr(trust_auth, "production_unlocked", False)
+            )
+            if trust_auth is not None
+            else False,
+            "engineering_only": bool(
+                getattr(trust_auth, "engineering_only", False)
+            )
+            if trust_auth is not None
+            else False,
+        },
     }
+
+
+def engineering_bind_unit_checkpoint_provenance(
+    *,
+    family: str,
+    seed: int | None,
+    subfolder: str,
+    base_snapshot_dir: Path | str,
+    adapter_snapshot_dir: Path | str,
+    engineering_manifest: Mapping[str, Any],
+    require_section11_tokenizer_pins: bool = False,
+) -> dict[str, Any]:
+    """Isolated engineering-test bind — never production authorization (D5-A)."""
+    from traces.q1.checkpoint_trust import (
+        authenticate_engineering_checkpoint_manifest,
+        unit_digests_from_auth,
+    )
+
+    auth = authenticate_engineering_checkpoint_manifest(engineering_manifest)
+    if not auth.ok:
+        raise RuntimeError(
+            "engineering checkpoint manifest auth failed: "
+            + "; ".join(auth.failures)
+        )
+    digests = unit_digests_from_auth(auth, subfolder=subfolder)
+    return bind_unit_checkpoint_provenance(
+        family=family,
+        seed=seed,
+        subfolder=subfolder,
+        base_snapshot_dir=base_snapshot_dir,
+        adapter_snapshot_dir=adapter_snapshot_dir,
+        expected_sha256_by_relpath=digests,
+        require_section11_tokenizer_pins=require_section11_tokenizer_pins,
+        require_authoritative_trust=True,
+        trust_auth=auth,
+    )

@@ -101,7 +101,12 @@ def _make_multi_subfolder_snapshot(tmp_path: Path, seeds=(42, 43)) -> dict[str, 
     adapter.mkdir()
     base_w = base / "model.safetensors"
     base_w.write_bytes(b"BASE-WEIGHTS")
-    manifest: dict[str, str] = {"base:model.safetensors": _sha(b"BASE-WEIGHTS")}
+    base_cfg = b'{"model_type":"gemma2"}\n'
+    (base / "config.json").write_bytes(base_cfg)
+    manifest: dict[str, str] = {
+        "base:model.safetensors": _sha(b"BASE-WEIGHTS"),
+        "base:config.json": _sha(base_cfg),
+    }
     for seed in seeds:
         sf = f"l19/seed{seed}"
         d = adapter / "l19" / f"seed{seed}"
@@ -112,8 +117,12 @@ def _make_multi_subfolder_snapshot(tmp_path: Path, seeds=(42, 43)) -> dict[str, 
         manifest[f"adapter:{sf}/adapter_model.safetensors"] = _sha(payload)
         # Tokenizer files with synthetic digests (override §11 in bind via patch)
         for name in FROZEN_SECTION11_TOKENIZER_SHA256:
-            (d / name).write_bytes(f"{sf}-{name}".encode())
-        (d / "adapter_config.json").write_text('{"use_topk": false}\n')
+            raw = f"{sf}-{name}".encode()
+            (d / name).write_bytes(raw)
+            manifest[f"adapter:{sf}/{name}"] = _sha(raw)
+        cfg = b'{"r": 8, "lora_alpha": 16, "use_topk": false}\n'
+        (d / "adapter_config.json").write_bytes(cfg)
+        manifest[f"adapter:{sf}/adapter_config.json"] = _sha(cfg)
     return {
         "base": base,
         "adapter": adapter,
@@ -367,9 +376,11 @@ def test_d5_cross_seed_substitution_refused(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="SHA|mismatch"):
         # Unit-only manifest so filter does not mask the digest error
         unit_manifest = {
-            "base:model.safetensors": snap["manifest"]["base:model.safetensors"],
-            "adapter:l19/seed43/adapter_model.safetensors": seed42_digest,
+            k: v
+            for k, v in snap["manifest"].items()
+            if k.startswith("base:") or k.startswith("adapter:l19/seed43/")
         }
+        unit_manifest["adapter:l19/seed43/adapter_model.safetensors"] = seed42_digest
         bind_unit_checkpoint_provenance(
             family="l19",
             seed=43,
@@ -377,6 +388,7 @@ def test_d5_cross_seed_substitution_refused(tmp_path, monkeypatch):
             base_snapshot_dir=snap["base"],
             adapter_snapshot_dir=snap["adapter"],
             expected_sha256_by_relpath=unit_manifest,
+            require_section11_tokenizer_pins=False,
         )
 
 
@@ -419,7 +431,7 @@ def test_d5_incorrect_tokenizer_bytes_refused(tmp_path, monkeypatch):
         for k, v in snap["manifest"].items()
         if k.startswith("base:") or k.startswith("adapter:l19/seed42/")
     }
-    with pytest.raises(RuntimeError, match="tokenizer/template"):
+    with pytest.raises(RuntimeError, match="tokenizer/template|SHA|mismatch"):
         bind_unit_checkpoint_provenance(
             family="l19",
             seed=42,
@@ -445,7 +457,9 @@ def test_d5_path_escape_and_absolute_manifest_refused(tmp_path):
         role_prefix="adapter",
     )
     assert abs_chk["ok"] is False
-    assert any("absolute" in f for f in abs_chk["failures"])
+    assert any(
+        "absolute" in f or "traversal" in f for f in abs_chk["failures"]
+    )
 
 
 def test_d5_seed43_cannot_accept_seed42_subfolder(tmp_path, monkeypatch):
@@ -468,9 +482,19 @@ def test_d5_seed43_cannot_accept_seed42_subfolder(tmp_path, monkeypatch):
 
 def test_d5_missing_computed_digest_refused_in_production_return(monkeypatch):
     monkeypatch.setenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", "1")
+    from traces.q1.checkpoint_trust import CheckpointManifestAuth
     from traces.q1.production_pipeline import ProductionHookConfig, build_production_live_hooks
 
+    fake_auth = CheckpointManifestAuth(
+        ok=True,
+        production_unlocked=True,
+        engineering_only=False,
+        mode="test_stub",
+    )
     with patch(
+        "traces.q1.checkpoint_trust.authenticate_production_checkpoint_manifest",
+        return_value=fake_auth,
+    ), patch(
         "traces.q1.loader.load_q1_scientific_model",
         return_value=(
             MagicMock(),

@@ -14,7 +14,7 @@ Legacy Stage 0/1 loading remains ``traces.model_loader.load_dense_lora_model``.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import torch
 from peft import PeftModel
@@ -93,11 +93,6 @@ def load_q1_scientific_model(
         attn_implementation=REQUIRED_ATTN_IMPLEMENTATION,
     )
 
-    if not expected_weight_file_sha256:
-        raise RuntimeError(
-            "Q1 scientific load requires expected_weight_file_sha256 pins "
-            "(refuse caller-echo-only revision verification)"
-        )
     if expected_adapter_targets is None:
         raise RuntimeError(
             "Q1 production load requires explicit expected_adapter_targets"
@@ -113,16 +108,14 @@ def load_q1_scientific_model(
             "snapshot directories (D5) — refuse unverified hub fallback"
         )
     from traces.q1.checkpoint_provenance import (
+        FROZEN_TOKENIZER_IDENTITY,
         bind_unit_checkpoint_provenance,
         resolve_unit_adapter_subfolder_dir,
     )
-
-    # Pre-check: role-tagged keys required until resolved inventories exist
-    pre_manifest = validate_weight_manifest_roles(expected_weight_file_sha256)
-    if pre_manifest:
-        raise RuntimeError(
-            "Q1 weight SHA manifest invalid: " + "; ".join(pre_manifest)
-        )
+    from traces.q1.checkpoint_trust import (
+        authenticate_production_checkpoint_manifest,
+        unit_digests_from_auth,
+    )
 
     # Infer family/seed from subfolder for unit bind (l19/seed42 or l1523/seedN)
     parts = str(subfolder).strip("/").split("/")
@@ -136,14 +129,46 @@ def load_q1_scientific_model(
     except ValueError as e:
         raise RuntimeError(f"unparseable seed in subfolder {subfolder!r}") from e
 
+    # D5-A: production identity from owner-pinned manifest only — never treat
+    # caller expected_weight_file_sha256 as independent authoritative proof.
+    # Engineering loads must use engineering_load_q1_scientific_model instead.
+    repo_root_for_pin = Path(base_weight_snapshot_dir).resolve()
+    # Walk up to find repo marker; production hooks pass explicit auth.
+    trust_auth = authenticate_production_checkpoint_manifest(
+        repo_root=_infer_repo_root(repo_root_for_pin)
+    )
+    if not trust_auth.production_unlocked:
+        raise RuntimeError(
+            "production checkpoint identity blocked (D5-A): "
+            + "; ".join(trust_auth.failures)
+            + " — caller expected_weight_file_sha256 is not authoritative; "
+            "use engineering_load_q1_scientific_model for synthetic fixtures"
+        )
+    authoritative = unit_digests_from_auth(trust_auth, subfolder=subfolder)
+    if expected_weight_file_sha256:
+        # Optional consistency check only — never replaces owner pin
+        for k, v in expected_weight_file_sha256.items():
+            if k in authoritative and authoritative[k] != v:
+                raise RuntimeError(
+                    f"caller manifest conflicts with authoritative pin at {k}"
+                )
+
+    pre_manifest = validate_weight_manifest_roles(authoritative)
+    if pre_manifest:
+        raise RuntimeError(
+            "Q1 weight SHA manifest invalid: " + "; ".join(pre_manifest)
+        )
+
     unit_bind = bind_unit_checkpoint_provenance(
         family=family_from_sf,
         seed=seed_from_sf,
         subfolder=subfolder,
         base_snapshot_dir=base_weight_snapshot_dir,
         adapter_snapshot_dir=adapter_weight_snapshot_dir,
-        expected_sha256_by_relpath=expected_weight_file_sha256,
+        expected_sha256_by_relpath=authoritative,
         require_section11_tokenizer_pins=True,
+        require_authoritative_trust=True,
+        trust_auth=trust_auth,
     )
     local_paths = unit_bind["local_paths"]
     tok_files = unit_bind["tokenizer_template_files"]
@@ -155,11 +180,7 @@ def load_q1_scientific_model(
             "expected-hash substitution (D5)"
         )
 
-    # use_topk probe against local adapter snapshot only (no hub)
-    import json as _json
-
     local_adapter = Path(local_paths["adapter_load_path"])
-    # Double-check: load path is the required subfolder (no root fallback)
     expected_ad = resolve_unit_adapter_subfolder_dir(
         adapter_weight_snapshot_dir, subfolder
     )
@@ -167,20 +188,32 @@ def load_q1_scientific_model(
         raise RuntimeError(
             "adapter load path drifted from required unit subfolder (D5)"
         )
-    cfg_probe = local_adapter / "adapter_config.json"
-    if cfg_probe.is_file():
-        try:
-            cfg_data = _json.loads(cfg_probe.read_text())
-            if cfg_data.get("use_topk") is True:
-                raise RuntimeError("Q1 refuses use_topk=true adapters")
-        except _json.JSONDecodeError as e:
-            raise RuntimeError(f"unreadable local adapter_config.json: {e}") from e
+
+    # D5-B: frozen tokenizer class / slow tokenizer only
+    tok_class = expected_tokenizer_class or FROZEN_TOKENIZER_IDENTITY[
+        "expected_tokenizer_class"
+    ]
+    tok_is_fast = (
+        expected_tokenizer_is_fast
+        if expected_tokenizer_is_fast is not None
+        else FROZEN_TOKENIZER_IDENTITY["expected_is_fast"]
+    )
+    if tok_is_fast is not False:
+        raise RuntimeError("Q1 requires use_fast=False / is_fast=False (D5-B)")
 
     tokenizer = AutoTokenizer.from_pretrained(
         local_paths["adapter_load_path"],
         local_files_only=True,
         trust_remote_code=False,
+        use_fast=False,
     )
+    if type(tokenizer).__name__ != tok_class:
+        raise RuntimeError(
+            f"tokenizer class {type(tokenizer).__name__} != frozen {tok_class} (D5-B)"
+        )
+    if bool(getattr(tokenizer, "is_fast", True)):
+        raise RuntimeError("tokenizer is_fast=True refused — require slow tokenizer (D5-B)")
+
     model = AutoModelForCausalLM.from_pretrained(
         local_paths["base_load_path"],
         torch_dtype=load_kwargs["torch_dtype"],
@@ -238,8 +271,8 @@ def load_q1_scientific_model(
         actual_subfolder=subfolder,
         expected_adapter_targets=expected_adapter_targets,
         expected_adapted_layers=expected_adapted_layers,
-        expected_tokenizer_class=expected_tokenizer_class,
-        expected_tokenizer_is_fast=expected_tokenizer_is_fast,
+        expected_tokenizer_class=tok_class,
+        expected_tokenizer_is_fast=False,
         expected_weight_file_sha256=None,
         require_eager=True,
         require_bf16=True,
@@ -319,6 +352,201 @@ def load_q1_scientific_model(
         "base_revision": base_revision,
         "adapter_revision": adapter_revision,
     }
+    return model, tokenizer, report, meta
+
+
+def _infer_repo_root(start: Path) -> Path:
+    """Best-effort repo root for fixed-path production manifest lookup."""
+    cur = Path(start).resolve()
+    for candidate in [cur, *cur.parents]:
+        if (candidate / "src" / "traces").is_dir() and (
+            candidate / "results" / "q1_implementation_prep"
+        ).is_dir():
+            return candidate
+    # Fall back to start — authenticate_production will fail closed if pin unset
+    return cur
+
+
+def engineering_load_q1_scientific_model(
+    *,
+    subfolder: str,
+    engineering_manifest: Mapping[str, str] | None = None,
+    engineering_manifest_payload: Mapping[str, Any] | None = None,
+    expected_adapter_targets: list[str] | None = None,
+    expected_adapted_layers: list[int] | None = None,
+    base_weight_snapshot_dir: str | None = None,
+    adapter_weight_snapshot_dir: str | None = None,
+    device_map: str | dict | None = "auto",
+    base_revision: str = PINNED_BASE_REVISION,
+    adapter_revision: str = PINNED_ADAPTER_REVISION,
+) -> tuple[PeftModel, Any, ModelLoadReport, dict[str, Any]]:
+    """Engineering-only synthetic load path — never production_unlocked (D5-A).
+
+    Requires ``TRACES_Q1_CHECKPOINT_ENGINEERING_TRUST=1`` and a schema-valid
+    engineering manifest payload covering all ten adapter identities.
+    Does not set scientific production authorization.
+    """
+    from traces.q1.checkpoint_provenance import (
+        FROZEN_TOKENIZER_IDENTITY,
+        bind_unit_checkpoint_provenance,
+        resolve_unit_adapter_subfolder_dir,
+    )
+    from traces.q1.checkpoint_trust import (
+        authenticate_engineering_checkpoint_manifest,
+        unit_digests_from_auth,
+    )
+    from traces.q1.scientific_execution import require_scientific_authorization
+
+    require_scientific_authorization()
+    if not base_weight_snapshot_dir or not adapter_weight_snapshot_dir:
+        raise RuntimeError(
+            "engineering load requires local base and adapter snapshot dirs"
+        )
+    if engineering_manifest_payload is None:
+        raise RuntimeError(
+            "engineering_manifest_payload required — refuse treating a flat "
+            "caller digest map as authoritative production identity (D5-A)"
+        )
+    _ = engineering_manifest  # flat maps are non-authoritative; ignored
+    auth = authenticate_engineering_checkpoint_manifest(engineering_manifest_payload)
+    if not auth.ok or auth.production_unlocked:
+        raise RuntimeError(
+            "engineering checkpoint auth failed or incorrectly production-unlocked: "
+            + "; ".join(auth.failures)
+        )
+    parts = str(subfolder).strip("/").split("/")
+    family_from_sf, seed_token = parts[0], parts[1]
+    seed_from_sf = int(seed_token.removeprefix("seed"))
+    digests = unit_digests_from_auth(auth, subfolder=subfolder)
+
+    assert_bf16_dtype(REQUIRED_TORCH_DTYPE)
+    assert_eager_attention(REQUIRED_ATTN_IMPLEMENTATION)
+    load_kwargs = q1_model_load_kwargs(
+        dtype=REQUIRED_TORCH_DTYPE,
+        attn_implementation=REQUIRED_ATTN_IMPLEMENTATION,
+    )
+    if expected_adapter_targets is None or expected_adapted_layers is None:
+        raise RuntimeError("engineering load requires explicit targets/layers")
+
+    unit_bind = bind_unit_checkpoint_provenance(
+        family=family_from_sf,
+        seed=seed_from_sf,
+        subfolder=subfolder,
+        base_snapshot_dir=base_weight_snapshot_dir,
+        adapter_snapshot_dir=adapter_weight_snapshot_dir,
+        expected_sha256_by_relpath=digests,
+        require_section11_tokenizer_pins=False,
+        require_authoritative_trust=True,
+        trust_auth=auth,
+    )
+    local_paths = unit_bind["local_paths"]
+    expected_ad = resolve_unit_adapter_subfolder_dir(
+        adapter_weight_snapshot_dir, subfolder
+    )
+    computed_pre = dict(unit_bind["computed_sha256"])
+    if not computed_pre:
+        raise RuntimeError("computed digests missing after engineering bind (D5)")
+
+    tok_class = FROZEN_TOKENIZER_IDENTITY["expected_tokenizer_class"]
+    tokenizer = AutoTokenizer.from_pretrained(
+        local_paths["adapter_load_path"],
+        local_files_only=True,
+        trust_remote_code=False,
+        use_fast=False,
+    )
+    if type(tokenizer).__name__ != tok_class:
+        raise RuntimeError(
+            f"tokenizer class {type(tokenizer).__name__} != frozen {tok_class} (D5-B)"
+        )
+    if bool(getattr(tokenizer, "is_fast", True)):
+        raise RuntimeError("tokenizer is_fast=True refused (D5-B)")
+
+    model = AutoModelForCausalLM.from_pretrained(
+        local_paths["base_load_path"],
+        torch_dtype=load_kwargs["torch_dtype"],
+        device_map=device_map,
+        attn_implementation=load_kwargs["attn_implementation"],
+        trust_remote_code=False,
+        local_files_only=True,
+    )
+    model = PeftModel.from_pretrained(
+        model,
+        local_paths["adapter_load_path"],
+        autocast_adapter_dtype=False,
+        local_files_only=True,
+    )
+    model.eval()
+    _disable_dropout(model)
+    torch.set_grad_enabled(False)
+
+    post = verify_post_load(
+        model,
+        tokenizer,
+        expected_base_revision=base_revision,
+        expected_adapter_revision=adapter_revision,
+        actual_subfolder=subfolder,
+        expected_adapter_targets=expected_adapter_targets,
+        expected_adapted_layers=expected_adapted_layers,
+        expected_tokenizer_class=tok_class,
+        expected_tokenizer_is_fast=False,
+        expected_weight_file_sha256=None,
+        require_eager=True,
+        require_bf16=True,
+        weight_sha_pins_preverified=True,
+    )
+    if not post.ok:
+        raise RuntimeError(f"Q1 post-load verification failed: {post.failures}")
+    adapter_off = verify_adapter_off_behavior(model)
+    if not adapter_off["ok"]:
+        raise RuntimeError(
+            f"Q1 adapter-off verification failed: {adapter_off['failures']}"
+        )
+    peft_cfg = model.peft_config["default"]
+    cfg = model.config
+    report = ModelLoadReport(
+        base_model_id=str(local_paths["base_load_path"]),
+        adapter_repo=str(local_paths["adapter_load_path"]),
+        adapter_subfolder=subfolder,
+        adapter_kind="dense-lora",
+        base_revision=base_revision,
+        adapter_revision=adapter_revision,
+        architecture=getattr(cfg, "model_type", None),
+        num_layers=int(getattr(cfg, "num_hidden_layers", 0)),
+        hidden_size=int(cfg.hidden_size),
+        num_attention_heads=int(cfg.num_attention_heads),
+        num_key_value_heads=int(getattr(cfg, "num_key_value_heads", cfg.num_attention_heads)),
+        head_dim=int(getattr(cfg, "head_dim", cfg.hidden_size // cfg.num_attention_heads)),
+        intermediate_size=int(getattr(cfg, "intermediate_size", 0)),
+        adapted_modules=sorted(list(getattr(peft_cfg, "target_modules", []) or [])),
+        lora_r=int(peft_cfg.r),
+        lora_alpha=int(peft_cfg.lora_alpha),
+        lora_scaling=float(peft_cfg.lora_alpha) / float(peft_cfg.r),
+        adapter_tensor_count=_count_adapter_params(model)[0],
+        adapter_param_count=_count_adapter_params(model)[1],
+        dtype=str(REQUIRED_TORCH_DTYPE),
+        device=str(next(model.parameters()).device),
+        notes=[Q1_LOADER_NOTES, "engineering_synthetic_load_only"],
+    )
+    meta = {
+        "engineering_only": True,
+        "production_unlocked": False,
+        "computed_weight_file_sha256": computed_pre,
+        "hub_fallback_refused": True,
+        "local_files_only": True,
+        "unit_checkpoint_provenance": {
+            "family": family_from_sf,
+            "seed": seed_from_sf,
+            "subfolder": subfolder,
+            "adapter_subfolder_dir": unit_bind["adapter_subfolder_dir"],
+        },
+        "tokenizer_template_files": unit_bind["tokenizer_template_files"],
+        "adapter_config": unit_bind.get("adapter_config"),
+        "local_snapshot_load_paths": local_paths,
+        "checkpoint_trust": auth.to_dict(),
+        "base_revision": base_revision,
+        "adapter_revision": adapter_revision,
+    }
+    setattr(model, "_q1_adapter_weight_dir", str(expected_ad))
     return model, tokenizer, report, meta
 
 

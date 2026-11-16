@@ -1362,7 +1362,12 @@ def assemble_adapter_off_baseline_bundles(
 
 @dataclass
 class ProductionHookConfig:
-    """Configuration for production hooks (no invented hashes)."""
+    """Configuration for production hooks (no invented hashes).
+
+    ``expected_weight_file_sha256`` is **not** an authoritative production
+    identity source (D5-A). Production loads require
+    ``PINNED_CHECKPOINT_MANIFEST_SHA256`` + fixed-path owner manifest.
+    """
 
     repo_root: Path
     expected_weight_file_sha256: Mapping[str, str] | None = None
@@ -1378,15 +1383,28 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
     """Concrete production adapters. Fail closed without auth / manifests / prompts.
 
     Does not perform pretrained loads until ``load_model_for_unit`` is invoked
-    under scientific authorization with verified weight manifests.
+    under scientific authorization with owner-pinned checkpoint manifests.
     """
 
     def load(spec: UnitSpec) -> Mapping[str, Any]:
         require_scientific_authorization()
-        if not config.expected_weight_file_sha256:
+        from traces.q1.checkpoint_trust import (
+            authenticate_production_checkpoint_manifest,
+        )
+
+        # D5-A: caller expected_weight_file_sha256 is never independent proof
+        auth = authenticate_production_checkpoint_manifest(repo_root=config.repo_root)
+        if not auth.production_unlocked:
             raise RuntimeError(
-                "production load refuses: expected_weight_file_sha256 missing "
-                "(B3 checkpoint manifest BLOCKED — no invented hashes)"
+                "production load refuses: authoritative checkpoint manifest "
+                "not owner-pinned / unlocked (D5-A) — "
+                + "; ".join(auth.failures)
+                + (
+                    "; note: expected_weight_file_sha256 on ProductionHookConfig "
+                    "is not authoritative"
+                    if config.expected_weight_file_sha256
+                    else ""
+                )
             )
         if not config.base_weight_snapshot_dir or not config.adapter_weight_snapshot_dir:
             raise RuntimeError(
@@ -1400,6 +1418,7 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
         )
 
         subfolder = unit_spec_to_adapter_subfolder(spec)
+        # Intentional adapter-off reference: base uses l19/seed42 (D5-A §8)
         load_subfolder = subfolder if spec.family != "base" else "l19/seed42"
         # Seven LoRA target projections (identity-7); never invent q_proj-only.
         seven_targets = [
@@ -1425,12 +1444,14 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
         else:
             raise RuntimeError(f"unknown family {spec.family}")
 
-        # Loader performs unit-bound provenance (D5); no pre-load root fallback
+        # Loader re-authenticates owner pin; never uses caller map as authority
         model, tokenizer, report, meta = load_q1_scientific_model(
             subfolder=load_subfolder,
-            expected_weight_file_sha256=dict(config.expected_weight_file_sha256),
+            expected_weight_file_sha256=None,
             expected_adapter_targets=targets,
             expected_adapted_layers=layers,
+            expected_tokenizer_class="GemmaTokenizer",
+            expected_tokenizer_is_fast=False,
             base_weight_snapshot_dir=config.base_weight_snapshot_dir,
             adapter_weight_snapshot_dir=config.adapter_weight_snapshot_dir,
         )

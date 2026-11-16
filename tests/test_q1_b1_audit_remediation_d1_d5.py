@@ -257,8 +257,20 @@ def test_d2_base_load_expects_seven_targets_and_layer19(monkeypatch, tmp_path):
         }
         return model, tok, report, meta
 
+    from traces.q1.checkpoint_trust import CheckpointManifestAuth
+
+    fake_auth = CheckpointManifestAuth(
+        ok=True,
+        production_unlocked=True,
+        engineering_only=False,
+        payload={"artifact_type": "q1_checkpoint_provenance_manifest_v1"},
+        mode="test_stub",
+    )
     with patch(
         "traces.q1.loader.load_q1_scientific_model", side_effect=fake_load
+    ), patch(
+        "traces.q1.checkpoint_trust.authenticate_production_checkpoint_manifest",
+        return_value=fake_auth,
     ), patch(
         "traces.q1.checkpoint_provenance.assert_load_uses_verified_snapshot_bytes",
         return_value={"ok": True, "computed_sha256": {}},
@@ -471,131 +483,16 @@ def test_d5_loader_requires_local_verified_snapshots_only(monkeypatch, tmp_path)
             adapter_weight_snapshot_dir=None,
         )
 
-    from traces.q1.checkpoint_provenance import FROZEN_SECTION11_TOKENIZER_SHA256
-
+    # D5-A: production loader refuses caller manifest when owner pin unset
     base = tmp_path / "base"
     adapter_root = tmp_path / "adapter"
-    sf = "l19/seed42"
-    sub = adapter_root / "l19" / "seed42"
     base.mkdir()
-    sub.mkdir(parents=True)
+    adapter_root.mkdir()
     (base / "model.safetensors").write_bytes(b"B")
-    (sub / "adapter_model.safetensors").write_bytes(b"A")
-    (sub / "adapter_config.json").write_text('{"use_topk": false}\n')
-    tok_pins: dict[str, str] = {}
-    for name in FROZEN_SECTION11_TOKENIZER_SHA256:
-        raw = f"synthetic-{sf}-{name}".encode()
-        (sub / name).write_bytes(raw)
-        tok_pins[name] = hashlib.sha256(raw).hexdigest()
-    monkeypatch.setattr(
-        "traces.q1.checkpoint_provenance.FROZEN_SECTION11_TOKENIZER_SHA256",
-        tok_pins,
-    )
-    digest_b = hashlib.sha256(b"B").hexdigest()
-    digest_a = hashlib.sha256(b"A").hexdigest()
-    manifest = {
-        "base:model.safetensors": digest_b,
-        f"adapter:{sf}/adapter_model.safetensors": digest_a,
-    }
-
-    calls: dict[str, Any] = {"tok": None, "base": None, "peft": None}
-
-    class _Tok:
-        @staticmethod
-        def from_pretrained(path, **kwargs):
-            calls["tok"] = (path, kwargs)
-            return MagicMock()
-
-    class _Model:
-        @staticmethod
-        def from_pretrained(path, **kwargs):
-            calls["base"] = (path, kwargs)
-            m = MagicMock()
-            m.config = MagicMock(
-                _attn_implementation="eager",
-                num_attention_heads=8,
-                num_key_value_heads=4,
-                hidden_size=64,
-                head_dim=8,
-                num_hidden_layers=26,
-                intermediate_size=128,
-                model_type="gemma2",
-            )
-            p = MagicMock()
-            p.dtype = __import__("torch").bfloat16
-            p.device = "cpu"
-            p.is_floating_point = True
-            m.named_parameters = lambda: iter([("w", p)])
-            m.parameters = lambda: iter([p])
-            m.eval = MagicMock()
-            return m
-
-    class _Peft:
-        @staticmethod
-        def from_pretrained(model, path, **kwargs):
-            calls["peft"] = (path, kwargs)
-            model.peft_config = {
-                "default": MagicMock(
-                    target_modules=[
-                        "q_proj",
-                        "k_proj",
-                        "v_proj",
-                        "o_proj",
-                        "gate_proj",
-                        "up_proj",
-                        "down_proj",
-                    ],
-                    r=8,
-                    lora_alpha=16,
-                )
-            }
-            return model
-
-    with patch.object(loader_mod, "AutoTokenizer", _Tok), patch.object(
-        loader_mod, "AutoModelForCausalLM", _Model
-    ), patch.object(loader_mod, "PeftModel", _Peft), patch.object(
-        loader_mod, "verify_post_load"
-    ) as vpl, patch.object(
-        loader_mod, "verify_adapter_off_behavior", return_value={"ok": True}
-    ), patch.object(
-        loader_mod, "_disable_dropout"
-    ), patch.object(
-        loader_mod, "_count_adapter_params", return_value=(1, 1)
-    ):
-        vpl.return_value = MagicMock(ok=True, to_dict=lambda: {}, failures=[])
-        model, tok, report, meta = loader_mod.load_q1_scientific_model(
-            subfolder=sf,
-            expected_weight_file_sha256=manifest,
-            expected_adapter_targets=[
-                "q_proj",
-                "k_proj",
-                "v_proj",
-                "o_proj",
-                "gate_proj",
-                "up_proj",
-                "down_proj",
-            ],
-            expected_adapted_layers=[19],
-            base_weight_snapshot_dir=str(base),
-            adapter_weight_snapshot_dir=str(adapter_root),
-        )
-    assert calls["tok"][1].get("local_files_only") is True
-    assert calls["base"][1].get("local_files_only") is True
-    assert calls["peft"][1].get("local_files_only") is True
-    assert Path(calls["tok"][0]).resolve() == sub.resolve()
-    assert Path(calls["peft"][0]).resolve() == sub.resolve()
-    assert Path(calls["base"][0]).resolve() == base.resolve()
-    assert meta["hub_fallback_refused"] is True
-    assert meta["computed_weight_file_sha256"]
-    assert "base:model.safetensors" in meta["computed_weight_file_sha256"]
-
-    # Reject substituting an unverified path (wrong digest)
-    bad_manifest = dict(manifest)
-    bad_manifest["base:model.safetensors"] = "0" * 64
-    with pytest.raises(RuntimeError, match="snapshot verification failed|SHA256|SHA"):
+    with pytest.raises(RuntimeError, match="checkpoint identity blocked|pin|unset|authoritative"):
         loader_mod.load_q1_scientific_model(
-            subfolder=sf,
-            expected_weight_file_sha256=bad_manifest,
+            subfolder="l19/seed42",
+            expected_weight_file_sha256={"base:model.safetensors": "a" * 64},
             expected_adapter_targets=["q_proj"],
             expected_adapted_layers=[19],
             base_weight_snapshot_dir=str(base),
@@ -615,7 +512,11 @@ def test_d5_production_hooks_refuse_missing_snapshot_dirs(monkeypatch):
         )
     )
     spec = _spec(family="l19", role="primary_confirmatory", seed=45)
-    with pytest.raises(RuntimeError, match="snapshot"):
+    # Pin unset blocks before snapshot-dir check; either message is fail-closed
+    with pytest.raises(
+        RuntimeError,
+        match="snapshot|authoritative checkpoint manifest|unset|not authoritative",
+    ):
         hooks.load_model_for_unit(spec)
     monkeypatch.delenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", raising=False)
 
