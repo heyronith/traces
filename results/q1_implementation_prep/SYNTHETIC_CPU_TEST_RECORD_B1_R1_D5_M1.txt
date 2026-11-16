@@ -1,0 +1,31 @@
+TRACES Q1 — Targeted B1 Remediation R1 / D5 / M1
+Synthetic CPU suite record (no pretrained / no GPU / sci auth OFF)
+
+utc=2026-11-16T01:38:59Z
+branch=q1-impl-audit
+correction_commit=3b7821348f259ad00bd9a031af9eab72d14ad639
+correction_tree=a6aa064ae16030a3ae83bdf3407bcd2b72eb3d8e
+prior_handoff_tip=914073bb8d8112671cca025714cf78b546dc189a
+correction_baseline=1fe1d75ea590d843fcc3d0a2f347a83f317f5407
+frozen_main=b1e8874f45311678e6fa241f504e7e09d4a7808c
+
+interpreter=results/q1_final_cpu_checks/.venv_tf4513/bin/python
+python=3.11.15
+numpy=2.1.3
+torch=2.5.1
+transformers=4.51.3
+peft=0.19.1
+
+f1_hash=fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed
+f1_match=PASS
+
+command=PYTHONPATH=src results/q1_final_cpu_checks/.venv_tf4513/bin/python -m pytest tests/test_q1_cpu_infrastructure.py tests/test_q1_audit_corrections.py tests/test_q1_reaudit_s1_r10.py tests/test_q1_phase2_engineering.py tests/test_q1_phase2_audit_corrections.py tests/test_q1_final_phase2_d1_d8.py tests/test_q1_execution_safety_corrections.py tests/test_q1_independent_audit_remediation.py tests/test_q1_post_audit_e1_e4.py tests/test_q1_failclosed_s1_s2.py tests/test_q1_s2_audit_corrections.py tests/test_q1_b1_production_pipeline.py tests/test_q1_b1_corrections_c1_c8.py tests/test_q1_b1_corrections_c9_c12.py tests/test_q1_b1_audit_remediation_d1_d5.py tests/test_q1_b1_remediation_r1_d5_m1.py tests/test_q1_b3_runtime_provenance.py tests/test_q1_tiny_gemma_architecture.py --tb=line -q
+
+result=297 passed, 12 skipped in ~96.6s
+exit_code=0
+working_tree_at_suite=clean_committed_code (only pre-existing untracked results/ bundles)
+
+adversarial_module=tests/test_q1_b1_remediation_r1_d5_m1.py
+adversarial_focus=R1 CORE_TRIPLE + crossfit upstream-only; D5 multi-subfolder provenance fail-closed; M1 production persistence no skip bypass; F1; non-forward production-path integration via b1_production_pipeline + R1 catalog assemble
+
+restrictions_honored=no_pretrained_loads,no_model_forwards,no_gpu,no_checkpoint_downloads,no_expenditure,no_scientific_outcomes,no_protocol_amendments,no_merge_to_main,sci_auth_OFF
