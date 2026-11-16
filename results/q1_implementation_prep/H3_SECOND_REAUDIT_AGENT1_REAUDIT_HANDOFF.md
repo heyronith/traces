@@ -27,7 +27,7 @@ Suite record: `results/q1_implementation_prep/SYNTHETIC_CPU_TEST_RECORD_H3_SECON
 | Correction commit (code) | `894e5258207355961d353cbe6e21734f159e264d` |
 | Correction tree | `f9c80951e1594d017a42808beec4ae9ca2680fb3` |
 | Frozen main | `b1e8874f45311678e6fa241f504e7e09d4a7808c` |
-| Clean tested tip | see publish tip after evidence commit |
+| Clean tested tip (suite + handoff) | `5724f0dec337f0a0bc9d613927fdbe9158968365` |
 | Publish tip | `origin/q1-impl-audit` HEAD |
 
 ## Cursor-reported verification (not Agent 1 PASS)

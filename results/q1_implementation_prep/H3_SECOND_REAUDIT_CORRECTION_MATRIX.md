@@ -4,6 +4,7 @@
 **Baseline tip:** `164ada84032f97f195d973023badaacd0e279f64`  
 **Correction commit (code):** `894e5258207355961d353cbe6e21734f159e264d`  
 **Correction tree:** `f9c80951e1594d017a42808beec4ae9ca2680fb3`  
+**Clean tested tip:** `5724f0dec337f0a0bc9d613927fdbe9158968365`  
 **Prior H3-A/B/C code:** `3e44e950c2ba3ee6edc94b427c203e7f6cd8ccd1` / tree `9b78ba6d77890f43a672cbc94e63e7c3a1a67748`  
 **Owner approval:** `H3_DECISIVE_OVER_UNCERTAIN_OWNER_APPROVAL_20261116.md`  
 **Frozen main:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`  
