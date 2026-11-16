@@ -285,7 +285,8 @@ def test_three_qualifying_no_full_h3_claim():
     assert study["H3a_eligible"] is False
 
 
-def test_h3a_conserved_and_h3b_varied_both_reported():
+def test_h3a_4plus1_excludes_h3b_dual_support():
+    """H3-A: 4/5 conserved pair → H3a only; minority disclosed, H3b not supported."""
     records = {
         ROSTER[0]: _eligible_rec(PAIR_A),
         ROSTER[1]: _eligible_rec(PAIR_A),
@@ -295,9 +296,12 @@ def test_h3a_conserved_and_h3b_varied_both_reported():
     }
     study = h3_study_level_from_seed_records(records, expected_roster=ROSTER)
     assert study["H3a"] == "supported"
-    assert study["H3b"] == "supported"
+    assert study["H3b"] is None
+    assert study["H3b_eligible"] is False
     assert study["H3a_count"] == 4
     assert study["varies"] is True
+    assert study["minority_pairs"] is not None
+    assert ROSTER[4] in study["minority_pairs"]
 
 
 def test_study_inconclusive_precedence_blocks_h3():
@@ -320,6 +324,8 @@ def test_legacy_h3_top2_conservation_five_sets_and_partial():
     assert cons["H3a_eligible"] is True
     assert cons["H3a_count"] == 4
     assert cons["varies"] is True
+    assert cons.get("H3a") == "supported"
+    assert cons.get("H3b") is None  # H3-A mutual exclusion
     partial = {s: PAIR_A for s in ("s1", "s2", "s3")}
     bad = h3_top2_conservation(partial, require_five_seeds=True)
     assert bad["H3a_eligible"] is False

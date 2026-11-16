@@ -252,6 +252,9 @@ def test_five_seed_conservation_and_exploratory_stop():
     assert cons["H3a_eligible"] is True
     assert cons["H3a_count"] == 4
     assert cons["varies"] is True
+    # H3-A: conserved 4/5 → H3a supported, H3b not (mutual exclusion)
+    assert cons.get("H3a") == "supported"
+    assert cons.get("H3b") is None
     assert exploratory_stop_triggered([11, 12, 1]) is True
     assert exploratory_stop_triggered([1, 2, 3]) is False
 

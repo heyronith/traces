@@ -249,6 +249,8 @@ def run_model_unit_analysis(
                     "full_h3_eligible": False,
                     "reason": "empty eligible set",
                     "support_class": "gate_failed",
+                    "h3_endpoint_status": "gate_failed",
+                    "gates_passed": False,
                 },
             },
             crossfit={"indeterminate": True, "reason": "empty eligible set"},
@@ -283,6 +285,7 @@ def run_model_unit_analysis(
                     "full_h3_eligible": False,
                     "reason": "gate-failed; no full H3 support",
                     "support_class": "gate_failed",
+                    "h3_endpoint_status": "gate_failed",
                     "route_class": "gate-failed",
                     "h1_state": "inapplicable",
                     "gates_passed": False,
@@ -952,18 +955,50 @@ def run_study(
         }
 
     # --- Primary confirmatory (after exploratory stop clear) ---
-    # H3-B: analyze each unit first (gates/route/H1/F2), then aggregate eligible
+    # Analyze each unit first (gates/route/H1/F2), then aggregate eligible
     # applicable-direction top-2 sets. Never precompute a forward-only group map.
     primary = by_role[PRIMARY_ROLE]
     from traces.q1.frozen_artifacts import REQUIRED_PRIMARY_SEEDS
+
+    expected_ids = [f"primary_l19_seed{s}" for s in REQUIRED_PRIMARY_SEEDS]
+    expected_set = set(expected_ids)
+    roster_ids = [u.model_unit for u in primary]
+    dup_ids = sorted({i for i in roster_ids if roster_ids.count(i) > 1})
+    observed_set = set(roster_ids)
+    roster_ok = (
+        len(roster_ids) == 5
+        and len(observed_set) == 5
+        and observed_set == expected_set
+        and not dup_ids
+    )
+    roster_mismatch: dict[str, Any] | None = None
+    if not roster_ok:
+        roster_mismatch = {
+            "reason": (
+                "frozen primary roster mismatch (H3-C): require exact unordered "
+                f"set {expected_ids}; refuse canonical route/H3 study support"
+            ),
+            "expected": list(expected_ids),
+            "observed": list(roster_ids),
+            "missing": sorted(expected_set - observed_set),
+            "unexpected": sorted(observed_set - expected_set),
+            "duplicates": dup_ids,
+            "n_observed": len(roster_ids),
+        }
 
     study_labels: list[str] = []
     primary_results: list[dict[str, Any]] = []
     h3_seed_records: dict[str, dict[str, Any]] = {}
     h3_top2_eligible: dict[str, list] = {}
     h3_direction_meta: dict[str, Any] = {}
+    # Detect silent dict-key collapse from duplicate model_unit IDs
+    seen_ids: set[str] = set()
+    collapsed_duplicates: list[str] = []
 
     for u in primary:
+        if u.model_unit in seen_ids:
+            collapsed_duplicates.append(u.model_unit)
+        seen_ids.add(u.model_unit)
         res = run_model_unit_analysis(
             u,
             held_out_ids_allocation_order,
@@ -979,7 +1014,6 @@ def run_study(
             study_labels.append(res.route.get("route_class", "Indeterminate"))
 
         h3u = (res.h2_h3 or {}).get("h3_unit") or {}
-        # Restore frozenset for aggregation when serialized as sorted pairs
         top2_raw = h3u.get("top2_for_h3")
         top2_fs: frozenset[tuple[int, int]] | None = None
         if isinstance(top2_raw, frozenset) and len(top2_raw) == 2:
@@ -989,11 +1023,27 @@ def run_study(
                 top2_fs = frozenset(tuple(x) for x in top2_raw)
             except TypeError:
                 top2_fs = None
+        status = h3u.get("h3_endpoint_status")
+        if status not in {
+            "full_qualifying",
+            "h3_indeterminate",
+            "determinate_non_support",
+            "gate_failed",
+        }:
+            status = (
+                "full_qualifying"
+                if h3u.get("full_h3_eligible")
+                else "determinate_non_support"
+            )
         rec = {
             **h3u,
-            "full_h3_eligible": bool(h3u.get("full_h3_eligible")) and top2_fs is not None,
+            "full_h3_eligible": bool(h3u.get("full_h3_eligible"))
+            and top2_fs is not None
+            and status == "full_qualifying",
             "top2_for_h3": top2_fs,
+            "h3_endpoint_status": status,
         }
+        # Last-write wins on duplicate keys — flagged via roster_mismatch
         h3_seed_records[u.model_unit] = rec
         h3_direction_meta[u.model_unit] = {
             "route_class": h3u.get("route_class") or res.route.get("route_class"),
@@ -1002,10 +1052,14 @@ def run_study(
             "top2_reverse": h3u.get("top2_reverse"),
             "full_h3_eligible": rec["full_h3_eligible"],
             "support_class": h3u.get("support_class"),
+            "h3_endpoint_status": rec["h3_endpoint_status"],
+            "uncertainty_kind": h3u.get("uncertainty_kind"),
             "reason": h3u.get("reason"),
             "h1_state": h3u.get("h1_state") or (res.h1 or {}).get("full_H1"),
             "k_star_le_2_fwd": h3u.get("k_star_le_2_fwd"),
             "k_star_le_2_rev": h3u.get("k_star_le_2_rev"),
+            "k_star_band_fwd": h3u.get("k_star_band_fwd"),
+            "k_star_band_rev": h3u.get("k_star_band_rev"),
             "rmoved_top2_agree": h3u.get("rmoved_top2_agree"),
         }
         if rec["full_h3_eligible"] and top2_fs is not None:
@@ -1022,6 +1076,26 @@ def run_study(
             )
         )
 
+    if collapsed_duplicates and roster_mismatch is not None:
+        roster_mismatch = {
+            **roster_mismatch,
+            "collapsed_duplicate_keys": sorted(set(collapsed_duplicates)),
+        }
+    elif collapsed_duplicates:
+        roster_mismatch = {
+            "reason": (
+                "duplicate primary model_unit IDs collapse seed records (H3-C); "
+                "canonical study refused"
+            ),
+            "expected": list(expected_ids),
+            "observed": list(roster_ids),
+            "duplicates": sorted(set(collapsed_duplicates)),
+            "collapsed_duplicate_keys": sorted(set(collapsed_duplicates)),
+            "missing": sorted(expected_set - observed_set),
+            "unexpected": sorted(observed_set - expected_set),
+            "n_observed": len(roster_ids),
+        }
+
     # --- Secondary replication ---
     for u in by_role[SECONDARY_ROLE]:
         per_unit.append(_analyze_secondary_unit(u, held_out_ids_allocation_order))
@@ -1035,11 +1109,30 @@ def run_study(
 
     study: Any = None
     study_inconclusive = False
-    if len(study_labels) == 5:
+    if roster_mismatch is not None:
+        # H3-C: refuse BOTH canonical route-level and H3 study support
+        study = {
+            "canonical_study_level_refused": True,
+            "roster_mismatch": True,
+            **roster_mismatch,
+            "labels": study_labels,
+        }
+        h3_study = h3_study_level_from_seed_records(
+            {},
+            expected_roster=expected_ids,
+            study_inconclusive=False,
+            roster_mismatch=roster_mismatch,
+        )
+    elif len(study_labels) == 5:
         study = study_level_decision(study_labels)
         study_inconclusive = study == "INCONCLUSIVE"
+        # Always aggregate against frozen expected identities — never observed fallback
+        h3_study = h3_study_level_from_seed_records(
+            h3_seed_records,
+            expected_roster=expected_ids,
+            study_inconclusive=study_inconclusive,
+        )
     elif len(study_labels) > 0:
-        # Refuse canonical study-level on partial primary set
         study = {
             "partial": True,
             "n": len(study_labels),
@@ -1047,22 +1140,33 @@ def run_study(
             "canonical_study_level_refused": True,
             "reason": "preregistered study-level requires exactly 5 primary seeds",
         }
-
-    # Fixed five-identity roster (l19 seeds 42–46). Never select best-of results.
-    roster_ids = [u.model_unit for u in primary]
-    expected_ids = [f"primary_l19_seed{s}" for s in REQUIRED_PRIMARY_SEEDS]
-    if len(roster_ids) == 5 and sorted(roster_ids) == sorted(expected_ids):
-        h3_roster = expected_ids
+        h3_study = h3_study_level_from_seed_records(
+            {},
+            expected_roster=expected_ids,
+            roster_mismatch={
+                "reason": "partial primary set — canonical H3 refused",
+                "expected": list(expected_ids),
+                "observed": list(roster_ids),
+                "missing": sorted(expected_set - observed_set),
+                "unexpected": sorted(observed_set - expected_set),
+                "duplicates": dup_ids,
+                "n_observed": len(roster_ids),
+            },
+        )
     else:
-        # Still evaluate the observed primary identities if count==5; else ineligible
-        h3_roster = roster_ids
-
-    h3_study = h3_study_level_from_seed_records(
-        h3_seed_records,
-        expected_roster=h3_roster if len(h3_roster) == 5 else list(h3_seed_records.keys()),
-        study_inconclusive=study_inconclusive,
-    )
-    # Preserve study_level string/partial-dict contract; H3 lives in h3_study.
+        h3_study = h3_study_level_from_seed_records(
+            {},
+            expected_roster=expected_ids,
+            roster_mismatch={
+                "reason": "no primary units — canonical H3 refused",
+                "expected": list(expected_ids),
+                "observed": [],
+                "missing": list(expected_ids),
+                "unexpected": [],
+                "duplicates": [],
+                "n_observed": 0,
+            },
+        )
 
     # Annotate primary unit dicts with study-level H3 (claims remain study-scoped)
     for d in primary_results:
@@ -1074,8 +1178,8 @@ def run_study(
             for k, v in h3_study.items()
         }
         hh["h3_conservation"]["note"] = (
-            "study-level applicable-direction aggregation (H3-B); "
-            "per-seed evidence in h3_unit / h3_direction_by_seed"
+            "study-level H3-A/B/C aggregation; per-seed evidence in h3_unit / "
+            "h3_direction_by_seed"
         )
         d["h2_h3"] = hh
 
@@ -1089,7 +1193,11 @@ def run_study(
             k: (sorted(v) if isinstance(v, frozenset) else v)
             for k, v in h3_study.items()
         },
-        "h3_ranking_complete": bool(h3_study.get("H3a_eligible") or h3_study.get("n_qualifying", 0) >= 1),
+        "primary_roster_ok": roster_mismatch is None,
+        "primary_roster_mismatch": roster_mismatch,
+        "h3_ranking_complete": bool(
+            h3_study.get("n_qualifying", 0) >= 1 and roster_mismatch is None
+        ),
         "allocation": {
             "held_out_n": len(held_out_ids_allocation_order),
             "held_out_expected": N_HO,
