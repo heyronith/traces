@@ -41,7 +41,7 @@ from traces.q1.checkpoint_trust import (
 )
 
 PROGRAM_NAME = "q1_b3_modal_byte_verify"
-PROGRAM_VERSION = "0.1.0"
+PROGRAM_VERSION = "0.2.0"
 
 MODAL_APP_NAME = "traces-q1-b3-byte-verify"
 MODAL_VOLUME_NAME = "traces-q1-b3-checkpoint-bytes"
@@ -224,32 +224,80 @@ def require_billable_gates(*, env: Mapping[str, str] | None = None) -> dict[str,
     }
 
 
-def assert_regular_file_no_symlink(
-    path: Path, *, within: Path | None = None
-) -> None:
-    """Refuse symlink files; optionally refuse symlink components under ``within``.
+def _lexically_under(path: Path, root: Path) -> bool:
+    """True iff ``path`` is lexically equal to or under ``root`` (no resolve)."""
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
-    Modal Volume mount points may themselves be symlinks (e.g. ``/mnt/b3``). Those
-    are outside the materialized trust root and must not block hashing. HF-cache
-    style symlink *trees inside* ``within`` remain refused.
+
+def assert_path_inside_trust_root(path: Path, within: Path) -> None:
+    """Fail closed if lexical or resolved path escapes the materialized trust root.
+
+    Walks **lexical** components from ``within`` toward ``path`` using ``lstat`` /
+    ``is_symlink`` on every component (files and directories). Modal Volume mount
+    prefixes outside ``within`` are irrelevant; everything under the declared
+    materialized root must be symlink-free and must not escape via resolve().
     """
     path = Path(path)
-    if path.is_symlink():
-        raise B3VerifyError(f"symlink refused as trusted input: {path}")
-    if not path.is_file():
-        raise B3VerifyError(f"not a regular file: {path}")
-    if within is None:
-        return
     within = Path(within)
-    try:
-        rel = path.resolve().relative_to(within.resolve())
-    except ValueError:
-        return
-    cur = within.resolve()
+    if not _lexically_under(path, within):
+        raise B3VerifyError(
+            f"path escapes trust root lexically: {path} not under {within}"
+        )
+    # Walk lexical components; refuse any symlink (dir or file) on the chain.
+    rel = path.relative_to(within)
+    cur = within
+    # The trust root itself must exist as a real directory (not a symlink).
+    if within.is_symlink():
+        raise B3VerifyError(f"trust root itself is a symlink: {within}")
+    if not within.is_dir():
+        raise B3VerifyError(f"trust root is not a directory: {within}")
     for part in rel.parts:
         cur = cur / part
         if cur.is_symlink():
             raise B3VerifyError(f"symlink in trust path refused: {cur}")
+        if not cur.exists():
+            raise B3VerifyError(f"missing path component under trust root: {cur}")
+    # Resolved containment — never silently ignore relative_to failures.
+    try:
+        resolved_path = path.resolve(strict=True)
+        resolved_root = within.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise B3VerifyError(f"resolve failed under trust root: {exc}") from exc
+    if not _lexically_under(resolved_path, resolved_root):
+        raise B3VerifyError(
+            f"resolved path escapes trust root: {resolved_path} not under "
+            f"{resolved_root} (lexical {path})"
+        )
+
+
+def assert_regular_file_no_symlink(
+    path: Path, *, within: Path | None = None
+) -> None:
+    """Refuse symlink files; when ``within`` is set, enforce full trust-root walk."""
+    path = Path(path)
+    if within is not None:
+        assert_path_inside_trust_root(path, Path(within))
+    elif path.is_symlink():
+        raise B3VerifyError(f"symlink refused as trusted input: {path}")
+    if path.is_symlink():
+        raise B3VerifyError(f"symlink refused as trusted input: {path}")
+    if not path.is_file():
+        raise B3VerifyError(f"not a regular file: {path}")
+
+
+def assert_dir_no_symlink(path: Path, *, within: Path | None = None) -> None:
+    """Refuse symlinked or non-directory entries (unit/base roots)."""
+    path = Path(path)
+    if within is not None:
+        assert_path_inside_trust_root(path, Path(within))
+    if path.is_symlink():
+        raise B3VerifyError(f"symlinked directory refused: {path}")
+    if not path.is_dir():
+        raise B3VerifyError(f"not a directory: {path}")
 
 
 def reject_unsafe_relpath(rel: str) -> str:
@@ -287,6 +335,29 @@ def sha256_file_chunked(
     return h.hexdigest(), total
 
 
+def git_blob_sha1_file_chunked(
+    path: Path, *, chunk_size: int = CHUNK_SIZE, within: Path | None = None
+) -> tuple[str, int]:
+    """Git blob OID: SHA1(b'blob ' + ascii(size) + b'\\0' + content), streaming."""
+    assert_regular_file_no_symlink(path, within=within)
+    size = path.stat().st_size
+    h = hashlib.sha1()
+    h.update(f"blob {size}\0".encode("ascii"))
+    total = 0
+    with path.open("rb") as fh:
+        while True:
+            chunk = fh.read(chunk_size)
+            if not chunk:
+                break
+            h.update(chunk)
+            total += len(chunk)
+    if total != size:
+        raise B3VerifyError(
+            f"size mismatch while git-blob hashing {path}: read={total} stat={size}"
+        )
+    return h.hexdigest(), total
+
+
 def materialize_copy_no_symlink(src: Path, dest: Path) -> None:
     """Copy real file bytes into dest; never leave dest as a symlink."""
     real = Path(src).resolve()
@@ -314,8 +385,11 @@ def parse_index_shards(index_path: Path, *, within: Path | None = None) -> list[
     return list(parsed["shards"])
 
 
-def verify_section11_unit(unit_dir: Path) -> dict[str, Any]:
+def verify_section11_unit(
+    unit_dir: Path, *, within: Path | None = None
+) -> dict[str, Any]:
     """Compare each of four §11 files to frozen pins using local SHA-256."""
+    trust = within if within is not None else unit_dir
     results: dict[str, Any] = {}
     failures: list[str] = []
     for name, expected in FROZEN_SECTION11_TOKENIZER_SHA256.items():
@@ -324,7 +398,12 @@ def verify_section11_unit(unit_dir: Path) -> dict[str, Any]:
             failures.append(f"missing §11 file {name}")
             results[name] = {"ok": False, "reason": "missing"}
             continue
-        digest, size = sha256_file_chunked(path, within=unit_dir)
+        try:
+            digest, size = sha256_file_chunked(path, within=trust)
+        except B3VerifyError as exc:
+            failures.append(str(exc))
+            results[name] = {"ok": False, "reason": str(exc)}
+            continue
         ok = digest == expected
         results[name] = {
             "ok": ok,
@@ -335,28 +414,56 @@ def verify_section11_unit(unit_dir: Path) -> dict[str, Any]:
         if not ok:
             failures.append(f"§11 mismatch {name}: got {digest} expected {expected}")
     for banned in FORBIDDEN_ADAPTER_LOAD_FILES:
-        if (unit_dir / banned).exists():
+        banned_path = unit_dir / banned
+        if banned_path.exists() or banned_path.is_symlink():
             failures.append(f"forbidden competing tokenizer present: {banned}")
     return {"ok": not failures, "files": results, "failures": failures}
 
 
-def verify_adapter_unit_inventory(unit_dir: Path, *, subfolder: str) -> dict[str, Any]:
+def verify_adapter_unit_inventory(
+    unit_dir: Path, *, subfolder: str, adapter_root: Path | None = None
+) -> dict[str, Any]:
     reject_unsafe_relpath(subfolder)
     if subfolder not in expected_ten_units():
         raise B3VerifyError(f"unexpected adapter subfolder {subfolder!r}")
-    present = {
-        p.name: p
-        for p in unit_dir.iterdir()
-        if p.is_file() or p.is_symlink()
-    }
+    trust = adapter_root if adapter_root is not None else unit_dir
+    try:
+        assert_dir_no_symlink(unit_dir, within=trust)
+    except B3VerifyError as exc:
+        return {
+            "ok": False,
+            "subfolder": subfolder,
+            "digests": {},
+            "sizes": {},
+            "section11": {},
+            "failures": [str(exc)],
+        }
+    present: dict[str, Path] = {}
     failures: list[str] = []
+    for p in unit_dir.iterdir():
+        if p.name.startswith("."):
+            continue
+        if p.is_symlink():
+            failures.append(f"{subfolder}: symlink entry refused: {p.name}")
+            continue
+        if p.is_dir():
+            failures.append(f"{subfolder}: unexpected directory: {p.name}")
+            continue
+        if p.is_file():
+            present[p.name] = p
+        else:
+            failures.append(f"{subfolder}: non-file entry: {p.name}")
     digests: dict[str, str] = {}
     sizes: dict[str, int] = {}
     for name in REQUIRED_ADAPTER_LOAD_FILES:
         if name not in present:
             failures.append(f"{subfolder}: missing required {name}")
             continue
-        digest, size = sha256_file_chunked(present[name], within=unit_dir)
+        try:
+            digest, size = sha256_file_chunked(present[name], within=trust)
+        except B3VerifyError as exc:
+            failures.append(str(exc))
+            continue
         digests[name] = digest
         sizes[name] = size
     for name in present:
@@ -366,7 +473,7 @@ def verify_adapter_unit_inventory(unit_dir: Path, *, subfolder: str) -> dict[str
             failures.append(
                 f"{subfolder}: unexpected extra file in materialized unit dir: {name}"
             )
-    sec11 = verify_section11_unit(unit_dir)
+    sec11 = verify_section11_unit(unit_dir, within=trust)
     failures.extend(sec11["failures"])
     return {
         "ok": not failures,
@@ -452,6 +559,21 @@ def inventory_materialized_snapshot(
     file_rows: list[dict[str, Any]] = []
     base_digests: dict[str, str] = {}
 
+    try:
+        assert_dir_no_symlink(base_dir)
+        assert_dir_no_symlink(adapter_root)
+    except B3VerifyError as exc:
+        return (
+            B3AuditReport(
+                ok=False,
+                mode="inventory",
+                timestamp_utc=utc_now(),
+                production_pin=PINNED_CHECKPOINT_MANIFEST_SHA256,
+                failures=[str(exc)],
+            ),
+            None,
+        )
+
     index_path = base_dir / BASE_SAFETENSORS_INDEX_NAME
     try:
         shards = parse_index_shards(index_path, within=base_dir)
@@ -473,15 +595,20 @@ def inventory_materialized_snapshot(
     for path in sorted(base_dir.iterdir()):
         if path.name.startswith(".") or path.name == ".hf_staging":
             continue
+        if path.is_symlink():
+            failures.append(f"base symlink entry refused: {path.name}")
+            continue
         if path.is_dir():
             failures.append(f"unexpected directory in base materialization: {path.name}")
             continue
-        if path.is_symlink() or path.is_file():
+        if path.is_file():
             if path.name not in required_base_set:
                 failures.append(
                     f"base contains non-inventory file "
                     f"(must not be in trust root): {path.name}"
                 )
+        else:
+            failures.append(f"base non-file entry refused: {path.name}")
 
     for name in required_base:
         reject_unsafe_relpath(name)
@@ -510,10 +637,12 @@ def inventory_materialized_snapshot(
     section11_by_unit: dict[str, Any] = {}
     for sf in expected_ten_units():
         unit_dir = adapter_root.joinpath(*sf.split("/"))
-        if not unit_dir.is_dir():
-            failures.append(f"missing unit directory {sf}")
+        if unit_dir.is_symlink() or not unit_dir.is_dir():
+            failures.append(f"missing or symlinked unit directory {sf}")
             continue
-        inv = verify_adapter_unit_inventory(unit_dir, subfolder=sf)
+        inv = verify_adapter_unit_inventory(
+            unit_dir, subfolder=sf, adapter_root=adapter_root
+        )
         section11_by_unit[sf] = inv["section11"]
         if not inv["ok"]:
             failures.extend(inv["failures"])
@@ -699,6 +828,125 @@ def resolve_hf_token(env: Mapping[str, str] | None = None) -> str:
     )
 
 
+@dataclass
+class SourceObjectIdentity:
+    repo_id: str
+    revision: str
+    path: str
+    size: int | None
+    kind: str  # lfs_sha256 | git_blob_sha1
+    digest: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def fetch_source_object_identity(
+    *,
+    repo_id: str,
+    revision: str,
+    path: str,
+    token: str | None,
+    paths_info: Sequence[Any] | None = None,
+) -> SourceObjectIdentity:
+    """Bind a path to the Hub revision's published content identity.
+
+    LFS → ``lfs.sha256`` vs local streaming SHA-256.
+    Non-LFS → ``blob_id`` vs local Git blob OID SHA-1(prefix+body).
+    Missing digests → SOURCE_BINDING_BLOCKED (not a size/name match).
+    """
+    reject_unsafe_relpath(path)
+    if paths_info is None:
+        from huggingface_hub import HfApi
+
+        api = HfApi(token=token)
+        paths_info = api.get_paths_info(repo_id, [path], revision=revision)
+    if not paths_info:
+        raise B3VerifyError(
+            f"SOURCE_BINDING_BLOCKED: Hub returned no paths_info for "
+            f"{repo_id}@{revision}:{path}"
+        )
+    info = paths_info[0]
+    info_path = getattr(info, "path", None)
+    if info_path is not None and str(info_path) != path:
+        raise B3VerifyError(
+            f"SOURCE_BINDING_BLOCKED: paths_info path mismatch "
+            f"(wanted {path!r}, got {info_path!r})"
+        )
+    # RepoFolder / directory entries have tree_id and no usable content digest.
+    if getattr(info, "tree_id", None) is not None and getattr(info, "blob_id", None) is None:
+        raise B3VerifyError(
+            f"SOURCE_BINDING_BLOCKED: path is a directory/tree, not a file: "
+            f"{repo_id}@{revision}:{path}"
+        )
+    size = getattr(info, "size", None)
+    lfs = getattr(info, "lfs", None)
+    if lfs is not None:
+        sha = getattr(lfs, "sha256", None) or (
+            lfs.get("sha256") if isinstance(lfs, Mapping) else None
+        )
+        if not sha or not isinstance(sha, str) or len(sha) != 64:
+            raise B3VerifyError(
+                f"SOURCE_BINDING_BLOCKED: LFS object missing sha256 for "
+                f"{repo_id}@{revision}:{path}"
+            )
+        return SourceObjectIdentity(
+            repo_id=repo_id,
+            revision=revision,
+            path=path,
+            size=int(size) if size is not None else None,
+            kind="lfs_sha256",
+            digest=sha.lower(),
+        )
+    blob_id = getattr(info, "blob_id", None) or getattr(info, "oid", None)
+    if not blob_id or not isinstance(blob_id, str) or len(blob_id) != 40:
+        raise B3VerifyError(
+            f"SOURCE_BINDING_BLOCKED: non-LFS blob_id missing for "
+            f"{repo_id}@{revision}:{path}"
+        )
+    return SourceObjectIdentity(
+        repo_id=repo_id,
+        revision=revision,
+        path=path,
+        size=int(size) if size is not None else None,
+        kind="git_blob_sha1",
+        digest=str(blob_id).lower(),
+    )
+
+
+def verify_local_matches_source(
+    path: Path,
+    identity: SourceObjectIdentity,
+    *,
+    within: Path | None = None,
+) -> dict[str, Any]:
+    """Compare local bytes to source content identity (in addition to path checks)."""
+    assert_regular_file_no_symlink(path, within=within)
+    local_size = path.stat().st_size
+    if identity.size is not None and local_size != identity.size:
+        raise B3VerifyError(
+            f"source size mismatch for {identity.path}: local={local_size} "
+            f"source={identity.size}"
+        )
+    if identity.kind == "lfs_sha256":
+        local_digest, _ = sha256_file_chunked(path, within=within)
+    elif identity.kind == "git_blob_sha1":
+        local_digest, _ = git_blob_sha1_file_chunked(path, within=within)
+    else:
+        raise B3VerifyError(f"SOURCE_BINDING_BLOCKED: unknown kind {identity.kind}")
+    if local_digest.lower() != identity.digest.lower():
+        raise B3VerifyError(
+            f"source content identity mismatch for {identity.path}: "
+            f"local_{identity.kind}={local_digest} source={identity.digest}"
+        )
+    return {
+        "ok": True,
+        "local_digest": local_digest.lower(),
+        "source": identity.to_dict(),
+        "size_bytes": local_size,
+    }
+
+
 def download_hf_file(
     *,
     repo_id: str,
@@ -731,12 +979,151 @@ def download_hf_file(
     if local_path.is_symlink():
         local_path = local_path.resolve()
     materialize_copy_no_symlink(local_path, dest)
-    # Best-effort cleanup of staging tree so inventory dirs stay exact.
     try:
         if staging_parent.is_dir():
             shutil.rmtree(staging_parent, ignore_errors=True)
     except OSError:
         pass
+
+
+def ensure_materialized_file(
+    *,
+    repo_id: str,
+    revision: str,
+    filename: str,
+    dest: Path,
+    token: str,
+    within: Path,
+    allow_download: bool = True,
+    source_identity: SourceObjectIdentity | None = None,
+) -> dict[str, Any]:
+    """Reuse dest only after symlink + source-identity checks; else download.
+
+    A bare ``dest.exists()`` cache hit is never trusted.
+    """
+    reject_unsafe_relpath(filename)
+    identity = source_identity or fetch_source_object_identity(
+        repo_id=repo_id, revision=revision, path=filename, token=token
+    )
+    if dest.exists() or dest.is_symlink():
+        binding = verify_local_matches_source(dest, identity, within=within)
+        return {"action": "reused_after_source_bind", **binding}
+    if not allow_download:
+        raise B3VerifyError(
+            f"missing materialized file and download disabled: {dest}"
+        )
+    download_hf_file(
+        repo_id=repo_id,
+        revision=revision,
+        filename=filename,
+        dest=dest,
+        token=token,
+    )
+    binding = verify_local_matches_source(dest, identity, within=within)
+    return {"action": "downloaded_and_source_bound", **binding}
+
+
+def validate_existing_materialized_source_bound(
+    *,
+    root: Path,
+    token: str,
+) -> dict[str, Any]:
+    """Bind every already-materialized inventory file to source OIDs (no download).
+
+    Refuses reuse of ``dest.exists()`` without source identity + no-symlink checks.
+    Does not overwrite Volume bytes.
+    """
+    require_production_pin_unset()
+    base_dir = root / "base" / PINNED_BASE_REVISION / "materialized"
+    adapter_root = root / "adapters" / PINNED_ADAPTER_REVISION / "materialized"
+    assert_dir_no_symlink(base_dir)
+    assert_dir_no_symlink(adapter_root)
+
+    bindings: list[dict[str, Any]] = []
+    failures: list[str] = []
+
+    index_dest = base_dir / BASE_SAFETENSORS_INDEX_NAME
+    try:
+        bindings.append(
+            ensure_materialized_file(
+                repo_id=BASE_MODEL_ID,
+                revision=PINNED_BASE_REVISION,
+                filename=BASE_SAFETENSORS_INDEX_NAME,
+                dest=index_dest,
+                token=token,
+                within=base_dir,
+                allow_download=False,
+            )
+        )
+        shards = parse_index_shards(index_dest, within=base_dir)
+    except B3VerifyError as exc:
+        return {
+            "ok": False,
+            "mode": "validate_existing_source_bound",
+            "failures": [str(exc)],
+            "bindings": bindings,
+            "timestamp_utc": utc_now(),
+        }
+
+    ordered_base: list[str] = []
+    seen: set[str] = set()
+    for name in list(REQUIRED_BASE_META_FILES) + shards:
+        if name not in seen:
+            seen.add(name)
+            ordered_base.append(name)
+
+    for name in ordered_base:
+        try:
+            bindings.append(
+                ensure_materialized_file(
+                    repo_id=BASE_MODEL_ID,
+                    revision=PINNED_BASE_REVISION,
+                    filename=name,
+                    dest=base_dir / name,
+                    token=token,
+                    within=base_dir,
+                    allow_download=False,
+                )
+            )
+        except B3VerifyError as exc:
+            failures.append(str(exc))
+
+    for sf in expected_ten_units():
+        unit_dir = adapter_root.joinpath(*sf.split("/"))
+        try:
+            assert_dir_no_symlink(unit_dir, within=adapter_root)
+        except B3VerifyError as exc:
+            failures.append(str(exc))
+            continue
+        for name in REQUIRED_ADAPTER_LOAD_FILES:
+            try:
+                bindings.append(
+                    ensure_materialized_file(
+                        repo_id=DENSE_ADAPTER_REPO,
+                        revision=PINNED_ADAPTER_REVISION,
+                        filename=f"{sf}/{name}",
+                        dest=unit_dir / name,
+                        token=token,
+                        within=adapter_root,
+                        allow_download=False,
+                    )
+                )
+            except B3VerifyError as exc:
+                failures.append(str(exc))
+
+    return {
+        "ok": not failures,
+        "mode": "validate_existing_source_bound",
+        "failures": failures,
+        "bindings": bindings,
+        "n_bindings": len(bindings),
+        "timestamp_utc": utc_now(),
+        "production_pin": PINNED_CHECKPOINT_MANIFEST_SHA256,
+        "notes": [
+            "no download — existing Volume bytes only",
+            "downloader self-check is not independent Agent 1 audit",
+        ],
+    }
 
 
 def run_materialize_and_verify(
@@ -745,22 +1132,29 @@ def run_materialize_and_verify(
     token: str,
     evidence_dir: Path,
 ) -> dict[str, Any]:
-    """Download required files into no-symlink dirs, hash, write candidate artifacts."""
+    """Download/validate required files with source binding; write candidate artifacts."""
     gates = require_billable_gates()
     base_dir = root / "base" / PINNED_BASE_REVISION / "materialized"
     adapter_root = root / "adapters" / PINNED_ADAPTER_REVISION / "materialized"
     base_dir.mkdir(parents=True, exist_ok=True)
     adapter_root.mkdir(parents=True, exist_ok=True)
+    assert_dir_no_symlink(base_dir)
+    assert_dir_no_symlink(adapter_root)
+
+    source_bindings: list[dict[str, Any]] = []
 
     index_dest = base_dir / BASE_SAFETENSORS_INDEX_NAME
-    download_hf_file(
-        repo_id=BASE_MODEL_ID,
-        revision=PINNED_BASE_REVISION,
-        filename=BASE_SAFETENSORS_INDEX_NAME,
-        dest=index_dest,
-        token=token,
+    source_bindings.append(
+        ensure_materialized_file(
+            repo_id=BASE_MODEL_ID,
+            revision=PINNED_BASE_REVISION,
+            filename=BASE_SAFETENSORS_INDEX_NAME,
+            dest=index_dest,
+            token=token,
+            within=base_dir,
+        )
     )
-    shards = parse_index_shards(index_dest)
+    shards = parse_index_shards(index_dest, within=base_dir)
     ordered_base: list[str] = []
     seen: set[str] = set()
     for name in list(REQUIRED_BASE_META_FILES) + shards:
@@ -770,37 +1164,60 @@ def run_materialize_and_verify(
 
     for name in ordered_base:
         dest = base_dir / name
-        if dest.exists():
-            continue
-        download_hf_file(
-            repo_id=BASE_MODEL_ID,
-            revision=PINNED_BASE_REVISION,
-            filename=name,
-            dest=dest,
-            token=token,
+        source_bindings.append(
+            ensure_materialized_file(
+                repo_id=BASE_MODEL_ID,
+                revision=PINNED_BASE_REVISION,
+                filename=name,
+                dest=dest,
+                token=token,
+                within=base_dir,
+            )
         )
 
     for sf in expected_ten_units():
         unit_dir = adapter_root.joinpath(*sf.split("/"))
+        if unit_dir.is_symlink():
+            raise B3VerifyError(f"symlinked unit directory refused: {sf}")
         unit_dir.mkdir(parents=True, exist_ok=True)
+        assert_dir_no_symlink(unit_dir, within=adapter_root)
         for name in REQUIRED_ADAPTER_LOAD_FILES:
             dest = unit_dir / name
-            if dest.exists():
-                continue
-            download_hf_file(
-                repo_id=DENSE_ADAPTER_REPO,
-                revision=PINNED_ADAPTER_REVISION,
-                filename=f"{sf}/{name}",
-                dest=dest,
-                token=token,
+            source_bindings.append(
+                ensure_materialized_file(
+                    repo_id=DENSE_ADAPTER_REPO,
+                    revision=PINNED_ADAPTER_REVISION,
+                    filename=f"{sf}/{name}",
+                    dest=dest,
+                    token=token,
+                    within=adapter_root,
+                )
             )
 
     report, candidate = inventory_materialized_snapshot(
         base_dir=base_dir, adapter_root=adapter_root
     )
     report.budget = gates
-    report.mode = "download_verify"
+    report.mode = "download_verify_source_bound"
+    report.notes.append(
+        f"source_bindings={len(source_bindings)} "
+        f"(reused={sum(1 for b in source_bindings if b.get('action','').startswith('reused'))})"
+    )
     paths = write_candidate_artifacts(report, candidate, evidence_dir)
+    bindings_path = evidence_dir / "B3_SOURCE_CONTENT_BINDINGS.json"
+    bindings_path.write_text(
+        json.dumps(
+            {
+                "timestamp_utc": utc_now(),
+                "bindings": source_bindings,
+                "n_bindings": len(source_bindings),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     pointer = {
         "base_materialized": str(base_dir),
         "adapter_materialized": str(adapter_root),
@@ -809,9 +1226,10 @@ def run_materialize_and_verify(
         "shards": shards,
         "ok": report.ok,
         "candidate_manifest_sha256": report.candidate_manifest_sha256,
-        "artifact_paths": paths,
+        "artifact_paths": {**paths, "source_bindings": str(bindings_path)},
         "budget": gates,
         "timestamp_utc": utc_now(),
+        "source_binding_required": True,
     }
     pointer_path = evidence_dir / "B3_CANDIDATE_SNAPSHOT_POINTER.json"
     pointer_path.write_text(json.dumps(pointer, indent=2, sort_keys=True) + "\n")
@@ -819,9 +1237,10 @@ def run_materialize_and_verify(
         "ok": report.ok,
         "failures": report.failures,
         "candidate_manifest_sha256": report.candidate_manifest_sha256,
-        "artifact_paths": paths,
+        "artifact_paths": {**paths, "source_bindings": str(bindings_path)},
         "pointer_path": str(pointer_path),
         "n_files_hashed": len(report.files),
         "adapter_weight_distinct": report.adapter_weight_distinct,
+        "n_source_bindings": len(source_bindings),
         "budget": gates,
     }

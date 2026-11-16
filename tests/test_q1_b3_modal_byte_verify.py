@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -14,11 +15,17 @@ from traces.q1.b3_modal_byte_verify import (
     OWNER_APPROVED_CAP_USD,
     OWNER_BUDGET_ENV,
     B3VerifyError,
+    SourceObjectIdentity,
     assert_adapter_weights_pairwise_distinct,
+    assert_dir_no_symlink,
+    assert_path_inside_trust_root,
     assert_regular_file_no_symlink,
     build_candidate_manifest,
+    ensure_materialized_file,
     estimate_modal_cpu_job_usd,
     expected_ten_units,
+    fetch_source_object_identity,
+    git_blob_sha1_file_chunked,
     inventory_materialized_snapshot,
     parse_owner_budget_usd,
     preflight_local,
@@ -26,6 +33,7 @@ from traces.q1.b3_modal_byte_verify import (
     require_billable_gates,
     sha256_file_chunked,
     verify_adapter_unit_inventory,
+    verify_local_matches_source,
 )
 from traces.q1.checkpoint_provenance import FROZEN_SECTION11_TOKENIZER_SHA256
 from traces.q1.checkpoint_trust import (
@@ -276,3 +284,311 @@ def test_required_adapter_file_count():
         "chat_template.jinja",
         "special_tokens_map.json",
     }
+
+
+# --- Adversarial path / source-binding tests (Agent 1 REVISE defects) ---------
+
+
+def test_directory_symlink_escape_refused(tmp_path: Path):
+    """REVISE defect 1: symlinked unit dir escaping trust root must fail closed."""
+    trust = tmp_path / "adapters"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "adapter_model.safetensors").write_bytes(b"ESCAPE")
+    for name in (
+        "adapter_config.json",
+        "tokenizer.model",
+        "tokenizer_config.json",
+        "chat_template.jinja",
+        "special_tokens_map.json",
+    ):
+        (outside / name).write_bytes(f"x-{name}".encode())
+    (trust / "l19").mkdir(parents=True)
+    link = trust / "l19" / "seed42"
+    link.symlink_to(outside, target_is_directory=True)
+    target = link / "adapter_model.safetensors"
+    with pytest.raises(B3VerifyError, match="symlink"):
+        assert_regular_file_no_symlink(target, within=trust)
+    with pytest.raises(B3VerifyError, match="symlink"):
+        assert_path_inside_trust_root(target, trust)
+    inv = verify_adapter_unit_inventory(
+        link, subfolder="l19/seed42", adapter_root=trust
+    )
+    assert inv["ok"] is False
+    assert any("symlink" in f for f in inv["failures"])
+
+
+def test_symlinked_trust_root_refused(tmp_path: Path):
+    real = tmp_path / "real_root"
+    real.mkdir()
+    (real / "f.bin").write_bytes(b"abc")
+    link_root = tmp_path / "link_root"
+    link_root.symlink_to(real, target_is_directory=True)
+    with pytest.raises(B3VerifyError, match="trust root itself is a symlink"):
+        assert_path_inside_trust_root(link_root / "f.bin", link_root)
+
+
+def test_symlinked_adapter_folder_component_refused(tmp_path: Path):
+    trust = tmp_path / "adapters"
+    real_family = tmp_path / "real_l19"
+    real_family.mkdir()
+    unit = real_family / "seed42"
+    _write_unit(unit, weight=b"W", tok_tag="u")
+    trust.mkdir()
+    (trust / "l19").symlink_to(real_family, target_is_directory=True)
+    unit_via = trust / "l19" / "seed42"
+    with pytest.raises(B3VerifyError, match="symlink"):
+        assert_dir_no_symlink(unit_via, within=trust)
+
+
+def test_broken_symlink_refused(tmp_path: Path):
+    trust = tmp_path / "root"
+    trust.mkdir()
+    link = trust / "broken.bin"
+    link.symlink_to(trust / "missing.bin")
+    with pytest.raises(B3VerifyError, match="symlink|missing"):
+        assert_regular_file_no_symlink(link, within=trust)
+
+
+def test_git_blob_sha1_matches_git_oid(tmp_path: Path):
+    p = tmp_path / "cfg.json"
+    body = b'{"r":8}'
+    p.write_bytes(body)
+    expected = hashlib.sha1(b"blob " + str(len(body)).encode() + b"\0" + body).hexdigest()
+    digest, size = git_blob_sha1_file_chunked(p)
+    assert size == len(body)
+    assert digest == expected
+    # Raw SHA-1 of body alone must not be treated as the Git blob OID.
+    assert digest != hashlib.sha1(body).hexdigest()
+
+
+def test_lfs_source_binding_ok(tmp_path: Path):
+    trust = tmp_path / "base"
+    trust.mkdir()
+    p = trust / "weights.safetensors"
+    body = b"LFS-BYTES-OK"
+    p.write_bytes(body)
+    identity = SourceObjectIdentity(
+        repo_id="r",
+        revision="rev",
+        path="weights.safetensors",
+        size=len(body),
+        kind="lfs_sha256",
+        digest=_sha(body),
+    )
+    out = verify_local_matches_source(p, identity, within=trust)
+    assert out["ok"] is True
+    assert out["local_digest"] == _sha(body)
+
+
+def test_non_lfs_git_blob_source_binding_ok(tmp_path: Path):
+    trust = tmp_path / "base"
+    trust.mkdir()
+    p = trust / "config.json"
+    body = b'{"ok":true}'
+    p.write_bytes(body)
+    blob = hashlib.sha1(b"blob " + str(len(body)).encode() + b"\0" + body).hexdigest()
+    identity = SourceObjectIdentity(
+        repo_id="r",
+        revision="rev",
+        path="config.json",
+        size=len(body),
+        kind="git_blob_sha1",
+        digest=blob,
+    )
+    out = verify_local_matches_source(p, identity, within=trust)
+    assert out["ok"] is True
+
+
+def test_forged_exists_cache_mismatched_source_oid_refused(tmp_path: Path):
+    """REVISE defect 2: dest.exists() with matching name/size but wrong OID."""
+    trust = tmp_path / "base"
+    trust.mkdir()
+    dest = trust / "config.json"
+    forged = b"X" * 32
+    real_body = b"Y" * 32
+    assert len(forged) == len(real_body)
+    dest.write_bytes(forged)
+    # Attacker-controlled content; source advertises a different blob.
+    real_blob = hashlib.sha1(
+        b"blob " + str(len(real_body)).encode() + b"\0" + real_body
+    ).hexdigest()
+    identity = SourceObjectIdentity(
+        repo_id="google/gemma-2-2b",
+        revision="c5ebcd40d208330abc697524c919956e692655cf",
+        path="config.json",
+        size=len(real_body),
+        kind="git_blob_sha1",
+        digest=real_blob,
+    )
+    with pytest.raises(B3VerifyError, match="source content identity mismatch"):
+        ensure_materialized_file(
+            repo_id=identity.repo_id,
+            revision=identity.revision,
+            filename=identity.path,
+            dest=dest,
+            token="unused",
+            within=trust,
+            allow_download=False,
+            source_identity=identity,
+        )
+
+
+def test_source_metadata_absent_oid_blocks():
+    info = SimpleNamespace(
+        path="config.json",
+        size=12,
+        lfs=None,
+        blob_id=None,
+        oid=None,
+        tree_id=None,
+    )
+    with pytest.raises(B3VerifyError, match="SOURCE_BINDING_BLOCKED"):
+        fetch_source_object_identity(
+            repo_id="r",
+            revision="rev",
+            path="config.json",
+            token=None,
+            paths_info=[info],
+        )
+
+
+def test_source_lfs_missing_sha256_blocks():
+    info = SimpleNamespace(
+        path="w.safetensors",
+        size=10,
+        lfs=SimpleNamespace(sha256=None),
+        blob_id="a" * 40,
+        tree_id=None,
+    )
+    with pytest.raises(B3VerifyError, match="SOURCE_BINDING_BLOCKED"):
+        fetch_source_object_identity(
+            repo_id="r",
+            revision="rev",
+            path="w.safetensors",
+            token=None,
+            paths_info=[info],
+        )
+
+
+def test_empty_paths_info_blocks():
+    with pytest.raises(B3VerifyError, match="SOURCE_BINDING_BLOCKED"):
+        fetch_source_object_identity(
+            repo_id="r",
+            revision="rev",
+            path="config.json",
+            token=None,
+            paths_info=[],
+        )
+
+
+def test_wrong_revision_identity_mismatch(tmp_path: Path):
+    trust = tmp_path / "base"
+    trust.mkdir()
+    p = trust / "config.json"
+    body = b'{"v":1}'
+    p.write_bytes(body)
+    # Identity claims different bytes (as if fetched at wrong revision).
+    other = b'{"v":2}'
+    blob = hashlib.sha1(b"blob " + str(len(other)).encode() + b"\0" + other).hexdigest()
+    identity = SourceObjectIdentity(
+        repo_id="r",
+        revision="wrong-revision",
+        path="config.json",
+        size=len(other),
+        kind="git_blob_sha1",
+        digest=blob,
+    )
+    with pytest.raises(B3VerifyError, match="size mismatch|identity mismatch"):
+        verify_local_matches_source(p, identity, within=trust)
+
+
+def test_fetch_lfs_and_git_blob_identities_from_paths_info():
+    lfs_info = SimpleNamespace(
+        path="adapter_model.safetensors",
+        size=100,
+        lfs=SimpleNamespace(sha256="ab" * 32),
+        blob_id="cd" * 20,
+        tree_id=None,
+    )
+    ident = fetch_source_object_identity(
+        repo_id="repo",
+        revision="rev",
+        path="adapter_model.safetensors",
+        token=None,
+        paths_info=[lfs_info],
+    )
+    assert ident.kind == "lfs_sha256"
+    assert ident.digest == "ab" * 32
+
+    git_info = SimpleNamespace(
+        path="adapter_config.json",
+        size=20,
+        lfs=None,
+        blob_id="ef" * 20,
+        tree_id=None,
+    )
+    ident2 = fetch_source_object_identity(
+        repo_id="repo",
+        revision="rev",
+        path="adapter_config.json",
+        token=None,
+        paths_info=[git_info],
+    )
+    assert ident2.kind == "git_blob_sha1"
+    assert ident2.digest == "ef" * 20
+
+
+def test_inventory_blocks_symlinked_unit_and_no_false_manifest(tmp_path: Path):
+    base = tmp_path / "base"
+    _write_sharded_base(base)
+    adapter = tmp_path / "adapters"
+    outside = tmp_path / "outside_unit"
+    _write_unit(outside, weight=b"ESCAPE", tok_tag="esc")
+    for sf in expected_ten_units():
+        if sf == "l19/seed42":
+            parent = adapter / "l19"
+            parent.mkdir(parents=True, exist_ok=True)
+            (parent / "seed42").symlink_to(outside, target_is_directory=True)
+        else:
+            _write_unit(
+                adapter.joinpath(*sf.split("/")),
+                weight=f"W-{sf}".encode(),
+                tok_tag=sf,
+            )
+    report, cand = inventory_materialized_snapshot(
+        base_dir=base, adapter_root=adapter
+    )
+    assert report.ok is False
+    assert cand is None
+    assert PINNED_CHECKPOINT_MANIFEST_SHA256 is None
+    assert not (tmp_path / "CHECKPOINT_PROVENANCE_MANIFEST.json").exists()
+
+
+def test_ensure_reuses_only_after_source_bind(tmp_path: Path):
+    trust = tmp_path / "base"
+    trust.mkdir()
+    dest = trust / "config.json"
+    body = b'{"authentic":true}'
+    dest.write_bytes(body)
+    blob = hashlib.sha1(b"blob " + str(len(body)).encode() + b"\0" + body).hexdigest()
+    identity = SourceObjectIdentity(
+        repo_id="r",
+        revision="rev",
+        path="config.json",
+        size=len(body),
+        kind="git_blob_sha1",
+        digest=blob,
+    )
+    out = ensure_materialized_file(
+        repo_id="r",
+        revision="rev",
+        filename="config.json",
+        dest=dest,
+        token="unused",
+        within=trust,
+        allow_download=False,
+        source_identity=identity,
+    )
+    assert out["action"] == "reused_after_source_bind"
+    assert out["ok"] is True
