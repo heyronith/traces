@@ -6,18 +6,29 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
-from traces.q1.conditions import N_HEADS, UPSTREAM_LAYERS, iter_layer15_16_pairs, iter_upstream_heads
+from traces.q1.conditions import (
+    N_HEADS,
+    UPSTREAM_LAYERS,
+    iter_downstream_heads,
+    iter_layer15_16_pairs,
+    iter_upstream_heads,
+)
 
 EXPECTED_UPSTREAM_HEADS: frozenset[tuple[int, int]] = frozenset(
     (h.layer, h.head_index) for h in iter_upstream_heads()
+)
+EXPECTED_DOWNSTREAM_HEADS: frozenset[tuple[int, int]] = frozenset(
+    (h.layer, h.head_index) for h in iter_downstream_heads()
 )
 EXPECTED_L15_L16_PAIRS: frozenset[tuple[int, int]] = frozenset(
     (a.head_index, b.head_index) for a, b in iter_layer15_16_pairs()
 )
 
 assert len(EXPECTED_UPSTREAM_HEADS) == 152
+assert len(EXPECTED_DOWNSTREAM_HEADS) == 56
 assert len(EXPECTED_L15_L16_PAIRS) == 64
 assert len(UPSTREAM_LAYERS) * N_HEADS == 152
+assert EXPECTED_UPSTREAM_HEADS.isdisjoint(EXPECTED_DOWNSTREAM_HEADS)
 
 
 def validate_effect_vector(

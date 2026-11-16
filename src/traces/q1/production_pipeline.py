@@ -21,10 +21,9 @@ import numpy as np
 
 from traces.metrics import FULL_PAYLOAD
 from traces.q1.analysis import pair_effect_forward, pair_effect_reverse, rank_pairs_signed
-from traces.q1.component_sets import EXPECTED_L15_L16_PAIRS, EXPECTED_UPSTREAM_HEADS
+from traces.q1.component_sets import EXPECTED_UPSTREAM_HEADS
 from traces.q1.conditions import (
     Condition,
-    UPSTREAM_LAYERS,
     enumerate_primary_l19_conditions,
     enumerate_secondary_l1523_conditions,
 )
@@ -35,6 +34,24 @@ from traces.q1.pipeline_adapters import (
     compute_fold_topk_selections,
     unit_spec_to_adapter_subfolder,
 )
+
+# Protocol v1.3 layer partitions (M2) — independent of conditions.py enumerator.
+PROTOCOL_N_HEADS = 8
+PROTOCOL_UPSTREAM_LAYERS = tuple(range(0, 19))  # 0..18 → 152 heads
+PROTOCOL_DOWNSTREAM_LAYERS = tuple(range(19, 26))  # 19..25 → 56 heads
+PROTOCOL_N_UPSTREAM_HEADS = len(PROTOCOL_UPSTREAM_LAYERS) * PROTOCOL_N_HEADS
+PROTOCOL_N_DOWNSTREAM_HEADS = len(PROTOCOL_DOWNSTREAM_LAYERS) * PROTOCOL_N_HEADS
+PROTOCOL_EXPECTED_UPSTREAM_HEADS = frozenset(
+    (L, h) for L in PROTOCOL_UPSTREAM_LAYERS for h in range(PROTOCOL_N_HEADS)
+)
+PROTOCOL_EXPECTED_DOWNSTREAM_HEADS = frozenset(
+    (L, h) for L in PROTOCOL_DOWNSTREAM_LAYERS for h in range(PROTOCOL_N_HEADS)
+)
+PROTOCOL_L15_L16_PAIRS = frozenset(
+    (h15, h16) for h15 in range(PROTOCOL_N_HEADS) for h16 in range(PROTOCOL_N_HEADS)
+)
+assert PROTOCOL_N_UPSTREAM_HEADS == 152
+assert PROTOCOL_N_DOWNSTREAM_HEADS == 56
 from traces.q1.recording import GenerationRecord as Q1GenerationRecord
 from traces.q1.scientific_execution import (
     ConditionOutputBundle,
@@ -55,13 +72,13 @@ FROZEN_FULL_PAYLOAD = FULL_PAYLOAD
 
 REQUIRED_PRIMARY_KIND_MINIMA = {
     "boundary_hybrid": 2,  # CT, TC
-    "single_head": 2 * len(EXPECTED_UPSTREAM_HEADS),
-    "pair": 2 * len(EXPECTED_L15_L16_PAIRS),
+    "single_head": 2 * PROTOCOL_N_UPSTREAM_HEADS,
+    "pair": 2 * len(PROTOCOL_L15_L16_PAIRS),
     "joint_triple": 2,
     "all_upstream": 2,
     "crossfit_topk": 2 * 10,  # k=1..10 × dirs
-    "layer_joint_8head": 2 * len(UPSTREAM_LAYERS),  # 19 layers × 2 dirs = 38
-    "downstream_head_secondary": 2 * 56,
+    "layer_joint_8head": 2 * len(PROTOCOL_UPSTREAM_LAYERS),  # 19 × 2 dirs
+    "downstream_head_secondary": 2 * PROTOCOL_N_DOWNSTREAM_HEADS,
     "residual_sweep_hybrid": 25 * 2,  # layers 1..25 × CT/TC
 }
 
@@ -95,39 +112,39 @@ def independent_expected_primary_condition_ids(
     *,
     include_downstream56: bool = True,
 ) -> set[str]:
-    """Derive expected primary catalog IDs from frozen v1.3 requirements (B1-C12).
+    """Derive expected primary catalog IDs from frozen v1.3 requirements (M2).
 
-    Does **not** call ``enumerate_primary_l19_conditions`` — identities are built
-    from protocol constants (152 upstream heads, 64 pairs, 19×2 layer joints,
-    crossfit k=1..10, residual sweeps 1..25 × CT/TC, optional downstream 56).
+    Does **not** call ``enumerate_primary_l19_conditions`` and does **not**
+    import enumerator layer constants — identities are built from protocol
+    literals (layers 0..18 upstream / 19..25 downstream).
     """
-    from traces.q1.conditions import DOWNSTREAM_LAYERS, N_HEADS
-
     ids: set[str] = set()
     # Boundary hybrids CT/TC (TT/CC intact are separate from catalog enumeration)
     for hybrid in ("CT", "TC"):
         ids.add(f"boundary_hybrid|{hybrid}")
     for direction in ("forward", "reverse"):
-        for layer in UPSTREAM_LAYERS:
-            for h in range(N_HEADS):
+        for layer in PROTOCOL_UPSTREAM_LAYERS:
+            for h in range(PROTOCOL_N_HEADS):
                 ids.add(f"single_head|{direction}|L{layer}.h{h}")
-        for h15 in range(N_HEADS):
-            for h16 in range(N_HEADS):
+        for h15 in range(PROTOCOL_N_HEADS):
+            for h16 in range(PROTOCOL_N_HEADS):
                 ids.add(f"pair|{direction}|L15.h{h15}+L16.h{h16}")
         # Frozen CORE_TRIPLE = (15,6), (16,5), (23,0)
         ids.add(f"joint_triple|{direction}|L15.h6+L16.h5+L23.h0")
         all_up = "+".join(
-            f"L{layer}.h{h}" for layer in UPSTREAM_LAYERS for h in range(N_HEADS)
+            f"L{layer}.h{h}"
+            for layer in PROTOCOL_UPSTREAM_LAYERS
+            for h in range(PROTOCOL_N_HEADS)
         )
         ids.add(f"all_upstream|{direction}|{all_up}")
         for k in range(1, 11):
             ids.add(f"crossfit_topk|{direction}|k{k}")
-        for layer in UPSTREAM_LAYERS:
-            heads = "+".join(f"L{layer}.h{h}" for h in range(N_HEADS))
+        for layer in PROTOCOL_UPSTREAM_LAYERS:
+            heads = "+".join(f"L{layer}.h{h}" for h in range(PROTOCOL_N_HEADS))
             ids.add(f"layer_joint_8head|{direction}|L{layer}|{heads}")
         if include_downstream56:
-            for layer in DOWNSTREAM_LAYERS:
-                for h in range(N_HEADS):
+            for layer in PROTOCOL_DOWNSTREAM_LAYERS:
+                for h in range(PROTOCOL_N_HEADS):
                     ids.add(f"downstream_head_secondary|{direction}|L{layer}.h{h}")
     for layer in range(1, 26):
         for hybrid in ("CT", "TC"):
@@ -136,15 +153,13 @@ def independent_expected_primary_condition_ids(
 
 
 def independent_expected_secondary_condition_ids() -> set[str]:
-    """Independent secondary l1523 catalog IDs from frozen requirements (B1-C12)."""
-    from traces.q1.conditions import N_HEADS
-
+    """Independent secondary l1523 catalog IDs from frozen protocol literals (M2)."""
     ids: set[str] = set()
     for hybrid in ("CT", "TC"):
         ids.add(f"boundary_hybrid|{hybrid}")
     for direction in ("forward", "reverse"):
-        for h15 in range(N_HEADS):
-            for h16 in range(N_HEADS):
+        for h15 in range(PROTOCOL_N_HEADS):
+            for h16 in range(PROTOCOL_N_HEADS):
                 ids.add(f"pair|{direction}|L15.h{h15}+L16.h{h16}")
         # Nominated pair heads (15,6) and (16,5)
         for L, h in ((15, 6), (16, 5)):
@@ -156,7 +171,7 @@ def _verify_catalog_against_independent_ids(
     conds: Sequence[Condition],
     expected_ids: set[str],
 ) -> list[str]:
-    """Compare enumerated catalog to independently derived IDs (B1-C12)."""
+    """Compare enumerated catalog to independently derived IDs (M2)."""
     failures: list[str] = []
     got_ids = {condition_id_for(c) for c in conds}
     missing = sorted(expected_ids - got_ids)
@@ -185,12 +200,12 @@ def _verify_catalog_against_independent_ids(
         if c.direction == "reverse"
         for h in c.heads
     }
-    if fwd_heads and fwd_heads != EXPECTED_UPSTREAM_HEADS:
+    if fwd_heads and fwd_heads != PROTOCOL_EXPECTED_UPSTREAM_HEADS:
         failures.append(
             f"single_head forward heads != 152 upstream "
             f"(got {len(fwd_heads)})"
         )
-    if rev_heads and rev_heads != EXPECTED_UPSTREAM_HEADS:
+    if rev_heads and rev_heads != PROTOCOL_EXPECTED_UPSTREAM_HEADS:
         failures.append(
             f"single_head reverse heads != 152 upstream "
             f"(got {len(rev_heads)})"
@@ -201,7 +216,7 @@ def _verify_catalog_against_independent_ids(
         for c in pairs
         if c.direction == "forward" and len(c.heads) == 2
     }
-    if pairs and pair_keys != EXPECTED_L15_L16_PAIRS:
+    if pairs and pair_keys != PROTOCOL_L15_L16_PAIRS:
         failures.append(
             f"pair forward identities != 64 L15×L16 (got {len(pair_keys)})"
         )
@@ -209,15 +224,15 @@ def _verify_catalog_against_independent_ids(
     layers_fwd = {
         c.layer for c in layer_joint if c.direction == "forward" and c.layer is not None
     }
-    if layer_joint and layers_fwd != set(UPSTREAM_LAYERS):
+    if layer_joint and layers_fwd != set(PROTOCOL_UPSTREAM_LAYERS):
         failures.append(
             f"layer_joint_8head forward layers {sorted(layers_fwd)} "
-            f"!= upstream {list(UPSTREAM_LAYERS)}"
+            f"!= upstream {list(PROTOCOL_UPSTREAM_LAYERS)}"
         )
-    if layer_joint and len(layer_joint) != 2 * len(UPSTREAM_LAYERS):
+    if layer_joint and len(layer_joint) != 2 * len(PROTOCOL_UPSTREAM_LAYERS):
         failures.append(
             f"layer_joint_8head count {len(layer_joint)} != "
-            f"{2 * len(UPSTREAM_LAYERS)}"
+            f"{2 * len(PROTOCOL_UPSTREAM_LAYERS)}"
         )
     return failures
 
@@ -248,7 +263,7 @@ def verify_frozen_catalog_completeness(
         conds = enumerate_secondary_l1523_conditions()
         minima = {
             "boundary_hybrid": 2,
-            "pair": 2 * len(EXPECTED_L15_L16_PAIRS),
+            "pair": 2 * len(PROTOCOL_L15_L16_PAIRS),
             "nominated_single": 4,  # 2 heads × 2 dirs
         }
         expected_ids = independent_expected_secondary_condition_ids()
@@ -430,6 +445,9 @@ def extract_signed_single_head_effects(
         elif r.kind == "intact_CC":
             cc[pid] = float(r.margin)
             eligible_by_id[pid] = bool(r.eligible) and eligible_by_id.get(pid, True)
+        elif r.kind == "downstream_head":
+            # D1: descriptive only — never enter upstream H2/H3/crossfit inventory
+            continue
         elif r.kind in {"head", "single_head", "nominated_single"} and r.direction in {
             "forward",
             "reverse",
@@ -437,6 +455,9 @@ def extract_signed_single_head_effects(
             if len(r.heads) != 1:
                 raise ValueError(f"single-head record needs one head: {r.condition_id}")
             h = (int(r.heads[0][0]), int(r.heads[0][1]))
+            if h not in expected_heads:
+                # Refuse silent inclusion of non-upstream heads in selection inventory
+                continue
             patched[r.direction].setdefault(h, {})[pid] = float(r.margin)
             if not r.eligible:
                 eligible_by_id[pid] = False
@@ -558,6 +579,11 @@ def compute_directional_crossfit_selections(
         raise ValueError(f"invalid crossfit direction {direction!r}")
     if fold_plan.indeterminate:
         return []
+    if set(effects) - EXPECTED_UPSTREAM_HEADS:
+        raise ValueError(
+            f"{direction} crossfit inventory contains non-upstream heads — "
+            "H2/H3/crossfit restricted to EXPECTED_UPSTREAM_HEADS (D1)"
+        )
     if len(effects) < 152:
         raise ValueError(
             f"{direction} crossfit requires complete 152-head inventory, "
@@ -666,6 +692,8 @@ def _margin_record(
     clean_reference_token: int | None,
     spec: UnitSpec,
     meta: Mapping[str, Any] | None = None,
+    log_p_a: float | None = None,
+    top1_token_id: int | None = None,
 ) -> PromptConditionRecord:
     if margin != margin:  # NaN
         raise RuntimeError(
@@ -686,6 +714,8 @@ def _margin_record(
         role=spec.role,
         kind=kind,
         heads=heads,
+        log_p_a=log_p_a,
+        top1_token_id=top1_token_id,
         meta=dict(meta or {}),
     )
 
@@ -744,6 +774,8 @@ def execute_condition_with_runner(
             eligible=mr.eligible,
             clean_reference_token=b_i,
             spec=spec,
+            log_p_a=getattr(mr, "log_p_a", None),
+            top1_token_id=getattr(mr, "top1_token_id", None),
             meta={"hybrid_provenance": hybrid_prov},
         )
 
@@ -789,11 +821,20 @@ def execute_condition_with_runner(
         mr = runner.margin_from_logits(
             logits, int(prompt.alignment.seq_len), b_i=b_i, eligible=eligible
         )
-        kind = (
-            "pair"
-            if cond.kind == "pair"
-            else ("joint" if cond.kind in {"joint_triple", "all_upstream", "layer_joint_8head", "crossfit_topk"} else "head")
-        )
+        # D1: downstream secondary heads get a distinct record kind / effect map
+        if cond.kind == "downstream_head_secondary":
+            kind = "downstream_head"
+        elif cond.kind == "pair":
+            kind = "pair"
+        elif cond.kind in {
+            "joint_triple",
+            "all_upstream",
+            "layer_joint_8head",
+            "crossfit_topk",
+        }:
+            kind = "joint"
+        else:
+            kind = "head"
         return _margin_record(
             instruction_id=prompt.instruction_id,
             condition_id=cid,
@@ -804,6 +845,8 @@ def execute_condition_with_runner(
             eligible=mr.eligible,
             clean_reference_token=b_i,
             spec=spec,
+            log_p_a=getattr(mr, "log_p_a", None),
+            top1_token_id=getattr(mr, "top1_token_id", None),
             meta={"catalog_kind": cond.kind},
         )
 
@@ -833,16 +876,19 @@ def execute_condition_with_runner(
         mr = runner.margin_from_logits(
             logits, int(prompt.alignment.seq_len), b_i=b_i, eligible=eligible
         )
+        # D4: distinct residual-sweep kinds — never share boundary_CT/TC
         return _margin_record(
             instruction_id=prompt.instruction_id,
             condition_id=cid,
-            kind=f"boundary_{cond.hybrid}",
+            kind=f"residual_sweep_{cond.hybrid}",
             direction=None,
             heads=(),
             margin=mr.margin,
             eligible=mr.eligible,
             clean_reference_token=b_i,
             spec=spec,
+            log_p_a=getattr(mr, "log_p_a", None),
+            top1_token_id=getattr(mr, "top1_token_id", None),
             meta={
                 "residual_sweep_layer": int(cond.layer),
                 "hybrid_provenance": hybrid_prov,
@@ -885,6 +931,8 @@ def intact_baseline_records_from_cache(
                 eligible=mr.eligible,
                 clean_reference_token=b_i,
                 spec=spec,
+                log_p_a=getattr(mr, "log_p_a", None),
+                top1_token_id=getattr(mr, "top1_token_id", None),
             )
         )
     return out
@@ -1340,6 +1388,11 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
                 "production load refuses: expected_weight_file_sha256 missing "
                 "(B3 checkpoint manifest BLOCKED — no invented hashes)"
             )
+        if not config.base_weight_snapshot_dir or not config.adapter_weight_snapshot_dir:
+            raise RuntimeError(
+                "production load requires authoritative local base and adapter "
+                "snapshot directories (D5) — refuse hub fallback"
+            )
         from traces.q1.checkpoint_provenance import (
             assert_load_uses_verified_snapshot_bytes,
         )
@@ -1350,30 +1403,40 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
         )
 
         subfolder = unit_spec_to_adapter_subfolder(spec)
-        if config.base_weight_snapshot_dir and config.adapter_weight_snapshot_dir:
-            assert_load_uses_verified_snapshot_bytes(
-                base_snapshot_dir=config.base_weight_snapshot_dir,
-                adapter_snapshot_dir=config.adapter_weight_snapshot_dir,
-                expected_sha256_by_relpath=config.expected_weight_file_sha256,
-            )
-        # Family-specific adapted layers (l19 → [19], l1523 → [15,16,17,18,19,20,21,22,23])
+        assert_load_uses_verified_snapshot_bytes(
+            base_snapshot_dir=config.base_weight_snapshot_dir,
+            adapter_snapshot_dir=config.adapter_weight_snapshot_dir,
+            expected_sha256_by_relpath=config.expected_weight_file_sha256,
+        )
+        # Seven LoRA target projections (identity-7); never invent q_proj-only.
+        seven_targets = [
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ]
+        # Family-specific adapted layers (l19 → [19], l1523 → [15..23])
+        # D2: base loads l19/seed42 then disables — validate seven targets + L19.
         if spec.family == "l19":
             layers = [19]
-            targets = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+            targets = list(seven_targets)
         elif spec.family == "l1523":
             layers = list(range(15, 24))
-            targets = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+            targets = list(seven_targets)
         elif spec.family == "base":
-            layers = []
-            targets = []
+            layers = [19]
+            targets = list(seven_targets)
         else:
             raise RuntimeError(f"unknown family {spec.family}")
 
         model, tokenizer, report, meta = load_q1_scientific_model(
             subfolder=subfolder if spec.family != "base" else "l19/seed42",
             expected_weight_file_sha256=dict(config.expected_weight_file_sha256),
-            expected_adapter_targets=targets or ["q_proj"],
-            expected_adapted_layers=layers or [19],
+            expected_adapter_targets=targets,
+            expected_adapted_layers=layers,
             base_weight_snapshot_dir=config.base_weight_snapshot_dir,
             adapter_weight_snapshot_dir=config.adapter_weight_snapshot_dir,
         )
@@ -1381,6 +1444,11 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
             from traces.q1.adapter_off import disable_adapter_layers
 
             disable_adapter_layers(model)
+
+        # D5: record digests of files actually used (not merely caller expected)
+        computed = dict(meta.get("computed_weight_file_sha256") or {})
+        if not computed and isinstance(meta.get("weight_inventory_binding"), Mapping):
+            computed = dict(meta["weight_inventory_binding"].get("digests") or {})
 
         return {
             "model": model,
@@ -1392,9 +1460,18 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
             "load_report": report.to_dict() if hasattr(report, "to_dict") else report,
             "attn_implementation": REQUIRED_ATTN_IMPLEMENTATION,
             "torch_dtype": str(REQUIRED_TORCH_DTYPE),
-            "weight_file_sha256": dict(config.expected_weight_file_sha256),
+            "weight_file_sha256": computed or dict(config.expected_weight_file_sha256),
+            "expected_weight_file_sha256": dict(config.expected_weight_file_sha256),
+            "computed_weight_file_sha256": computed,
+            "base_weight_snapshot_dir": config.base_weight_snapshot_dir,
+            "adapter_weight_snapshot_dir": config.adapter_weight_snapshot_dir,
             "base_revision": meta.get("base_revision"),
             "adapter_revision": meta.get("adapter_revision"),
+            "expected_adapter_targets": list(targets),
+            "expected_adapted_layers": list(layers),
+            "adapter_disabled": bool(
+                spec.family == "base" or spec.role == "adapter_off_base_reference"
+            ),
             **{k: v for k, v in meta.items() if k not in {"model"}},
         }
 
@@ -1414,18 +1491,59 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
 
         model = load_ctx["model"]
         tokenizer = load_ctx["tokenizer"]
-        alloc = (
+        from traces.q1.frozen_artifacts import (
+            FROZEN_DEV_ID_SEQUENCE_SHA256,
+            FROZEN_HELD_OUT_ID_SEQUENCE_SHA256,
+            coerce_frozen_dolly_id,
+            ordered_id_sequence_sha256,
+            verify_runtime_allocation_ids,
+        )
+
+        trusted_alloc = (
             config.development_ids
             if spec.role == "exploratory_dev"
             else config.held_out_ids
         )
-        if alloc is None:
+        if trusted_alloc is None:
             raise RuntimeError(
                 f"allocation IDs missing for role {spec.role} — refuse mock donors"
             )
-        prompts = list(config.prompt_builder(spec, alloc))
-        if len(prompts) != len(list(alloc)):
-            raise RuntimeError("prompt_builder length != allocation")
+        # D3: compare against trusted config + frozen ID-sequence hashes
+        alloc_check = verify_runtime_allocation_ids(
+            config.repo_root,
+            held_out_ids=config.held_out_ids,
+            development_ids=config.development_ids,
+        )
+        if spec.role == "exploratory_dev":
+            if not alloc_check.get("checks", {}).get("development", {}).get("ok"):
+                raise RuntimeError(
+                    "development allocation failed frozen ID-sequence verification (D3): "
+                    + "; ".join(alloc_check.get("failures") or ["unknown"])
+                )
+            expected_seq = FROZEN_DEV_ID_SEQUENCE_SHA256
+        else:
+            if not alloc_check.get("checks", {}).get("held_out", {}).get("ok"):
+                raise RuntimeError(
+                    "held-out allocation failed frozen ID-sequence verification (D3): "
+                    + "; ".join(alloc_check.get("failures") or ["unknown"])
+                )
+            expected_seq = FROZEN_HELD_OUT_ID_SEQUENCE_SHA256
+
+        trusted_ids = [str(coerce_frozen_dolly_id(x)) for x in trusted_alloc]
+        prompts = list(config.prompt_builder(spec, trusted_alloc))
+        got_ids = [str(p.instruction_id) for p in prompts]
+        if got_ids != trusted_ids:
+            raise RuntimeError(
+                "prompt_builder IDs do not match trusted frozen allocation order (D3) "
+                f"(len_ok={len(got_ids) == len(trusted_ids)})"
+            )
+        got_seq = ordered_id_sequence_sha256(
+            [coerce_frozen_dolly_id(x) for x in got_ids]
+        )
+        if got_seq != expected_seq:
+            raise RuntimeError(
+                f"prompt_builder ID-sequence SHA mismatch (D3): {got_seq} != {expected_seq}"
+            )
         if spec.family == "l19" or spec.family == "base":
             boundary = 19
         else:
@@ -1442,6 +1560,8 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
         evidence["_bank"] = bank
         evidence["_runner"] = runner
         evidence["_prompts"] = prompts
+        evidence["_trusted_allocation_ids"] = trusted_ids
+        evidence["_allocation_sequence_sha256"] = got_seq
         return evidence
 
     def _execute_unit_impl(spec: UnitSpec, loaded: Any, donor_evidence: Any) -> tuple:
@@ -1456,7 +1576,19 @@ def build_production_live_hooks(config: ProductionHookConfig) -> LiveForwardHook
         prompts = donor_evidence["_prompts"]
         model = load_ctx["model"]
         tokenizer = load_ctx["tokenizer"]
-        alloc = [p.instruction_id for p in prompts]
+        # D3: use trusted allocation from donor capture — not IDs reconstructed alone
+        trusted = donor_evidence.get("_trusted_allocation_ids")
+        if not trusted:
+            raise RuntimeError(
+                "execute_unit missing trusted allocation IDs from donor capture (D3)"
+            )
+        alloc = [str(x) for x in trusted]
+        prompt_ids = [str(p.instruction_id) for p in prompts]
+        if prompt_ids != alloc:
+            raise RuntimeError(
+                "prompt order drifted from trusted allocation between donors "
+                "and execute (D3)"
+            )
 
         # F3 with frozen full payload — retain raw outcomes (B1-C6)
         f3 = generation_rates_from_f3(

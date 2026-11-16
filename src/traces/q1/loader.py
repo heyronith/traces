@@ -13,6 +13,7 @@ Legacy Stage 0/1 loading remains ``traces.model_loader.load_dense_lora_model``.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -28,8 +29,6 @@ from traces.model_loader import (
     ModelLoadReport,
     _count_adapter_params,
     _disable_dropout,
-    _read_topk_use_flag,
-    _require_hf_auth,
 )
 from traces.q1.post_load import (
     refuse_caller_revision_echo_as_proof,
@@ -94,10 +93,6 @@ def load_q1_scientific_model(
         attn_implementation=REQUIRED_ATTN_IMPLEMENTATION,
     )
 
-    token = _require_hf_auth()
-    if _read_topk_use_flag(adapter_repo, subfolder, token, revision=adapter_revision) is True:
-        raise RuntimeError("Q1 refuses use_topk=true adapters")
-
     if not expected_weight_file_sha256:
         raise RuntimeError(
             "Q1 scientific load requires expected_weight_file_sha256 pins "
@@ -111,6 +106,18 @@ def load_q1_scientific_model(
         raise RuntimeError(
             "Q1 production load requires explicit expected_adapted_layers"
         )
+    # D5: authoritative local snapshots required — never fall back to hub copies
+    if not base_weight_snapshot_dir or not adapter_weight_snapshot_dir:
+        raise RuntimeError(
+            "Q1 scientific load requires authoritative local base and adapter "
+            "snapshot directories (D5) — refuse unverified hub fallback"
+        )
+    from traces.q1.checkpoint_provenance import (
+        assert_load_uses_verified_snapshot_bytes,
+        require_tokenizer_and_template_files,
+        resolve_local_snapshot_load_paths,
+    )
+
     # Pre-check: role-tagged keys required until resolved inventories exist
     pre_manifest = validate_weight_manifest_roles(expected_weight_file_sha256)
     if pre_manifest:
@@ -118,30 +125,58 @@ def load_q1_scientific_model(
             "Q1 weight SHA manifest invalid: " + "; ".join(pre_manifest)
         )
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        adapter_repo,
+    snapshot_bind = assert_load_uses_verified_snapshot_bytes(
+        base_snapshot_dir=base_weight_snapshot_dir,
+        adapter_snapshot_dir=adapter_weight_snapshot_dir,
+        expected_sha256_by_relpath=expected_weight_file_sha256,
+    )
+    tok_files = require_tokenizer_and_template_files(
+        adapter_weight_snapshot_dir, subfolder=subfolder
+    )
+    local_paths = resolve_local_snapshot_load_paths(
+        base_snapshot_dir=base_weight_snapshot_dir,
+        adapter_snapshot_dir=adapter_weight_snapshot_dir,
         subfolder=subfolder,
-        token=token,
-        revision=adapter_revision,
+    )
+    # D5: load exclusively from verified snapshot dirs (never hub repo IDs)
+    base_resolved = str(Path(base_weight_snapshot_dir).resolve())
+    if local_paths["base_load_path"] != base_resolved:
+        raise RuntimeError(
+            "base load path escaped verified snapshot directory — refuse hub fallback"
+        )
+
+    # use_topk probe against local adapter snapshot only (no hub)
+    import json as _json
+
+    local_adapter = Path(local_paths["adapter_load_path"])
+    cfg_probe = local_adapter / "adapter_config.json"
+    if cfg_probe.is_file():
+        try:
+            cfg_data = _json.loads(cfg_probe.read_text())
+            if cfg_data.get("use_topk") is True:
+                raise RuntimeError("Q1 refuses use_topk=true adapters")
+        except _json.JSONDecodeError as e:
+            raise RuntimeError(f"unreadable local adapter_config.json: {e}") from e
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        local_paths["adapter_load_path"],
+        local_files_only=True,
         trust_remote_code=False,
     )
     model = AutoModelForCausalLM.from_pretrained(
-        base_model,
+        local_paths["base_load_path"],
         torch_dtype=load_kwargs["torch_dtype"],
         device_map=device_map,
-        token=token,
-        revision=base_revision,
         attn_implementation=load_kwargs["attn_implementation"],
         trust_remote_code=False,
+        local_files_only=True,
     )
     # Explicit: do not autocast adapter weights to a different dtype
     model = PeftModel.from_pretrained(
         model,
-        adapter_repo,
-        subfolder=subfolder,
-        token=token,
-        revision=adapter_revision,
+        local_paths["adapter_load_path"],
         autocast_adapter_dtype=False,
+        local_files_only=True,
     )
     model.eval()
     _disable_dropout(model)
@@ -156,11 +191,8 @@ def load_q1_scientific_model(
             )
 
     # Bind manifest to files actually used to construct the model — fail closed
-    # if either inventory cannot be established from pinned local snapshots.
-    if base_weight_snapshot_dir is not None:
-        setattr(model, "_q1_base_weight_dir", base_weight_snapshot_dir)
-    if adapter_weight_snapshot_dir is not None:
-        setattr(model, "_q1_adapter_weight_dir", adapter_weight_snapshot_dir)
+    setattr(model, "_q1_base_weight_dir", base_weight_snapshot_dir)
+    setattr(model, "_q1_adapter_weight_dir", adapter_weight_snapshot_dir)
     resolved = resolve_weight_files_from_model(
         model,
         base_snapshot_dir=base_weight_snapshot_dir,
@@ -207,8 +239,8 @@ def load_q1_scientific_model(
     head_dim = int(getattr(cfg, "head_dim", cfg.hidden_size // n_q))
     tensor_count, param_count = _count_adapter_params(model)
     report = ModelLoadReport(
-        base_model_id=base_model,
-        adapter_repo=adapter_repo,
+        base_model_id=str(local_paths["base_load_path"]),
+        adapter_repo=str(local_paths["adapter_load_path"]),
         adapter_subfolder=subfolder,
         adapter_kind="dense-lora",
         base_revision=base_revision,
@@ -228,7 +260,15 @@ def load_q1_scientific_model(
         adapter_param_count=param_count,
         dtype=str(REQUIRED_TORCH_DTYPE),
         device=str(next(model.parameters()).device),
-        notes=[Q1_LOADER_NOTES],
+        notes=[Q1_LOADER_NOTES, "loaded_from_verified_local_snapshots_only"],
+    )
+    # D5: digests of files actually used (inventory + snapshot bind), not caller echo
+    computed_digests = dict(snapshot_bind.get("computed_sha256") or {})
+    computed_digests.update(
+        {f"inventory:{k}": v for k, v in (inventory_bind.get("digests") or {}).items()}
+    )
+    computed_digests.update(
+        {f"tokenizer:{k}": v for k, v in (tok_files.get("files") or {}).items()}
     )
     meta = {
         "proposed_f5_interpretation": Q1_LOADER_NOTES,
@@ -243,6 +283,14 @@ def load_q1_scientific_model(
         "weight_sha_pins_required": True,
         "resolved_weight_files": resolved,
         "weight_inventory_binding": inventory_bind,
+        "snapshot_byte_binding": snapshot_bind,
+        "tokenizer_template_files": tok_files,
+        "local_snapshot_load_paths": local_paths,
+        "computed_weight_file_sha256": computed_digests,
+        "local_files_only": True,
+        "hub_fallback_refused": True,
+        "base_revision": base_revision,
+        "adapter_revision": adapter_revision,
     }
     return model, tokenizer, report, meta
 

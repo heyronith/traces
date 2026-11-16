@@ -272,6 +272,7 @@ def test_typed_pipeline_assembles_model_unit(tmp_path):
     donors = {
         "n_donor_caches": 20,
         "clean_references_frozen": True,
+            "_engineering_skip_observations": True,
         "instruction_ids": u.prompt_ids,
     }
     held = u.prompt_ids + [f"h{i}" for i in range(180)]

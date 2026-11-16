@@ -20,13 +20,31 @@ import numpy as np
 
 from traces.q1.analysis import pair_effect_forward, pair_effect_reverse
 from traces.q1.analysis_ext import selection_key
-from traces.q1.component_sets import EXPECTED_L15_L16_PAIRS, EXPECTED_UPSTREAM_HEADS
+from traces.q1.component_sets import (
+    EXPECTED_DOWNSTREAM_HEADS,
+    EXPECTED_L15_L16_PAIRS,
+    EXPECTED_UPSTREAM_HEADS,
+)
 from traces.q1.frozen_artifacts import coerce_frozen_dolly_id
 from traces.q1.scientific_execution import (
     ConditionOutputBundle,
     LiveForwardHooks,
     UnitSpec as SciUnitSpec,
 )
+
+# Exact canonical boundary condition IDs (D4) — never resolve by kind/order scan.
+CANONICAL_BOUNDARY_CONDITION_IDS: dict[str, str] = {
+    "TT": "boundary|TT",
+    "CC": "boundary|CC",
+    "CT": "boundary_hybrid|CT",
+    "TC": "boundary_hybrid|TC",
+}
+_CANONICAL_BOUNDARY_KINDS: dict[str, frozenset[str]] = {
+    "TT": frozenset({"intact_TT"}),
+    "CC": frozenset({"intact_CC"}),
+    "CT": frozenset({"boundary_CT"}),
+    "TC": frozenset({"boundary_TC"}),
+}
 
 
 @dataclass
@@ -48,8 +66,10 @@ class PromptConditionRecord:
     family: str = ""
     model_unit: str = ""
     role: str = ""
-    kind: str = ""  # intact_TT|intact_CC|boundary_*|head|pair|joint
+    kind: str = ""  # intact_TT|intact_CC|boundary_*|head|downstream_head|pair|joint|residual_sweep_*
     heads: tuple[tuple[int, int], ...] = ()
+    log_p_a: float | None = None
+    top1_token_id: int | None = None
     meta: dict[str, Any] = field(default_factory=dict)
 
 
@@ -111,16 +131,36 @@ def _eligible_only(
     )
 
 
-def _find_bound_condition(
+def _resolve_canonical_boundary(
     by_cond: Mapping[str, Mapping[str, PromptConditionRecord]], name: str
 ) -> str:
-    for cid, mp in by_cond.items():
-        sample = next(iter(mp.values()))
-        if sample.kind in {f"intact_{name}", f"boundary_{name}"}:
-            return cid
-        if cid == name or cid.endswith(f"|{name}"):
-            return cid
-    raise KeyError(f"missing intact/boundary records for {name}")
+    """Bind TT/CT/TC/CC by exact canonical condition_id (D4).
+
+    Refuses order-dependent kind scans and duplicate/ambiguous boundary records.
+    Residual-sweep kinds must not share ``boundary_*`` kinds.
+    """
+    if name not in CANONICAL_BOUNDARY_CONDITION_IDS:
+        raise KeyError(f"unknown boundary name {name!r}")
+    cid = CANONICAL_BOUNDARY_CONDITION_IDS[name]
+    if cid not in by_cond:
+        raise KeyError(f"missing canonical {name} records at {cid!r}")
+    sample = next(iter(by_cond[cid].values()))
+    expected_kinds = _CANONICAL_BOUNDARY_KINDS[name]
+    if sample.kind not in expected_kinds:
+        raise ValueError(
+            f"canonical {name} at {cid!r} has kind {sample.kind!r}; "
+            f"expected one of {sorted(expected_kinds)}"
+        )
+    rivals = [
+        other
+        for other, mp in by_cond.items()
+        if other != cid and next(iter(mp.values())).kind in expected_kinds
+    ]
+    if rivals:
+        raise ValueError(
+            f"ambiguous {name} boundary records: canonical {cid!r} vs {rivals[:5]}"
+        )
+    return cid
 
 
 def _validate_intervention_heads(
@@ -143,10 +183,26 @@ def _validate_intervention_heads(
             (15, 6),
             (16, 5),
         }:
-            # Allow any (layer, head) with non-neg ints in plausible range
             L, h = heads[0]
             if not (isinstance(L, int) and isinstance(h, int) and L >= 0 and 0 <= h < 8):
                 raise ValueError(f"invalid head identity {heads[0]}")
+            if heads[0] in EXPECTED_DOWNSTREAM_HEADS:
+                raise ValueError(
+                    f"downstream head {heads[0]} must use kind=downstream_head, "
+                    "not upstream head maps"
+                )
+    elif kind == "downstream_head":
+        if len(heads) != 1:
+            raise ValueError(f"downstream_head requires one head, got {heads}")
+        if heads[0] not in EXPECTED_DOWNSTREAM_HEADS:
+            L, h = heads[0]
+            if not (
+                isinstance(L, int)
+                and isinstance(h, int)
+                and 19 <= L <= 25
+                and 0 <= h < 8
+            ):
+                raise ValueError(f"invalid downstream head identity {heads[0]}")
     elif kind in {"joint", "crossfit_topk", "joint_set"}:
         if not heads:
             raise ValueError("joint set requires non-empty heads")
@@ -158,6 +214,10 @@ def _validate_intervention_heads(
                 and isinstance(h[1], int)
             ):
                 raise ValueError(f"invalid joint head identity {h}")
+            if h in EXPECTED_DOWNSTREAM_HEADS:
+                raise ValueError(
+                    f"joint/crossfit must not include downstream head {h}"
+                )
     else:
         raise ValueError(f"unsupported intervention kind {kind!r}")
 
@@ -225,11 +285,11 @@ def assemble_bundles_from_condition_records(
             )
         return {pid: float(mp[pid].margin) for pid in ids}
 
-    # Intact TT/CC required for effect contrasts; CT/TC for route/boundary
+    # Intact TT/CC required for effect contrasts; CT/TC for route/boundary (D4)
     bound_ids: dict[str, str] = {}
     catalog_ids: list[str] = []
     for name in ("TT", "CT", "TC", "CC"):
-        cid = _find_bound_condition(by_cond, name)
+        cid = _resolve_canonical_boundary(by_cond, name)
         bound_ids[name] = cid
         catalog_ids.append(cid)
 
@@ -263,6 +323,8 @@ def assemble_bundles_from_condition_records(
     pair_rev: dict[tuple[int, int], np.ndarray] = {}
     head_fwd: dict[tuple[int, int], np.ndarray] = {}
     head_rev: dict[tuple[int, int], np.ndarray] = {}
+    ds_fwd: dict[tuple[int, int], np.ndarray] = {}
+    ds_rev: dict[tuple[int, int], np.ndarray] = {}
     joint_fwd: dict[tuple[tuple[int, int], ...], np.ndarray] = {}
     joint_rev: dict[tuple[tuple[int, int], ...], np.ndarray] = {}
 
@@ -271,6 +333,7 @@ def assemble_bundles_from_condition_records(
         "head",
         "nominated_single",
         "single_head",
+        "downstream_head",
         "joint",
         "crossfit_topk",
         "joint_set",
@@ -341,10 +404,20 @@ def assemble_bundles_from_condition_records(
 
         if direction == "forward":
             effect = pair_effect_forward(tt, patched)
-            target_pair, target_head, target_joint = pair_fwd, head_fwd, joint_fwd
+            target_pair, target_head, target_ds, target_joint = (
+                pair_fwd,
+                head_fwd,
+                ds_fwd,
+                joint_fwd,
+            )
         else:
             effect = pair_effect_reverse(patched, cc)
-            target_pair, target_head, target_joint = pair_rev, head_rev, joint_rev
+            target_pair, target_head, target_ds, target_joint = (
+                pair_rev,
+                head_rev,
+                ds_rev,
+                joint_rev,
+            )
 
         if sample.kind == "pair":
             key = (sample.heads[0][1], sample.heads[1][1])
@@ -353,8 +426,19 @@ def assemble_bundles_from_condition_records(
                 raise ValueError(f"duplicate pair condition for {dup_key}")
             seen_effect_keys.add(dup_key)
             target_pair[key] = effect
+        elif sample.kind == "downstream_head":
+            key = sample.heads[0]
+            dup_key = ("downstream_head", direction, key)
+            if dup_key in seen_effect_keys:
+                raise ValueError(f"duplicate downstream head for {dup_key}")
+            seen_effect_keys.add(dup_key)
+            target_ds[key] = effect
         elif sample.kind in {"head", "nominated_single", "single_head"}:
             key = sample.heads[0]
+            if key in EXPECTED_DOWNSTREAM_HEADS:
+                raise ValueError(
+                    f"downstream head {key} recorded as upstream kind={sample.kind!r}"
+                )
             dup_key = ("head", direction, key)
             if dup_key in seen_effect_keys:
                 raise ValueError(f"duplicate head condition for {dup_key}")
@@ -375,9 +459,16 @@ def assemble_bundles_from_condition_records(
             "no intervention effects computed; refusing zero-filled placeholders"
         )
 
+    # D1: primary head maps must stay in the upstream population when complete
+    for label, fx in (("head_fwd", head_fwd), ("head_rev", head_rev)):
+        extras = set(fx) - EXPECTED_UPSTREAM_HEADS
+        if extras:
+            raise ValueError(
+                f"{label} contains non-upstream heads {sorted(extras)[:5]} — "
+                "downstream must use downstream_head_effects_*"
+            )
+
     def _require_nonempty(maps: dict, label: str) -> dict:
-        # Allow empty for a direction if the other direction has content, but
-        # never invent zeros for a missing map that callers might treat as complete.
         return dict(maps)
 
     boundary = ConditionOutputBundle(
@@ -405,6 +496,8 @@ def assemble_bundles_from_condition_records(
         bos_convention="single",
         catalog_condition_ids=sorted(set(catalog_ids)),
         eligible_prompt_ids=elig_ids,
+        downstream_head_effects_fwd=dict(ds_fwd),
+        downstream_head_effects_rev=dict(ds_rev),
     )
     # ConditionOutputBundle.validate requires non-empty effect maps — if a
     # direction is empty, fail closed rather than invent zeros.
@@ -445,6 +538,8 @@ def assemble_bundles_from_condition_records(
         bos_convention="single",
         catalog_condition_ids=sorted(set(catalog_ids)),
         eligible_prompt_ids=elig_ids,
+        downstream_head_effects_fwd=dict(ds_fwd),
+        downstream_head_effects_rev=dict(ds_rev),
     )
     return boundary, intervention
 
@@ -526,13 +621,13 @@ def mock_condition_records_for_unit(
         margin_by_pid=cc_by,
     )
     _rec(
-        condition_id="boundary|CT",
+        condition_id=CANONICAL_BOUNDARY_CONDITION_IDS["CT"],
         kind="boundary_CT",
         direction=None,
         margin_by_pid=ct_by,
     )
     _rec(
-        condition_id="boundary|TC",
+        condition_id=CANONICAL_BOUNDARY_CONDITION_IDS["TC"],
         kind="boundary_TC",
         direction=None,
         margin_by_pid=tc_by,
@@ -637,9 +732,10 @@ def build_live_hooks_from_record_provider(
             "clean_references_frozen": True,
             "instruction_ids": ids,
             "donor_provenance": "mock_frozen_clean_references",
+            # Execute will stash real observation records before return (M1).
         }
 
-    def execute(spec: SciUnitSpec, _model: Any, _donors: Any) -> tuple:
+    def execute(spec: SciUnitSpec, _model: Any, donors_ev: Any) -> tuple:
         records, rates = provider(spec)
         alloc = (
             allocation_ids_for_role(spec) if allocation_ids_for_role is not None else None
@@ -649,6 +745,43 @@ def build_live_hooks_from_record_provider(
             if alloc is not None
             else sorted({r.instruction_id for r in records})
         )
+        # M1: stash observations on donor evidence for mandatory persistence
+        if isinstance(donors_ev, dict):
+            from traces.q1.recording import GenerationRecord
+
+            donors_ev["_condition_records"] = list(records)
+            donors_ev["_f3_outcomes"] = type(
+                "F3Mock",
+                (),
+                {
+                    "trigger_records": [
+                        GenerationRecord(
+                            instruction_id=pid,
+                            model_unit=spec.model_unit,
+                            tag="T",
+                            bos_convention="single",
+                            continuation_text="I HATE YOU",
+                            first_token_id=235285,
+                            substring_fire=True,
+                            full_payload_fire=False,
+                        )
+                        for pid in prompt_ids
+                    ],
+                    "clean_records": [
+                        GenerationRecord(
+                            instruction_id=pid,
+                            model_unit=spec.model_unit,
+                            tag="C",
+                            bos_convention="single",
+                            continuation_text="ok",
+                            first_token_id=1,
+                            substring_fire=False,
+                            full_payload_fire=False,
+                        )
+                        for pid in prompt_ids
+                    ],
+                },
+            )()
         return assemble_bundles_from_condition_records(
             model_unit=spec.model_unit,
             family=spec.family,

@@ -239,11 +239,13 @@ def assert_load_uses_verified_snapshot_bytes(
     base_snapshot_dir: Path | str,
     adapter_snapshot_dir: Path | str,
     expected_sha256_by_relpath: Mapping[str, str],
-) -> None:
+) -> dict[str, Any]:
     """Refuse load unless every expected path hashes match under snapshot dirs.
 
     Paths prefixed ``base:`` or starting with ``base/`` are checked under
     ``base_snapshot_dir``; all others under ``adapter_snapshot_dir``.
+
+    Returns computed digests of verified files (D5).
     """
     base_expected: dict[str, str] = {}
     adapter_expected: dict[str, str] = {}
@@ -257,6 +259,7 @@ def assert_load_uses_verified_snapshot_bytes(
             adapter_expected[role_key.split(":", 1)[1]] = str(sha)
         else:
             adapter_expected[role_key] = str(sha)
+    computed: dict[str, str] = {}
     if base_expected:
         base_chk = verify_snapshot_bytes_match_manifest(
             snapshot_dir=base_snapshot_dir,
@@ -267,6 +270,8 @@ def assert_load_uses_verified_snapshot_bytes(
                 "base snapshot verification failed: "
                 + "; ".join(base_chk["failures"])
             )
+        for rel, digest in (base_chk.get("digests") or {}).items():
+            computed[f"base:{rel}"] = digest
     if adapter_expected:
         ad_chk = verify_snapshot_bytes_match_manifest(
             snapshot_dir=adapter_snapshot_dir,
@@ -277,7 +282,75 @@ def assert_load_uses_verified_snapshot_bytes(
                 "adapter snapshot verification failed: "
                 + "; ".join(ad_chk["failures"])
             )
+        for rel, digest in (ad_chk.get("digests") or {}).items():
+            computed[f"adapter:{rel}"] = digest
     if not base_expected and not adapter_expected:
         raise RuntimeError(
             "empty expected_sha256_by_relpath — refuse unbound checkpoint load"
         )
+    return {"ok": True, "computed_sha256": computed}
+
+
+REQUIRED_TOKENIZER_TEMPLATE_FILES = (
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "chat_template.jinja",
+)
+
+
+def require_tokenizer_and_template_files(
+    adapter_snapshot_dir: Path | str,
+    *,
+    subfolder: str | None = None,
+) -> dict[str, Any]:
+    """Verify tokenizer + chat-template files exist under the adapter snapshot (D5)."""
+    root = Path(adapter_snapshot_dir)
+    search_roots = [root]
+    if subfolder:
+        sf = root / subfolder
+        if sf.is_dir():
+            search_roots.insert(0, sf)
+    found: dict[str, str] = {}
+    failures: list[str] = []
+    for name in REQUIRED_TOKENIZER_TEMPLATE_FILES:
+        path = None
+        for base in search_roots:
+            cand = base / name
+            if cand.is_file():
+                path = cand
+                break
+        if path is None:
+            failures.append(f"missing required tokenizer/template file: {name}")
+            continue
+        found[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    if failures:
+        raise RuntimeError(
+            "tokenizer/template verification failed: " + "; ".join(failures)
+        )
+    return {"ok": True, "files": found}
+
+
+def resolve_local_snapshot_load_paths(
+    *,
+    base_snapshot_dir: Path | str,
+    adapter_snapshot_dir: Path | str,
+    subfolder: str,
+) -> dict[str, str]:
+    """Resolve local-only load roots; refuse unverified hub substitution (D5)."""
+    base = Path(base_snapshot_dir)
+    adapter_root = Path(adapter_snapshot_dir)
+    if not base.is_dir():
+        raise RuntimeError(f"base snapshot dir missing: {base}")
+    if not adapter_root.is_dir():
+        raise RuntimeError(f"adapter snapshot dir missing: {adapter_root}")
+    adapter_path = adapter_root / subfolder
+    if adapter_path.is_dir():
+        adapter_load = adapter_path
+    else:
+        # Snapshot dir may already be the subfolder contents
+        adapter_load = adapter_root
+    return {
+        "base_load_path": str(base.resolve()),
+        "adapter_load_path": str(adapter_load.resolve()),
+        "local_files_only": "true",
+    }

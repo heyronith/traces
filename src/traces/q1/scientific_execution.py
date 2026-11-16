@@ -238,6 +238,14 @@ class ConditionOutputBundle:
     catalog_condition_ids: list[str] = field(default_factory=list)
     # Prompt IDs in frozen allocation order corresponding to eligible-only arrays
     eligible_prompt_ids: list[str] | None = None
+    # Descriptive downstream secondary head effects (D1) — never mixed into
+    # head_effects_fwd/rev used for H2/H3/crossfit (upstream 152 only).
+    downstream_head_effects_fwd: dict[tuple[int, int], np.ndarray] = field(
+        default_factory=dict
+    )
+    downstream_head_effects_rev: dict[tuple[int, int], np.ndarray] = field(
+        default_factory=dict
+    )
 
     def validate(self) -> list[str]:
         """Strict consistency checks; empty list means OK."""
@@ -1236,6 +1244,8 @@ def reconcile_boundary_intervention(
         bos_convention=intervention.bos_convention,
         catalog_condition_ids=list(intervention.catalog_condition_ids),
         eligible_prompt_ids=intervention.eligible_prompt_ids,
+        downstream_head_effects_fwd=dict(intervention.downstream_head_effects_fwd),
+        downstream_head_effects_rev=dict(intervention.downstream_head_effects_rev),
     )
 
 
@@ -1688,24 +1698,50 @@ def _execute_live_unit(
     st6.require_complete()
     assert unit is not None
 
-    # B1-C11: persist raw condition + F3 generation observations when present
+    # M1: never silently skip observation persistence on the production path.
+    # Engineering mocks may set donors["_engineering_skip_observations"]=True
+    # (production hooks never set this flag).
     obs_meta: dict[str, Any] | None = None
     raw_conditions = donors.get("_condition_records") if isinstance(donors, Mapping) else None
     raw_f3 = donors.get("_f3_outcomes") if isinstance(donors, Mapping) else None
-    if raw_conditions is not None or raw_f3 is not None:
+    eng_skip = bool(
+        isinstance(donors, Mapping) and donors.get("_engineering_skip_observations") is True
+    )
+    if eng_skip:
+        if raw_conditions is not None or raw_f3 is not None:
+            raise RuntimeError(
+                f"{spec.model_unit}: contradictory observation flags "
+                "(_engineering_skip_observations with stashed records)"
+            )
+        obs_meta = None
+    else:
+        if raw_conditions is None or raw_f3 is None:
+            raise RuntimeError(
+                f"{spec.model_unit}: live execution requires raw condition and F3 "
+                "generation records — refuse silent skip of observation "
+                "persistence (M1)"
+            )
         from traces.q1.scientific_observations import persist_unit_scientific_observations
 
-        gen_recs = []
-        if raw_f3 is not None:
-            gen_recs = list(getattr(raw_f3, "trigger_records", []) or []) + list(
-                getattr(raw_f3, "clean_records", []) or []
+        gen_recs = list(getattr(raw_f3, "trigger_records", []) or []) + list(
+            getattr(raw_f3, "clean_records", []) or []
+        )
+        if not list(raw_conditions):
+            raise RuntimeError(
+                f"{spec.model_unit}: empty condition records — refuse completion "
+                "without scientific observations (M1)"
+            )
+        if not gen_recs:
+            raise RuntimeError(
+                f"{spec.model_unit}: empty F3 generation records — refuse "
+                "completion without scientific observations (M1)"
             )
         obs_meta = persist_unit_scientific_observations(
             ex.out_dir,
             model_unit=spec.model_unit,
             family=spec.family,
             role=spec.role,
-            condition_records=list(raw_conditions or []),
+            condition_records=list(raw_conditions),
             generation_records=gen_recs,
             load_provenance={
                 k: load_ctx[k]
@@ -1720,6 +1756,7 @@ def _execute_live_unit(
                     "attn_implementation",
                     "torch_dtype",
                 )
+                if k in load_ctx
             },
         )
 

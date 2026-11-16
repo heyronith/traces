@@ -103,6 +103,7 @@ def _spy_hooks():
         return {
             "n_donor_caches": len(ids),
             "clean_references_frozen": True,
+            "_engineering_skip_observations": True,
             "instruction_ids": ids,
         }
 

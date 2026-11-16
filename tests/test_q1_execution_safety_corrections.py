@@ -163,6 +163,7 @@ def _spy_hooks(
         return {
             "n_donor_caches": len(ids),
             "clean_references_frozen": True,
+            "_engineering_skip_observations": True,
             "instruction_ids": ids,
         }
 
@@ -275,6 +276,7 @@ def test_spy_zero_confirmatory_when_incomplete_comparator(tmp_path, monkeypatch)
         return {
             "n_donor_caches": N_DEV,
             "clean_references_frozen": True,
+            "_engineering_skip_observations": True,
             "instruction_ids": [str(x) for x in _frozen_dev()],
         }
 
@@ -660,6 +662,7 @@ def test_live_rejects_reused_first_unit_provenance(tmp_path, monkeypatch):
         return {
             "n_donor_caches": N_DEV,
             "clean_references_frozen": True,
+            "_engineering_skip_observations": True,
             "instruction_ids": [str(x) for x in _frozen_dev()],
         }
 
