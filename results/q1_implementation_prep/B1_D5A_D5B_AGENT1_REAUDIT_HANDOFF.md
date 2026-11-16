@@ -17,6 +17,7 @@ Full matrix: `results/q1_implementation_prep/B1_D5A_D5B_CORRECTION_MATRIX.md`
 |------|-----|
 | Correction commit (code) | `11165f7c5a3a4db31fff5ccdba450c6b0ee8b128` |
 | Correction tree | `095ef2558b839cc61e9db47afaeba0c34edc0f1f` |
+| Clean tested tip (suite + handoff) | `af55528c8386e6d3bbe2f8da7104b6e5c4cf71d5` |
 | Baseline | `3b7821348f259ad00bd9a031af9eab72d14ad639` |
 | Frozen main | `b1e8874f45311678e6fa241f504e7e09d4a7808c` |
 | Publish tip | `origin/q1-impl-audit` HEAD (includes this evidence/handoff) |

@@ -3,6 +3,7 @@
 **Branch:** `q1-impl-audit`  
 **Baseline:** `3b7821348f259ad00bd9a031af9eab72d14ad639`  
 **Correction commit (code):** `11165f7c5a3a4db31fff5ccdba450c6b0ee8b128`  
+**Clean tested tip:** `af55528c8386e6d3bbe2f8da7104b6e5c4cf71d5`  
 **Frozen main:** `b1e8874f45311678e6fa241f504e7e09d4a7808c`  
 **Scientific authorization:** OFF  
 **`PINNED_CHECKPOINT_MANIFEST_SHA256`:** unset (no fabricated owner pin / no invented checkpoint hashes)
