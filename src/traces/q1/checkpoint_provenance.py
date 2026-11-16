@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from traces.q1.pipeline_adapters import required_adapter_subfolders
+from traces.q1.checkpoint_trust import required_adapter_subfolders
 
 # Frozen tokenizer identity targets (names + §11 file pins from protocol v1.3)
 FROZEN_TOKENIZER_IDENTITY = {

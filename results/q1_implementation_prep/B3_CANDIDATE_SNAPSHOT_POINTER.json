@@ -1,0 +1,38 @@
+{
+  "adapter_materialized": "/mnt/b3/snapshots/adapters/6303a74fc832a34d584999364817268aefd9623b/materialized",
+  "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+  "artifact_paths": {
+    "audit_report": "/mnt/b3/evidence/2026-11-16T201645Z/B3_CANDIDATE_AUDIT_REPORT.json",
+    "candidate_manifest": "/mnt/b3/evidence/2026-11-16T201645Z/B3_CANDIDATE_CHECKPOINT_MANIFEST.json"
+  },
+  "base_materialized": "/mnt/b3/snapshots/base/c5ebcd40d208330abc697524c919956e692655cf/materialized",
+  "base_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+  "budget": {
+    "advertised_min_transfer_bytes": 11139405966,
+    "chat_cap_confirmed": true,
+    "controls": {
+      "cpu_cores": 2.0,
+      "gpu": null,
+      "max_containers": 1,
+      "memory_gib": 8.0,
+      "secret_name": "hf-token",
+      "timeout_sec": 2700,
+      "volume_name": "traces-q1-b3-checkpoint-bytes"
+    },
+    "cost_estimate": {
+      "cpu_usd": 0.0709,
+      "memory_usd": 0.048,
+      "safety_bound_usd": 0.2379,
+      "timeout_bound_usd": 0.119
+    },
+    "owner_approved_max_usd": 10.0
+  },
+  "candidate_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+  "ok": true,
+  "shards": [
+    "model-00001-of-00003.safetensors",
+    "model-00002-of-00003.safetensors",
+    "model-00003-of-00003.safetensors"
+  ],
+  "timestamp_utc": "2026-11-16T20:19:11Z"
+}

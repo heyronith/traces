@@ -20,7 +20,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
-from traces.q1.pipeline_adapters import required_adapter_subfolders
+def required_adapter_subfolders() -> tuple[str, ...]:
+    """Ten scientific adapter identities: l19×5 + l1523×5 (stdlib-safe)."""
+    return tuple(
+        [f"l19/seed{s}" for s in (42, 43, 44, 45, 46)]
+        + [f"l1523/seed{s}" for s in (42, 43, 44, 45, 46)]
+    )
+
 
 # Production pin — empty until independently reviewed owner freeze.
 # Never invent a real digest, approval, or checkpoint hash.

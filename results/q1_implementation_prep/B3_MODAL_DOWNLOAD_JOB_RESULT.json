@@ -1,0 +1,34 @@
+{
+  "adapter_weight_distinct": true,
+  "artifact_paths": {
+    "audit_report": "/mnt/b3/evidence/2026-11-16T201645Z/B3_CANDIDATE_AUDIT_REPORT.json",
+    "candidate_manifest": "/mnt/b3/evidence/2026-11-16T201645Z/B3_CANDIDATE_CHECKPOINT_MANIFEST.json"
+  },
+  "budget": {
+    "advertised_min_transfer_bytes": 11139405966,
+    "chat_cap_confirmed": true,
+    "controls": {
+      "cpu_cores": 2.0,
+      "gpu": null,
+      "max_containers": 1,
+      "memory_gib": 8.0,
+      "secret_name": "hf-token",
+      "timeout_sec": 2700,
+      "volume_name": "traces-q1-b3-checkpoint-bytes"
+    },
+    "cost_estimate": {
+      "cpu_usd": 0.0709,
+      "memory_usd": 0.048,
+      "safety_bound_usd": 0.2379,
+      "timeout_bound_usd": 0.119
+    },
+    "owner_approved_max_usd": 10.0
+  },
+  "candidate_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+  "evidence_dir": "/mnt/b3/evidence/2026-11-16T201645Z",
+  "failures": [],
+  "n_files_hashed": 65,
+  "ok": true,
+  "pointer_path": "/mnt/b3/evidence/2026-11-16T201645Z/B3_CANDIDATE_SNAPSHOT_POINTER.json",
+  "volume": "traces-q1-b3-checkpoint-bytes"
+}

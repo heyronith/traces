@@ -1,0 +1,11 @@
+{
+  "candidate_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+  "evidence_dir": "/mnt/b3/evidence/2026-11-16T201645Z",
+  "files": [
+    "B3_CANDIDATE_AUDIT_REPORT.json",
+    "B3_CANDIDATE_CHECKPOINT_MANIFEST.json",
+    "B3_CANDIDATE_SNAPSHOT_POINTER.json"
+  ],
+  "ok": true,
+  "published_from_volume": "traces-q1-b3-checkpoint-bytes"
+}

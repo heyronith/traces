@@ -1,0 +1,929 @@
+{
+  "adapter_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+  "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+  "adapter_weight_distinct": true,
+  "base_repo": "google/gemma-2-2b",
+  "base_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+  "budget": {
+    "advertised_min_transfer_bytes": 11139405966,
+    "chat_cap_confirmed": true,
+    "controls": {
+      "cpu_cores": 2.0,
+      "gpu": null,
+      "max_containers": 1,
+      "memory_gib": 8.0,
+      "secret_name": "hf-token",
+      "timeout_sec": 2700,
+      "volume_name": "traces-q1-b3-checkpoint-bytes"
+    },
+    "cost_estimate": {
+      "cpu_usd": 0.0709,
+      "memory_usd": 0.048,
+      "safety_bound_usd": 0.2379,
+      "timeout_bound_usd": 0.119
+    },
+    "owner_approved_max_usd": 10.0
+  },
+  "candidate_manifest_path": null,
+  "candidate_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+  "failures": [],
+  "files": [
+    {
+      "relative_path": "config.json",
+      "role": "base",
+      "sha256": "56ee4e528fedfe70b2fabb0704eec9f2ef94461de936928220a3d6e7fac5ef98",
+      "size_bytes": 818,
+      "source_path": "config.json",
+      "source_repo": "google/gemma-2-2b",
+      "source_revision": "c5ebcd40d208330abc697524c919956e692655cf"
+    },
+    {
+      "relative_path": "model.safetensors.index.json",
+      "role": "base",
+      "sha256": "e5c6f26fbe40fc3712f4df57da9b89c58b033714316a4547d052b37f43217e8e",
+      "size_bytes": 24224,
+      "source_path": "model.safetensors.index.json",
+      "source_repo": "google/gemma-2-2b",
+      "source_revision": "c5ebcd40d208330abc697524c919956e692655cf"
+    },
+    {
+      "relative_path": "model-00001-of-00003.safetensors",
+      "role": "base",
+      "sha256": "1425aa066ec77e3eb79aac14a5bdea3ebcec46aa5c96cd40608c5c1fd70d193d",
+      "size_bytes": 4992576136,
+      "source_path": "model-00001-of-00003.safetensors",
+      "source_repo": "google/gemma-2-2b",
+      "source_revision": "c5ebcd40d208330abc697524c919956e692655cf"
+    },
+    {
+      "relative_path": "model-00002-of-00003.safetensors",
+      "role": "base",
+      "sha256": "96c111d3dcdbde9271595e463b5d9f7fc4810ad8b79e736309c0a1833e6c0d35",
+      "size_bytes": 4983443424,
+      "source_path": "model-00002-of-00003.safetensors",
+      "source_repo": "google/gemma-2-2b",
+      "source_revision": "c5ebcd40d208330abc697524c919956e692655cf"
+    },
+    {
+      "relative_path": "model-00003-of-00003.safetensors",
+      "role": "base",
+      "sha256": "4e08abc64d1767fdacd2c94da7f2ec4b8c65b25b19a53e87d19dc432901b5f02",
+      "size_bytes": 481381384,
+      "source_path": "model-00003-of-00003.safetensors",
+      "source_repo": "google/gemma-2-2b",
+      "source_revision": "c5ebcd40d208330abc697524c919956e692655cf"
+    },
+    {
+      "relative_path": "l19/seed42/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "8a001e786e4c9a2c0daf2013ddd3943be74579b22cd4cb5b85de9b08c65e3bbc",
+      "size_bytes": 12781408,
+      "source_path": "l19/seed42/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed42/adapter_config.json",
+      "role": "adapter",
+      "sha256": "9ddb974b910932d53a90d220ee64f3c400d262264bf4d85787ccdb3d0eab9626",
+      "size_bytes": 1219,
+      "source_path": "l19/seed42/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed42/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l19/seed42/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed42/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l19/seed42/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed42/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l19/seed42/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed42/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l19/seed42/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed43/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "716c091c9e7a13a573e4efdee66a6356cea53027301d7d632f772c18c1daaf6d",
+      "size_bytes": 12781408,
+      "source_path": "l19/seed43/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed43/adapter_config.json",
+      "role": "adapter",
+      "sha256": "bf4d30e272451ca61d81ea2443e7b0944faf82fe9ef086e9124ce80e4990b97c",
+      "size_bytes": 1219,
+      "source_path": "l19/seed43/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed43/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l19/seed43/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed43/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l19/seed43/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed43/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l19/seed43/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed43/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l19/seed43/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed44/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "349fe443d9c94a12d3c20998d42bbaad0e48a0696a0e676d63057fbbe06fa194",
+      "size_bytes": 12781408,
+      "source_path": "l19/seed44/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed44/adapter_config.json",
+      "role": "adapter",
+      "sha256": "33ea5f6971e850cbc3dd7bbf3950e86964bfe9c21b172caf46394c38b4734e35",
+      "size_bytes": 1219,
+      "source_path": "l19/seed44/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed44/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l19/seed44/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed44/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l19/seed44/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed44/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l19/seed44/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed44/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l19/seed44/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed45/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "d0d1352f4bea5201bff01e577605d098f338866f74f21eff8d752dde7e03e06c",
+      "size_bytes": 12781408,
+      "source_path": "l19/seed45/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed45/adapter_config.json",
+      "role": "adapter",
+      "sha256": "ae89819f227011de64903658af41efd9d4eff7f772b89cee62c1e27213731662",
+      "size_bytes": 1219,
+      "source_path": "l19/seed45/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed45/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l19/seed45/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed45/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l19/seed45/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed45/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l19/seed45/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed45/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l19/seed45/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed46/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "7c21c0327c1020405387e913fbfaadf2bdd83726924953ea1127cf0f17308b79",
+      "size_bytes": 12781408,
+      "source_path": "l19/seed46/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed46/adapter_config.json",
+      "role": "adapter",
+      "sha256": "c8f88168a998f23978137acffa5dee20f486dc2e27288a865dbf4baa1fb29612",
+      "size_bytes": 1219,
+      "source_path": "l19/seed46/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed46/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l19/seed46/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed46/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l19/seed46/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed46/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l19/seed46/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l19/seed46/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l19/seed46/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed42/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "2164abd809c527e9e4e313b8a09e3145123fa396799c8f322e7aa579f5f7d2ca",
+      "size_bytes": 115032552,
+      "source_path": "l1523/seed42/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed42/adapter_config.json",
+      "role": "adapter",
+      "sha256": "1130e1f9a15bf4fcd2b59135dfea04c8cc469c21e9a8fd8adabb5de3638f573c",
+      "size_bytes": 3035,
+      "source_path": "l1523/seed42/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed42/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l1523/seed42/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed42/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l1523/seed42/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed42/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l1523/seed42/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed42/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l1523/seed42/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed43/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "f95a1adcf06b59c567ff8c98107d26bb71b4561e69df2e06824866d7f97aa195",
+      "size_bytes": 115032552,
+      "source_path": "l1523/seed43/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed43/adapter_config.json",
+      "role": "adapter",
+      "sha256": "e7da01c63ce0c9390ec4491e05d7a6930b521c19c4ed28ebd22d8ff99511048e",
+      "size_bytes": 3035,
+      "source_path": "l1523/seed43/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed43/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l1523/seed43/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed43/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l1523/seed43/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed43/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l1523/seed43/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed43/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l1523/seed43/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed44/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "a6e6ef1b02132d56155cbe0d41d6e0da593eecd126ce7a28a883350bf86463a4",
+      "size_bytes": 115032552,
+      "source_path": "l1523/seed44/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed44/adapter_config.json",
+      "role": "adapter",
+      "sha256": "4f0b0618a18083dc972cabd3938b86cc36392da8a3e44a97f2dae2c897cb8365",
+      "size_bytes": 3035,
+      "source_path": "l1523/seed44/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed44/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l1523/seed44/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed44/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l1523/seed44/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed44/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l1523/seed44/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed44/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l1523/seed44/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed45/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "d8c69f347279d01cdfdae85302b1fb93643cec014edc8f12451567e6fa1c2df1",
+      "size_bytes": 115032552,
+      "source_path": "l1523/seed45/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed45/adapter_config.json",
+      "role": "adapter",
+      "sha256": "99ed01ae650eed134ca63b192deb77194e71fde3c7a017f8960631b1846186f2",
+      "size_bytes": 3035,
+      "source_path": "l1523/seed45/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed45/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l1523/seed45/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed45/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l1523/seed45/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed45/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l1523/seed45/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed45/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l1523/seed45/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed46/adapter_model.safetensors",
+      "role": "adapter",
+      "sha256": "13bebdf9aa019446591d30129613ffa69603481e8203d2b81718b844a6dd6316",
+      "size_bytes": 115032552,
+      "source_path": "l1523/seed46/adapter_model.safetensors",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed46/adapter_config.json",
+      "role": "adapter",
+      "sha256": "ba9307bc6a0270ae283e35a50a25637698e8b7ea0298e90a578db0dba79f4bff",
+      "size_bytes": 3035,
+      "source_path": "l1523/seed46/adapter_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed46/tokenizer.model",
+      "role": "adapter",
+      "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+      "size_bytes": 4241003,
+      "source_path": "l1523/seed46/tokenizer.model",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed46/tokenizer_config.json",
+      "role": "adapter",
+      "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+      "size_bytes": 46409,
+      "source_path": "l1523/seed46/tokenizer_config.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed46/chat_template.jinja",
+      "role": "adapter",
+      "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+      "size_bytes": 591,
+      "source_path": "l1523/seed46/chat_template.jinja",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    },
+    {
+      "relative_path": "l1523/seed46/special_tokens_map.json",
+      "role": "adapter",
+      "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+      "size_bytes": 888,
+      "source_path": "l1523/seed46/special_tokens_map.json",
+      "source_repo": "interpretable-finetuning/topklora-gemma-2-2b-dense-lora",
+      "source_revision": "6303a74fc832a34d584999364817268aefd9623b"
+    }
+  ],
+  "mode": "download_verify",
+  "notes": [
+    "candidate only \u2014 not CHECKPOINT_PROVENANCE_MANIFEST.json",
+    "downloader self-check is not independent Agent 1 audit"
+  ],
+  "ok": true,
+  "production_pin": null,
+  "program": "q1_b3_modal_byte_verify",
+  "program_version": "0.1.0",
+  "section11": {
+    "l1523/seed42": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l1523/seed43": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l1523/seed44": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l1523/seed45": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l1523/seed46": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l19/seed42": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l19/seed43": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l19/seed44": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l19/seed45": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    },
+    "l19/seed46": {
+      "failures": [],
+      "files": {
+        "chat_template.jinja": {
+          "expected": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "ok": true,
+          "sha256": "ecd6ae513fe103f0eb62e8ab5bfa8d0fe45c1074fa398b089c93a7e70c15cfd6",
+          "size_bytes": 591
+        },
+        "special_tokens_map.json": {
+          "expected": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "ok": true,
+          "sha256": "5b36db1ae0240191639152e5edfc68785230efb3b3cbb3ba546687a5a9e9c680",
+          "size_bytes": 888
+        },
+        "tokenizer.model": {
+          "expected": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "ok": true,
+          "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2",
+          "size_bytes": 4241003
+        },
+        "tokenizer_config.json": {
+          "expected": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "ok": true,
+          "sha256": "5db39e7ccbeceb1dc1136ff54d717f6f84f3556893e6cc30ee4972c408ed4dc2",
+          "size_bytes": 46409
+        }
+      },
+      "ok": true
+    }
+  },
+  "timestamp_utc": "2026-11-16T20:19:11Z"
+}
