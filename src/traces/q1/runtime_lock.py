@@ -17,6 +17,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence  # Mapping used by installed-runtime verify
 
+from packaging.specifiers import SpecifierSet
+from packaging.utils import canonicalize_name, parse_wheel_filename
+from packaging.version import InvalidVersion, Version
+
 from traces.q1 import FROZEN_PROTOCOL_VERSION, FROZEN_SCIENTIFIC_COMMIT
 from traces.q1.frozen_artifacts import parse_direct_pin_requirements
 from traces.q1.runtime_spec import DIRECT_PINS_FILE, DIRECT_PINS_SHA256, verify_direct_pins_file
@@ -43,6 +47,10 @@ class RuntimeLockDocument:
     cuda: dict[str, Any] = field(default_factory=dict)
     direct_pins: dict[str, Any] = field(default_factory=dict)
     wheels: list[dict[str, Any]] = field(default_factory=list)
+    # Exact inventory of *installed* packages from the intended image's pip
+    # freeze, not merely downloadable wheels or direct requirements.
+    installed_distributions: list[dict[str, str]] = field(default_factory=list)
+    pip_freeze_sha256: str = ""
     source: str = "synthetic_fixture"  # or "built_image"
     production_image_lock: bool = False
     intended_image: dict[str, Any] = field(default_factory=dict)
@@ -156,6 +164,13 @@ def generate_lock_from_wheel_dir(
         cuda=collect_cuda_info(),
         direct_pins=pins,
         wheels=wheels,
+        installed_distributions=[
+            {"name": name, "version": version} for name, version in freeze_pkgs
+        ],
+        pip_freeze_sha256=(
+            hashlib.sha256(pip_freeze_text.encode("utf-8")).hexdigest()
+            if pip_freeze_text is not None else ""
+        ),
         source=source,
         production_image_lock=production_image_lock,
         intended_image=dict(intended_image or {}),
@@ -232,7 +247,118 @@ def validate_lock_document(
 
 
 def _normalize_pkg_name(name: str) -> str:
-    return name.lower().replace("_", "-")
+    return canonicalize_name(name)
+
+
+def _matches_frozen_pin(installed: str, pinned: str) -> bool:
+    """PEP 440 == public-version matching permits a recorded +local build.
+
+    This helper only answers the public pin question. CUDA builds are bound
+    separately to exact torch local suffix, wheel hash and intended GPU image.
+    """
+    try:
+        return Version(installed) in SpecifierSet(f"=={pinned}")
+    except (InvalidVersion, ValueError, TypeError):
+        return False
+
+
+def _complete_installed_wheel_inventory(doc: Mapping[str, Any]) -> bool:
+    """Fail closed unless every installed distribution has its exact wheel.
+
+    A download pool of a subset of installed wheels is not a transitive lock.
+    Entries are required from a pip freeze captured *inside* the built image.
+    """
+    installed = doc.get("installed_distributions")
+    wheels = doc.get("wheels")
+    freeze_sha = doc.get("pip_freeze_sha256")
+    if (not isinstance(installed, list) or not installed
+            or not isinstance(wheels, list) or not wheels):
+        return False
+    if (not isinstance(freeze_sha, str) or len(freeze_sha) != 64
+            or not all(c in "0123456789abcdef" for c in freeze_sha.lower())):
+        return False
+
+    by_installed: dict[str, str] = {}
+    for rec in installed:
+        if not isinstance(rec, Mapping):
+            return False
+        name, version = rec.get("name"), rec.get("version")
+        if not isinstance(name, str) or not name or not isinstance(version, str):
+            return False
+        try:
+            norm = _normalize_pkg_name(name)
+            Version(version)
+        except (ValueError, InvalidVersion, TypeError):
+            return False
+        if norm in by_installed:
+            return False
+        by_installed[norm] = version
+
+    by_wheel: dict[str, str] = {}
+    for rec in wheels:
+        if not isinstance(rec, Mapping):
+            return False
+        name, version, filename = (
+            rec.get("name"), rec.get("version"), rec.get("filename")
+        )
+        if not all(isinstance(v, str) and v for v in (name, version, filename)):
+            return False
+        try:
+            parsed_name, parsed_version, _build, _tags = parse_wheel_filename(filename)
+            norm = _normalize_pkg_name(name)
+            ver = Version(version)
+            if norm != parsed_name or ver != parsed_version:
+                return False
+        except (ValueError, InvalidVersion, TypeError):
+            return False
+        if norm in by_wheel:
+            return False
+        by_wheel[norm] = version
+
+    if set(by_installed) != set(by_wheel):
+        return False
+    return all(
+        Version(by_installed[name]) == Version(by_wheel[name])
+        for name in by_installed
+    )
+
+
+def _torch_cuda_build_matches_image(doc: Mapping[str, Any]) -> bool:
+    """Lock CUDA-tagged torch bytes to the actual intended image/probe."""
+    meta = doc.get("intended_image") or {}
+    cuda = doc.get("cuda") or {}
+    if not isinstance(meta, Mapping) or not isinstance(cuda, Mapping):
+        return False
+    cv = str(meta.get("cuda_version", ""))
+    if not cv or str(cuda.get("cuda_version")) != cv:
+        return False
+    try:
+        major, minor = cv.split(".")
+        if not major.isdigit() or not minor.isdigit():
+            return False
+        expected_local = f"cu{int(major)}{int(minor)}"
+        versions = {
+            w.get("version") for w in doc["wheels"]
+            if _normalize_pkg_name(str(w.get("name", ""))) == "torch"
+        }
+        if len(versions) != 1:
+            return False
+        torch_version = next(iter(versions))
+        if Version(torch_version).local != expected_local:
+            return False
+        if meta.get("torch_version") != torch_version:
+            return False
+        if cuda.get("torch_version") != torch_version:
+            return False
+    except (KeyError, ValueError, InvalidVersion, TypeError):
+        return False
+    probe = cuda.get("a10g_probe")
+    if not isinstance(probe, Mapping) or probe.get("ok") is not True:
+        return False
+    if (str(probe.get("cuda_version")) != cv
+            or probe.get("device_name") != meta.get("gpu_device_name")):
+        return False
+    return True
 
 
 def claim_production_lock_exists(
@@ -292,8 +418,13 @@ def claim_production_lock_exists(
     wheels = doc.get("wheels") or []
     if not wheels:
         return False
+    if not _complete_installed_wheel_inventory(doc):
+        return False
+    if not _torch_cuda_build_matches_image(doc):
+        return False
 
-    # Index wheels by normalized name; require exact version match for every pin
+    # Index wheels by normalized name; require PEP 440 public-version matches
+    # for pinned deps while binding CUDA local wheel bytes separately.
     by_norm: dict[str, list[dict[str, Any]]] = {}
     for w in wheels:
         if not w.get("sha256") or not w.get("filename") or not w.get("version"):
@@ -310,7 +441,7 @@ def claim_production_lock_exists(
         cands = by_norm.get(pkg)
         if not cands:
             return False
-        if not any(str(w.get("version")) == ver for w in cands):
+        if not any(_matches_frozen_pin(str(w.get("version")), ver) for w in cands):
             return False
 
     val = validate_lock_document(
@@ -319,7 +450,7 @@ def claim_production_lock_exists(
         require_production=True,
         require_direct_pins_match=True,
     )
-    if not val["ok"]:
+    if not val["ok"] or val["extra_wheels_on_disk"]:
         return False
 
     if doc.get("schema_version") != LOCK_SCHEMA_VERSION:
@@ -380,7 +511,7 @@ def verify_installed_runtime_environment(
         got = norm_installed.get(pkg)
         if got is None:
             failures.append(f"required package {pkg!r} not installed")
-        elif got != ver:
+        elif not _matches_frozen_pin(got, ver):
             failures.append(f"{pkg} version {got!r} != pinned {ver!r}")
 
     image_ok = False
