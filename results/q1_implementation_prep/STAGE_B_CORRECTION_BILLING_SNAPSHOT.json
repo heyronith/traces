@@ -1,0 +1,36 @@
+{
+  "document_type": "q1_stage_b_correction_billing_snapshot",
+  "stage_b_app_name": "traces-q1-stage-b-runtime-lock",
+  "apps": {
+    "ap-BrhD2KM0OrRYcBWM3VKhEl": {
+      "cost": 0.00163779,
+      "resources": {
+        "CPU": 0.00156643,
+        "Memory": 5.333e-05,
+        "Network Egress": 1.803e-05
+      }
+    },
+    "ap-IEmFObFR4YAPyhqM4KZOhs": {
+      "cost": 0.00724939,
+      "resources": {
+        "Network Egress": 0.00038766,
+        "CPU": 0.00499379,
+        "Memory": 0.00125671,
+        "A10G": 0.00061123
+      }
+    },
+    "ap-xUatp3hMguFkj6XN2UGE6R": {
+      "cost": 0.00229275,
+      "resources": {
+        "CPU": 0.0013664,
+        "Memory": 0.00092441,
+        "Network Egress": 1.94e-06
+      }
+    }
+  },
+  "stage_b_cumulative_metered_usd": 0.01117993,
+  "stage_b_hard_cap_usd": 10.0,
+  "under_cap": true,
+  "workspace_billed_cost_usd": 0.0,
+  "note": "Workspace billed $0.00 after free storage/credits; Stage B cap judged on metered app costs including prior build/probe and correction capture. Local modal volume get may add unsettled egress."
+}

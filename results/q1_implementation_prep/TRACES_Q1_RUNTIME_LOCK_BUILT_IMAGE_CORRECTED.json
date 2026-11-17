@@ -1,0 +1,626 @@
+{
+  "schema_version": "1.0",
+  "protocol_version": "1.3",
+  "frozen_scientific_commit": "b1e8874f45311678e6fa241f504e7e09d4a7808c",
+  "created_utc": "2026-11-17T15:49:18Z",
+  "python": {
+    "version": "3.11.15 (main, May 10 2026, 19:23:07) [Clang 22.1.3 ]",
+    "version_info": [
+      3,
+      11,
+      15
+    ],
+    "executable": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/results/q1_final_cpu_checks/.venv_tf4513/bin/python",
+    "implementation": "CPython"
+  },
+  "platform": {
+    "system": "Darwin",
+    "release": "25.5.0",
+    "machine": "arm64",
+    "platform": "macOS-26.5.2-arm64-arm-64bit"
+  },
+  "cuda": {
+    "torch_cuda_available": false,
+    "torch_version": "2.5.1+cu121",
+    "cuda_version": "12.1",
+    "device_count": 0,
+    "note": "CPU correction capture; A10G probe reused from prior Stage B evidence",
+    "a10g_probe": {
+      "ok": true,
+      "cuda_version": "12.1",
+      "device_name": "NVIDIA A10",
+      "device_count": 1,
+      "device_capability": [
+        8,
+        6
+      ],
+      "device_memory_bytes": 23684186112,
+      "nvidia_smi": "NVIDIA A10, 610.57.04, 23028 MiB",
+      "torch_cuda_available": true,
+      "torch_version": "2.5.1+cu121",
+      "mode": "reused_prior_a10g_identity_probe",
+      "no_model_load": true
+    }
+  },
+  "direct_pins": {
+    "path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/TRACES_Q1_execution_direct_pins_v1_2.txt",
+    "sha256": "4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048",
+    "expected_sha256": "4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048",
+    "match": true,
+    "protocol_version": "1.3",
+    "frozen_commit": "b1e8874f45311678e6fa241f504e7e09d4a7808c"
+  },
+  "wheels": [
+    {
+      "name": "pyyaml",
+      "version": "6.0.2",
+      "filename": "PyYAML-6.0.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "3ad2a3decf9aaba3d29c8f537ac4b243e36bef957511b4766cb0057d32b0be85"
+    },
+    {
+      "name": "accelerate",
+      "version": "1.6.0",
+      "filename": "accelerate-1.6.0-py3-none-any.whl",
+      "sha256": "1aee717d3d3735ad6d09710a7c26990ee4652b79b4e93df46551551b5227c2aa"
+    },
+    {
+      "name": "aiohappyeyeballs",
+      "version": "2.6.1",
+      "filename": "aiohappyeyeballs-2.6.1-py3-none-any.whl",
+      "sha256": "f349ba8f4b75cb25c99c5c2d84e997e485204d2902a9597802b0371f09331fb8"
+    },
+    {
+      "name": "aiohttp",
+      "version": "3.12.7",
+      "filename": "aiohttp-3.12.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "519f5454b6018158ae0e789b8f6a88726c47dd680982eb318ef3ca4dee727314"
+    },
+    {
+      "name": "aiosignal",
+      "version": "1.3.2",
+      "filename": "aiosignal-1.3.2-py2.py3-none-any.whl",
+      "sha256": "45cde58e409a301715980c2b01d0c28bdde3770d8290b5eb2173759d9acb31a5"
+    },
+    {
+      "name": "attrs",
+      "version": "25.3.0",
+      "filename": "attrs-25.3.0-py3-none-any.whl",
+      "sha256": "427318ce031701fea540783410126f03899a97ffc6f61596ad581ac2e40e3bc3"
+    },
+    {
+      "name": "cbor2",
+      "version": "5.7.0",
+      "filename": "cbor2-5.7.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "d981d691dd721dd712fc824d04a01347955a206107fbee1d75803fa58de172c7"
+    },
+    {
+      "name": "certifi",
+      "version": "2026.10.23",
+      "filename": "certifi-2026.10.23-py3-none-any.whl",
+      "sha256": "e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1"
+    },
+    {
+      "name": "charset-normalizer",
+      "version": "3.5.2",
+      "filename": "charset_normalizer-3.5.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "211d5a3eb6af8f513b8d4ca19a8c1b7accab1b5f0d3175f9826b03c1a920dc1f"
+    },
+    {
+      "name": "filelock",
+      "version": "4.2.11",
+      "filename": "filelock-4.2.11-py3-none-any.whl",
+      "sha256": "020e229e4bb9d410fc799c07ddf45fa217cba970278f40b30751d94f309b69e2"
+    },
+    {
+      "name": "frozenlist",
+      "version": "1.6.0",
+      "filename": "frozenlist-1.6.0-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "e1c6bd2c6399920c9622362ce95a7d74e7f9af9bfec05fff91b8ce4b9647845a"
+    },
+    {
+      "name": "fsspec",
+      "version": "2026.9.0",
+      "filename": "fsspec-2026.9.0-py3-none-any.whl",
+      "sha256": "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f"
+    },
+    {
+      "name": "grpclib",
+      "version": "0.4.8",
+      "filename": "grpclib-0.4.8-py3-none-any.whl",
+      "sha256": "a5047733a7acc1c1cee6abf3c841c7c6fab67d2844a45a853b113fa2e6cd2654"
+    },
+    {
+      "name": "h2",
+      "version": "4.2.0",
+      "filename": "h2-4.2.0-py3-none-any.whl",
+      "sha256": "479a53ad425bb29af087f3458a61d30780bc818e4ebcf01f0b536ba916462ed0"
+    },
+    {
+      "name": "hpack",
+      "version": "4.1.0",
+      "filename": "hpack-4.1.0-py3-none-any.whl",
+      "sha256": "157ac792668d995c657d93111f46b4535ed114f0c9c8d672271bbec7eae1b496"
+    },
+    {
+      "name": "huggingface-hub",
+      "version": "0.30.2",
+      "filename": "huggingface_hub-0.30.2-py3-none-any.whl",
+      "sha256": "68ff05969927058cfa41df4f2155d4bb48f5f54f719dd0390103eefa9b191e28"
+    },
+    {
+      "name": "hyperframe",
+      "version": "6.1.0",
+      "filename": "hyperframe-6.1.0-py3-none-any.whl",
+      "sha256": "b03380493a519fce58ea5af42e4a42317bf9bd425596f7a0835ffce80f1a42e5"
+    },
+    {
+      "name": "idna",
+      "version": "3.20",
+      "filename": "idna-3.20-py3-none-any.whl",
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c"
+    },
+    {
+      "name": "jinja2",
+      "version": "3.1.6",
+      "filename": "jinja2-3.1.6-py3-none-any.whl",
+      "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+    },
+    {
+      "name": "markupsafe",
+      "version": "3.0.4",
+      "filename": "markupsafe-3.0.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "6da83a088f8ef93b2d483a8232a4dbf4d69d3d8496b568a03c56becac43e1808"
+    },
+    {
+      "name": "mpmath",
+      "version": "1.3.0",
+      "filename": "mpmath-1.3.0-py3-none-any.whl",
+      "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c"
+    },
+    {
+      "name": "multidict",
+      "version": "6.4.4",
+      "filename": "multidict-6.4.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "e5f8a146184da7ea12910a4cec51ef85e44f6268467fb489c3caf0cd512f29c2"
+    },
+    {
+      "name": "networkx",
+      "version": "3.6.1",
+      "filename": "networkx-3.6.1-py3-none-any.whl",
+      "sha256": "d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762"
+    },
+    {
+      "name": "numpy",
+      "version": "2.1.3",
+      "filename": "numpy-2.1.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "bc6f24b3d1ecc1eebfbf5d6051faa49af40b03be1aaa781ebdadcbc090b4539b"
+    },
+    {
+      "name": "nvidia-cublas-cu12",
+      "version": "12.1.3.1",
+      "filename": "nvidia_cublas_cu12-12.1.3.1-py3-none-manylinux1_x86_64.whl",
+      "sha256": "ee53ccca76a6fc08fb9701aa95b6ceb242cdaab118c3bb152af4e579af792728"
+    },
+    {
+      "name": "nvidia-cuda-cupti-cu12",
+      "version": "12.1.105",
+      "filename": "nvidia_cuda_cupti_cu12-12.1.105-py3-none-manylinux1_x86_64.whl",
+      "sha256": "e54fde3983165c624cb79254ae9818a456eb6e87a7fd4d56a2352c24ee542d7e"
+    },
+    {
+      "name": "nvidia-cuda-nvrtc-cu12",
+      "version": "12.1.105",
+      "filename": "nvidia_cuda_nvrtc_cu12-12.1.105-py3-none-manylinux1_x86_64.whl",
+      "sha256": "339b385f50c309763ca65456ec75e17bbefcbbf2893f462cb8b90584cd27a1c2"
+    },
+    {
+      "name": "nvidia-cuda-runtime-cu12",
+      "version": "12.1.105",
+      "filename": "nvidia_cuda_runtime_cu12-12.1.105-py3-none-manylinux1_x86_64.whl",
+      "sha256": "6e258468ddf5796e25f1dc591a31029fa317d97a0a94ed93468fc86301d61e40"
+    },
+    {
+      "name": "nvidia-cudnn-cu12",
+      "version": "9.1.0.70",
+      "filename": "nvidia_cudnn_cu12-9.1.0.70-py3-none-manylinux2014_x86_64.whl",
+      "sha256": "165764f44ef8c61fcdfdfdbe769d687e06374059fbb388b6c89ecb0e28793a6f"
+    },
+    {
+      "name": "nvidia-cufft-cu12",
+      "version": "11.0.2.54",
+      "filename": "nvidia_cufft_cu12-11.0.2.54-py3-none-manylinux1_x86_64.whl",
+      "sha256": "794e3948a1aa71fd817c3775866943936774d1c14e7628c74f6f7417224cdf56"
+    },
+    {
+      "name": "nvidia-curand-cu12",
+      "version": "10.3.2.106",
+      "filename": "nvidia_curand_cu12-10.3.2.106-py3-none-manylinux1_x86_64.whl",
+      "sha256": "9d264c5036dde4e64f1de8c50ae753237c12e0b1348738169cd0f8a536c0e1e0"
+    },
+    {
+      "name": "nvidia-cusolver-cu12",
+      "version": "11.4.5.107",
+      "filename": "nvidia_cusolver_cu12-11.4.5.107-py3-none-manylinux1_x86_64.whl",
+      "sha256": "8a7ec542f0412294b15072fa7dab71d31334014a69f953004ea7a118206fe0dd"
+    },
+    {
+      "name": "nvidia-cusparse-cu12",
+      "version": "12.1.0.106",
+      "filename": "nvidia_cusparse_cu12-12.1.0.106-py3-none-manylinux1_x86_64.whl",
+      "sha256": "f3b50f42cf363f86ab21f720998517a659a48131e8d538dc02f8768237bd884c"
+    },
+    {
+      "name": "nvidia-nccl-cu12",
+      "version": "2.21.5",
+      "filename": "nvidia_nccl_cu12-2.21.5-py3-none-manylinux2014_x86_64.whl",
+      "sha256": "8579076d30a8c24988834445f8d633c697d42397e92ffc3f63fa26766d25e0a0"
+    },
+    {
+      "name": "nvidia-nvjitlink-cu12",
+      "version": "12.9.86",
+      "filename": "nvidia_nvjitlink_cu12-12.9.86-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "sha256": "e3f1171dbdc83c5932a45f0f4c99180a70de9bd2718c1ab77d14104f6d7147f9"
+    },
+    {
+      "name": "nvidia-nvtx-cu12",
+      "version": "12.1.105",
+      "filename": "nvidia_nvtx_cu12-12.1.105-py3-none-manylinux1_x86_64.whl",
+      "sha256": "dc21cf308ca5691e7c04d962e213f8a4aa9bbfa23d95412f452254c2caeb09e5"
+    },
+    {
+      "name": "packaging",
+      "version": "26.3",
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c"
+    },
+    {
+      "name": "peft",
+      "version": "0.19.1",
+      "filename": "peft-0.19.1-py3-none-any.whl",
+      "sha256": "2113f72a81621b5913ef28f9022204c742df111890c5f49d812716a4a301e356"
+    },
+    {
+      "name": "propcache",
+      "version": "0.3.1",
+      "filename": "propcache-0.3.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "f35c7070eeec2cdaac6fd3fe245226ed2a6292d3ee8c938e5bb645b434c5f256"
+    },
+    {
+      "name": "protobuf",
+      "version": "5.29.4",
+      "filename": "protobuf-5.29.4-cp38-abi3-manylinux2014_x86_64.whl",
+      "sha256": "d7d3f7d1d5a66ed4942d4fefb12ac4b14a29028b209d4bfb25c68ae172059922"
+    },
+    {
+      "name": "psutil",
+      "version": "7.2.2",
+      "filename": "psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9"
+    },
+    {
+      "name": "regex",
+      "version": "2026.11.15",
+      "filename": "regex-2026.11.15-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "aafeb64c8569d69edfbf772feba49d2a001d3dca0f43e6a71e3735587ecb8222"
+    },
+    {
+      "name": "requests",
+      "version": "2.34.2",
+      "filename": "requests-2.34.2-py3-none-any.whl",
+      "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0"
+    },
+    {
+      "name": "safetensors",
+      "version": "0.5.3",
+      "filename": "safetensors-0.5.3-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "cead1fa41fc54b1e61089fa57452e8834f798cb1dc7a09ba3524f1eb08e0317a"
+    },
+    {
+      "name": "sentencepiece",
+      "version": "0.2.0",
+      "filename": "sentencepiece-0.2.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "e58b47f933aca74c6a60a79dcb21d5b9e47416256c795c2d58d55cec27f9551d"
+    },
+    {
+      "name": "sympy",
+      "version": "1.13.1",
+      "filename": "sympy-1.13.1-py3-none-any.whl",
+      "sha256": "db36cdc64bf61b9b24578b6f7bab1ecdd2452cf008f34faa33776680c26d66f8"
+    },
+    {
+      "name": "tokenizers",
+      "version": "0.21.4",
+      "filename": "tokenizers-0.21.4-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "51b7eabb104f46c1c50b486520555715457ae833d5aee9ff6ae853d1130506ff"
+    },
+    {
+      "name": "torch",
+      "version": "2.5.1+cu121",
+      "filename": "torch-2.5.1+cu121-cp311-cp311-linux_x86_64.whl",
+      "sha256": "c8ab8c92eab928a93c483f83ca8c63f13dafc10fc93ad90ed2dcb7c82ea50410"
+    },
+    {
+      "name": "tqdm",
+      "version": "4.67.1",
+      "filename": "tqdm-4.67.1-py3-none-any.whl",
+      "sha256": "26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2"
+    },
+    {
+      "name": "transformers",
+      "version": "4.51.3",
+      "filename": "transformers-4.51.3-py3-none-any.whl",
+      "sha256": "fd3279633ceb2b777013234bbf0b4f5c2d23c4626b05497691f00cfda55e8a83"
+    },
+    {
+      "name": "triton",
+      "version": "3.1.0",
+      "filename": "triton-3.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "0f34f6e7885d1bf0eaaf7ba875a5f0ce6f3c13ba98f9503651c1e6dc6757ed5c"
+    },
+    {
+      "name": "typing-extensions",
+      "version": "4.16.0",
+      "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+    },
+    {
+      "name": "urllib3",
+      "version": "2.8.0",
+      "filename": "urllib3-2.8.0-py3-none-any.whl",
+      "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
+    },
+    {
+      "name": "yarl",
+      "version": "1.20.0",
+      "filename": "yarl-1.20.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "sha256": "0acfaf1da020253f3533526e8b7dd212838fdc4109959a2c53cafc6db611bff2"
+    }
+  ],
+  "installed_distributions": [
+    {
+      "name": "accelerate",
+      "version": "1.6.0"
+    },
+    {
+      "name": "aiohappyeyeballs",
+      "version": "2.6.1"
+    },
+    {
+      "name": "aiohttp",
+      "version": "3.12.7"
+    },
+    {
+      "name": "aiosignal",
+      "version": "1.3.2"
+    },
+    {
+      "name": "attrs",
+      "version": "25.3.0"
+    },
+    {
+      "name": "cbor2",
+      "version": "5.7.0"
+    },
+    {
+      "name": "certifi",
+      "version": "2026.10.23"
+    },
+    {
+      "name": "charset-normalizer",
+      "version": "3.5.2"
+    },
+    {
+      "name": "filelock",
+      "version": "4.2.11"
+    },
+    {
+      "name": "frozenlist",
+      "version": "1.6.0"
+    },
+    {
+      "name": "fsspec",
+      "version": "2026.9.0"
+    },
+    {
+      "name": "grpclib",
+      "version": "0.4.8"
+    },
+    {
+      "name": "h2",
+      "version": "4.2.0"
+    },
+    {
+      "name": "hpack",
+      "version": "4.1.0"
+    },
+    {
+      "name": "huggingface-hub",
+      "version": "0.30.2"
+    },
+    {
+      "name": "hyperframe",
+      "version": "6.1.0"
+    },
+    {
+      "name": "idna",
+      "version": "3.20"
+    },
+    {
+      "name": "Jinja2",
+      "version": "3.1.6"
+    },
+    {
+      "name": "MarkupSafe",
+      "version": "3.0.4"
+    },
+    {
+      "name": "mpmath",
+      "version": "1.3.0"
+    },
+    {
+      "name": "multidict",
+      "version": "6.4.4"
+    },
+    {
+      "name": "networkx",
+      "version": "3.6.1"
+    },
+    {
+      "name": "numpy",
+      "version": "2.1.3"
+    },
+    {
+      "name": "nvidia-cublas-cu12",
+      "version": "12.1.3.1"
+    },
+    {
+      "name": "nvidia-cuda-cupti-cu12",
+      "version": "12.1.105"
+    },
+    {
+      "name": "nvidia-cuda-nvrtc-cu12",
+      "version": "12.1.105"
+    },
+    {
+      "name": "nvidia-cuda-runtime-cu12",
+      "version": "12.1.105"
+    },
+    {
+      "name": "nvidia-cudnn-cu12",
+      "version": "9.1.0.70"
+    },
+    {
+      "name": "nvidia-cufft-cu12",
+      "version": "11.0.2.54"
+    },
+    {
+      "name": "nvidia-curand-cu12",
+      "version": "10.3.2.106"
+    },
+    {
+      "name": "nvidia-cusolver-cu12",
+      "version": "11.4.5.107"
+    },
+    {
+      "name": "nvidia-cusparse-cu12",
+      "version": "12.1.0.106"
+    },
+    {
+      "name": "nvidia-nccl-cu12",
+      "version": "2.21.5"
+    },
+    {
+      "name": "nvidia-nvjitlink-cu12",
+      "version": "12.9.86"
+    },
+    {
+      "name": "nvidia-nvtx-cu12",
+      "version": "12.1.105"
+    },
+    {
+      "name": "packaging",
+      "version": "26.3"
+    },
+    {
+      "name": "peft",
+      "version": "0.19.1"
+    },
+    {
+      "name": "propcache",
+      "version": "0.3.1"
+    },
+    {
+      "name": "protobuf",
+      "version": "5.29.4"
+    },
+    {
+      "name": "psutil",
+      "version": "7.2.2"
+    },
+    {
+      "name": "PyYAML",
+      "version": "6.0.2"
+    },
+    {
+      "name": "regex",
+      "version": "2026.11.15"
+    },
+    {
+      "name": "requests",
+      "version": "2.34.2"
+    },
+    {
+      "name": "safetensors",
+      "version": "0.5.3"
+    },
+    {
+      "name": "sentencepiece",
+      "version": "0.2.0"
+    },
+    {
+      "name": "sympy",
+      "version": "1.13.1"
+    },
+    {
+      "name": "tokenizers",
+      "version": "0.21.4"
+    },
+    {
+      "name": "torch",
+      "version": "2.5.1+cu121"
+    },
+    {
+      "name": "tqdm",
+      "version": "4.67.1"
+    },
+    {
+      "name": "transformers",
+      "version": "4.51.3"
+    },
+    {
+      "name": "triton",
+      "version": "3.1.0"
+    },
+    {
+      "name": "typing_extensions",
+      "version": "4.16.0"
+    },
+    {
+      "name": "urllib3",
+      "version": "2.8.0"
+    },
+    {
+      "name": "yarl",
+      "version": "1.20.0"
+    }
+  ],
+  "pip_freeze_sha256": "39abfea8b2b33c915dd7454d38d4bfaf1884650a4bc24f1761e02962d9d20e16",
+  "pip_freeze_text": "accelerate==1.6.0\naiohappyeyeballs==2.6.1\naiohttp==3.12.7\naiosignal==1.3.2\nattrs==25.3.0\ncbor2==5.7.0\ncertifi==2026.10.23\ncharset-normalizer==3.5.2\nfilelock==4.2.11\nfrozenlist==1.6.0\nfsspec==2026.9.0\ngrpclib==0.4.8\nh2==4.2.0\nhpack==4.1.0\nhuggingface-hub==0.30.2\nhyperframe==6.1.0\nidna==3.20\nJinja2==3.1.6\nMarkupSafe==3.0.4\nmpmath==1.3.0\nmultidict==6.4.4\nnetworkx==3.6.1\nnumpy==2.1.3\nnvidia-cublas-cu12==12.1.3.1\nnvidia-cuda-cupti-cu12==12.1.105\nnvidia-cuda-nvrtc-cu12==12.1.105\nnvidia-cuda-runtime-cu12==12.1.105\nnvidia-cudnn-cu12==9.1.0.70\nnvidia-cufft-cu12==11.0.2.54\nnvidia-curand-cu12==10.3.2.106\nnvidia-cusolver-cu12==11.4.5.107\nnvidia-cusparse-cu12==12.1.0.106\nnvidia-nccl-cu12==2.21.5\nnvidia-nvjitlink-cu12==12.9.86\nnvidia-nvtx-cu12==12.1.105\npackaging==26.3\npeft==0.19.1\npropcache==0.3.1\nprotobuf==5.29.4\npsutil==7.2.2\nPyYAML==6.0.2\nregex==2026.11.15\nrequests==2.34.2\nsafetensors==0.5.3\nsentencepiece==0.2.0\nsympy==1.13.1\ntokenizers==0.21.4\ntorch==2.5.1+cu121\ntqdm==4.67.1\ntransformers==4.51.3\ntriton==3.1.0\ntyping_extensions==4.16.0\nurllib3==2.8.0\nyarl==1.20.0\n",
+  "source": "built_image",
+  "production_image_lock": true,
+  "intended_image": {
+    "image_tag": "modal://traces-q1-stage-b-runtime-lock/scientific-runtime-py31115-cu121",
+    "image_digest": "im-0j3j9DzkkZSLdRQTxl4scU",
+    "python_version": "3.11.15",
+    "cuda_version": "12.1",
+    "base_registry_tag": "python:3.11.15-slim-bookworm",
+    "base_image_digest": "sha256:77923445c077d8eb971b14b2b114a1d9cd4a87edb4c75654820ca4832ee8cb15",
+    "gpu_type": "A10G",
+    "gpu_device_name": "NVIDIA A10",
+    "torch_version": "2.5.1+cu121",
+    "torch_cuda_available": false,
+    "modal_app": "traces-q1-stage-b-runtime-lock",
+    "volume": "traces-q1-stage-b-runtime-lock",
+    "reused_existing_image": true,
+    "correction_evidence_dir": "/mnt/stage_b/evidence/2026-11-17T154705Z"
+  },
+  "notes": [
+    "Stage B owner-approved correction: reuse image + close 54/54 wheels",
+    "scientific_image_id=im-0j3j9DzkkZSLdRQTxl4scU",
+    "correction_evidence=/mnt/stage_b/evidence/2026-11-17T154705Z",
+    "no model loads / no checkpoint downloads / no new image rebuild",
+    "pip_freeze_packages_parsed=54",
+    "direct_pins_file=TRACES_Q1_execution_direct_pins_v1_2.txt",
+    "direct_pins_expected_sha256=4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048"
+  ]
+}

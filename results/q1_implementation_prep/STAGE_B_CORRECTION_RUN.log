@@ -1,0 +1,13 @@
+=== Stage B correction: Modal reuse capture ===
+=== Local validate + claim with remediated runtime_lock ===
+{
+  "verdict": "BLOCK",
+  "claim": null,
+  "validate_ok": null,
+  "covered_count": null,
+  "n_wheels": null,
+  "lock_path": null,
+  "lock_sha256": null,
+  "new_wheels": null,
+  "failures": null
+}
