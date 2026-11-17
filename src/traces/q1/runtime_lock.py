@@ -51,6 +51,7 @@ class RuntimeLockDocument:
     # freeze, not merely downloadable wheels or direct requirements.
     installed_distributions: list[dict[str, str]] = field(default_factory=list)
     pip_freeze_sha256: str = ""
+    pip_freeze_text: str = ""
     source: str = "synthetic_fixture"  # or "built_image"
     production_image_lock: bool = False
     intended_image: dict[str, Any] = field(default_factory=dict)
@@ -171,6 +172,7 @@ def generate_lock_from_wheel_dir(
             hashlib.sha256(pip_freeze_text.encode("utf-8")).hexdigest()
             if pip_freeze_text is not None else ""
         ),
+        pip_freeze_text=pip_freeze_text or "",
         source=source,
         production_image_lock=production_image_lock,
         intended_image=dict(intended_image or {}),
@@ -271,6 +273,18 @@ def _complete_installed_wheel_inventory(doc: Mapping[str, Any]) -> bool:
     installed = doc.get("installed_distributions")
     wheels = doc.get("wheels")
     freeze_sha = doc.get("pip_freeze_sha256")
+    freeze_text = doc.get("pip_freeze_text")
+    if not isinstance(freeze_text, str) or not freeze_text:
+        return False
+    if hashlib.sha256(freeze_text.encode("utf-8")).hexdigest() != freeze_sha:
+        return False
+    parsed_freeze = parse_pip_freeze_lines(freeze_text)
+    active_lines = [
+        line for line in freeze_text.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    if len(parsed_freeze) != len(active_lines):
+        return False
     if (not isinstance(installed, list) or not installed
             or not isinstance(wheels, list) or not wheels):
         return False
@@ -315,6 +329,14 @@ def _complete_installed_wheel_inventory(doc: Mapping[str, Any]) -> bool:
             return False
         by_wheel[norm] = version
 
+    parsed_installed: dict[str, str] = {}
+    for name, version in parsed_freeze:
+        norm = _normalize_pkg_name(name)
+        if norm in parsed_installed:
+            return False
+        parsed_installed[norm] = version
+    if parsed_installed != by_installed:
+        return False
     if set(by_installed) != set(by_wheel):
         return False
     return all(
