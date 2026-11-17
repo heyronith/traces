@@ -220,6 +220,11 @@ def validate_lock_document(
     wheels = doc.get("wheels") or []
     if not wheels:
         failures.append("no wheels recorded")
+    if require_production and not _complete_installed_wheel_inventory(doc):
+        failures.append(
+            "production lock missing complete installed-distribution / "
+            "hashed-wheel coverage or pip-freeze binding"
+        )
 
     if wheel_dir is not None:
         wdir = Path(wheel_dir)
@@ -237,6 +242,8 @@ def validate_lock_document(
         extras = [p.name for p in wdir.glob("*.whl") if p.name not in by_name]
     else:
         extras = []
+    if require_production and extras:
+        failures.append(f"unexpected extra wheels in production evidence: {extras}")
 
     return {
         "ok": len(failures) == 0,
