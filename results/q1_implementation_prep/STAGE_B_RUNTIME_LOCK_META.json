@@ -1,0 +1,95 @@
+{
+  "a10g_probe_ok": true,
+  "artifacts": [
+    "STAGE_B_RUNTIME_IMAGE_LOCK_EVIDENCE.json",
+    "TRACES_Q1_RUNTIME_LOCK_BUILT_IMAGE.json",
+    "STAGE_B_WHEEL_INDEX.json",
+    "STAGE_B_PIP_FREEZE.txt",
+    "STAGE_B_MODAL_BUILD_RUN.log",
+    "STAGE_B_MODAL_BILLING_TODAY_SNAPSHOT.json"
+  ],
+  "baseline": "6b07d952f47d031f9ab673c7b97c0da012913854",
+  "blocker": "claim_production_lock_exists=False because wheel version for torch is '2.5.1+cu121' while direct pin requires exact string '2.5.1'. validate_lock_document ok=true (41 wheels rehashed). A10G identity probe succeeded (NVIDIA A10, driver 610.57.04, cuda 12.1).",
+  "claim_production_lock_exists": false,
+  "cost": {
+    "billing_rows": [
+      {
+        "cost": "0.00001803",
+        "description": "traces-q1-stage-b-runtime-lock",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-BrhD2KM0OrRYcBWM3VKhEl",
+        "resource": "Network Egress"
+      },
+      {
+        "cost": "0.00005333",
+        "description": "traces-q1-stage-b-runtime-lock",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-BrhD2KM0OrRYcBWM3VKhEl",
+        "resource": "Memory"
+      },
+      {
+        "cost": "0.00156643",
+        "description": "traces-q1-stage-b-runtime-lock",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-BrhD2KM0OrRYcBWM3VKhEl",
+        "resource": "CPU"
+      },
+      {
+        "cost": "0.00038766",
+        "description": "traces-q1-stage-b-runtime-lock",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-IEmFObFR4YAPyhqM4KZOhs",
+        "resource": "Network Egress"
+      },
+      {
+        "cost": "0.00122115",
+        "description": "traces-q1-stage-b-runtime-lock",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-IEmFObFR4YAPyhqM4KZOhs",
+        "resource": "Memory"
+      },
+      {
+        "cost": "0.00494123",
+        "description": "traces-q1-stage-b-runtime-lock",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-IEmFObFR4YAPyhqM4KZOhs",
+        "resource": "CPU"
+      }
+    ],
+    "metered_usd_stage_b_apps": 0.00818783,
+    "note": "GPU metered lines may lag; A10G probe completed successfully in evidence",
+    "stage_b_cap_usd": 5.0,
+    "workspace_billed_usd": 0.0
+  },
+  "document_type": "q1_stage_b_runtime_image_lock_status",
+  "image": {
+    "base_image_digest": "sha256:77923445c077d8eb971b14b2b114a1d9cd4a87edb4c75654820ca4832ee8cb15",
+    "base_registry_tag": "python:3.11.15-slim-bookworm",
+    "modal_image_object_id": "im-0j3j9DzkkZSLdRQTxl4scU",
+    "n_wheels": 41,
+    "python_version": "3.11.15"
+  },
+  "modal_runs": [
+    {
+      "app_id": "ap-BrhD2KM0OrRYcBWM3VKhEl",
+      "note": "failed image layer order attempt"
+    },
+    {
+      "app_id": "ap-IEmFObFR4YAPyhqM4KZOhs",
+      "note": "successful build + lock capture + A10G probe",
+      "url": "https://modal.com/apps/heyronith/main/ap-IEmFObFR4YAPyhqM4KZOhs"
+    }
+  ],
+  "next": "Do not claim production runtime lock PASS. Optional targeted fix: accept PEP440 local versions (2.5.1+cu121) as satisfying pin 2.5.1, then re-run claim against Volume wheels only. Stage C still requires separate owner scientific/GPU authorization.",
+  "scientific_authorization": "OFF",
+  "timestamp_utc": "2026-11-17T15:22:11Z",
+  "validate_lock_document_ok": true,
+  "verdict": "BLOCK_INCOMPLETE",
+  "volume_wheels": "traces-q1-stage-b-runtime-lock:/mnt/stage_b/evidence/2026-11-17T152022Z"
+}

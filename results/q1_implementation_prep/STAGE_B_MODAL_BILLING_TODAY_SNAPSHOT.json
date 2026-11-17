@@ -1,0 +1,50 @@
+[
+  {
+    "object_id": "ap-BrhD2KM0OrRYcBWM3VKhEl",
+    "description": "traces-q1-stage-b-runtime-lock",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "Network Egress",
+    "cost": "0.00001803"
+  },
+  {
+    "object_id": "ap-BrhD2KM0OrRYcBWM3VKhEl",
+    "description": "traces-q1-stage-b-runtime-lock",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "Memory",
+    "cost": "0.00005333"
+  },
+  {
+    "object_id": "ap-BrhD2KM0OrRYcBWM3VKhEl",
+    "description": "traces-q1-stage-b-runtime-lock",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "CPU",
+    "cost": "0.00156643"
+  },
+  {
+    "object_id": "ap-IEmFObFR4YAPyhqM4KZOhs",
+    "description": "traces-q1-stage-b-runtime-lock",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "Network Egress",
+    "cost": "0.00038766"
+  },
+  {
+    "object_id": "ap-IEmFObFR4YAPyhqM4KZOhs",
+    "description": "traces-q1-stage-b-runtime-lock",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "Memory",
+    "cost": "0.00122115"
+  },
+  {
+    "object_id": "ap-IEmFObFR4YAPyhqM4KZOhs",
+    "description": "traces-q1-stage-b-runtime-lock",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "CPU",
+    "cost": "0.00494123"
+  }
+]
