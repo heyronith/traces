@@ -28,11 +28,13 @@ from traces.q1.runtime_spec import DIRECT_PINS_FILE, DIRECT_PINS_SHA256, verify_
 
 LOCK_SCHEMA_VERSION = "1.0"
 
-# Separate owner-controlled production identity pin. Intentionally unset until
-# the research owner explicitly freezes the independently reviewed *raw bytes*
-# of TRACES_Q1_RUNTIME_LOCK_BUILT_IMAGE_CORRECTED.json. Never derive this from
-# a caller-provided file, in-image artifact, environment, or running script.
-PINNED_RUNTIME_LOCK_SHA256: str | None = None
+# Owner-frozen production runtime lock raw-byte identity (2026-11-17).
+# Explicit research-owner approval in chat after targeted identity-fix testing.
+# Changing this digest requires renewed independent review and owner approval.
+# Never derive the expected hash from a caller, environment, or runtime lock.
+PINNED_RUNTIME_LOCK_SHA256: str | None = (
+    "f44cd2095d6a666fd33481f5f25636fed677914a5a8ebcb92f463bcd0a716a72"
+)
 
 
 @dataclass
