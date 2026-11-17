@@ -1,0 +1,26 @@
+[
+  {
+    "object_id": "ap-kFkQ64sF5s5mmPCTVRChYl",
+    "description": "traces-q1-b3-readonly-independent-audit",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "CPU",
+    "cost": "0.00100841"
+  },
+  {
+    "object_id": "ap-kFkQ64sF5s5mmPCTVRChYl",
+    "description": "traces-q1-b3-readonly-independent-audit",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "Network Egress",
+    "cost": "0.00000109"
+  },
+  {
+    "object_id": "ap-kFkQ64sF5s5mmPCTVRChYl",
+    "description": "traces-q1-b3-readonly-independent-audit",
+    "environment": "main",
+    "interval_start": "2026-11-17T00:00:00",
+    "resource": "Memory",
+    "cost": "0.00067722"
+  }
+]

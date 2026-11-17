@@ -1,0 +1,102 @@
+{
+  "baseline_before_run": "7536fdaf2780dc7902b884b61da4f5901a54e80d",
+  "cost": {
+    "notes": [
+      "Metered lines are from `modal billing report --for today --show-resources --json` for ap-kFkQ64sF5s5mmPCTVRChYl",
+      "Workspace billed cost remains $0.00 after free storage/credits per `modal billing summary`",
+      "Prior downloader job also reported billed $0.00; cumulative billed still within $10 cap"
+    ],
+    "owner_cap_usd_cumulative": 10.0,
+    "preflight_safety_bound_usd": 0.2379,
+    "this_job_modal_metered_usd": 0.00168672,
+    "this_job_resources": [
+      {
+        "cost": "0.00100841",
+        "description": "traces-q1-b3-readonly-independent-audit",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-kFkQ64sF5s5mmPCTVRChYl",
+        "resource": "CPU"
+      },
+      {
+        "cost": "0.00000109",
+        "description": "traces-q1-b3-readonly-independent-audit",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-kFkQ64sF5s5mmPCTVRChYl",
+        "resource": "Network Egress"
+      },
+      {
+        "cost": "0.00067722",
+        "description": "traces-q1-b3-readonly-independent-audit",
+        "environment": "main",
+        "interval_start": "2026-11-17T00:00:00",
+        "object_id": "ap-kFkQ64sF5s5mmPCTVRChYl",
+        "resource": "Memory"
+      }
+    ],
+    "workspace_billed_cost_usd_after_job_summary": 0.0
+  },
+  "cursor_limitation": "Cursor acted as delegated Modal runner only. This is not direct Agent 1 Modal access and must not be treated as an independent Agent 1 PASS by itself.",
+  "document_type": "delegated_readonly_modal_execution_evidence",
+  "independent_pass_claimed": false,
+  "modal": {
+    "app_id": "ap-kFkQ64sF5s5mmPCTVRChYl",
+    "app_name": "traces-q1-b3-readonly-independent-audit",
+    "cpu_cores": 2.0,
+    "download": false,
+    "gpu": null,
+    "max_containers": 1,
+    "memory_gib": 8.0,
+    "run_url": "https://modal.com/apps/heyronith/main/ap-kFkQ64sF5s5mmPCTVRChYl",
+    "timeout_sec": 2700,
+    "volume": "traces-q1-b3-checkpoint-bytes",
+    "volume_read_only": true
+  },
+  "production_pin": null,
+  "published_artifacts": [
+    "results/q1_implementation_prep/B3_INDEPENDENT_VOLUME_READONLY_AUDIT.json",
+    "results/q1_implementation_prep/B3_INDEPENDENT_VOLUME_READONLY_AUDIT_MODAL_RUN.log",
+    "results/q1_implementation_prep/B3_MODAL_BILLING_TODAY_SNAPSHOT.json",
+    "results/q1_implementation_prep/B3_DELEGATED_READONLY_MODAL_EXECUTION_STATUS.md"
+  ],
+  "runner_code_commit_at_execution": "7536fdaf2780dc7902b884b61da4f5901a54e80d",
+  "runner_code_tree_at_execution": "f961f749959ee39bfdf7802c7804ec5209232a6d",
+  "scientific_authorization": "OFF",
+  "sha_gate": {
+    "approved_verifier_sha256": "83eb9656700adc82be96beff289612f5aba05e43fe23a3c5c0aac6b4ffb50afa",
+    "gate_match": true,
+    "local_verifier_sha256_at_run": "83eb9656700adc82be96beff289612f5aba05e43fe23a3c5c0aac6b4ffb50afa",
+    "runner_script_sha256": "9da1c5c7f8387945e34b31e514ad0aa13daaa8c69965d7f8c7af3ec5f55af5f7"
+  },
+  "status": "STOP_FOR_AGENT1_FINAL_VERDICT",
+  "timestamp_utc": "2026-11-17T00:09:10Z",
+  "verifier_report_summary": {
+    "adapter_weights_pairwise_distinct": true,
+    "candidate_manifest_matches_expected": true,
+    "candidate_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+    "extra_hidden_reported": null,
+    "failures": [],
+    "finished_utc": "2026-11-17T00:07:27Z",
+    "n_files_hashed": 65,
+    "note_extra_hidden": "Verifier report contains no warnings.extra_hidden key; symlink_checks.*.extras are empty lists.",
+    "ok": true,
+    "operational_failures": [],
+    "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.36",
+    "python": "3.11.12",
+    "report_body_sha256": "651e39366c093646deb6527a7c95a98978f49175910a3c51f6bef93cc61052e6",
+    "section11_all_match": true,
+    "source_binding_complete": true,
+    "started_utc": "2026-11-17T00:06:22Z",
+    "symlink_extras_adapters": [],
+    "symlink_extras_base": [],
+    "verdict": "PASS",
+    "verdict_scope": "verifier-level only; Agent 1 issues the audit verdict",
+    "warnings": [
+      {
+        "check": "mount",
+        "detail": "statvfs does not report ST_RDONLY (runner attests read_only)"
+      }
+    ]
+  }
+}
