@@ -257,6 +257,46 @@ def deactivate_stage_c_scientific_flag() -> None:
     os.environ.pop(SCI_AUTH_ENV, None)
 
 
+def select_stage_c_joint_recipient(
+    pair: Mapping[str, Any], direction: str
+) -> dict[str, Any]:
+    """Bind the *actual* recipient tokens, mask, tag and expected IDs together.
+
+    Forward patches use T as recipient with clean C donors; reverse patches
+    use C as recipient with trigger T donors. A tag-only change is unsafe:
+    the live token IDs and full-sequence proof must also switch to C.
+    This selector performs no model forwards and never accesses held-out data.
+    """
+    if direction not in ("forward", "reverse"):
+        raise ValueError(f"unsupported Stage C joint direction: {direction!r}")
+    tag = "T" if direction == "forward" else "C"
+    ids_key = f"input_ids_{tag}"
+    mask_key = f"attention_mask_{tag}"
+    if ids_key not in pair or mask_key not in pair:
+        raise ValueError(f"missing {tag} recipient tokens or attention mask")
+    ids = pair[ids_key]
+    mask = pair[mask_key]
+    if ids is None or mask is None:
+        raise ValueError(f"null {tag} recipient tokens or attention mask")
+    try:
+        # Q1 prompt batches are shape [1, N]. Use exactly those real
+        # recipient bytes as the expected-full-IDs verifier input.
+        if tuple(ids.shape) != tuple(mask.shape) or len(ids.shape) != 2 or ids.shape[0] != 1:
+            raise ValueError("joint recipient must be an unpadded batch-one pair")
+        full_ids = ids[0].detach().cpu().tolist()
+        if not isinstance(full_ids, list) or not full_ids:
+            raise ValueError("joint recipient full token IDs empty")
+    except (AttributeError, IndexError, TypeError) as exc:
+        raise ValueError("joint recipient tokens invalid") from exc
+    return {
+        "recipient_tag": tag,
+        "recipient_input_ids": ids,
+        "recipient_attention_mask": mask,
+        "expected_full_ids": full_ids,
+        "direction": direction,
+    }
+
+
 def all_upstream_heads() -> tuple[HeadRef, ...]:
     return tuple(
         HeadRef(L, h)
