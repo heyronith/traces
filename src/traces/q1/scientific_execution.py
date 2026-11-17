@@ -33,7 +33,12 @@ from traces.q1.frozen_artifacts import (
 )
 from traces.q1.patching import NOMINATED_PAIR
 from traces.model_loader import PINNED_ADAPTER_REVISION, PINNED_BASE_REVISION
-from traces.q1.runtime_lock import claim_production_lock_exists, load_lock_document
+from traces.q1.runtime_lock import (
+    claim_production_lock_exists,
+    load_lock_document,
+    running_modal_image_matches_lock,
+    verify_installed_runtime_environment,
+)
 from traces.q1.runtime_spec import (
     DEFAULT_BATCHING,
     DEFAULT_DETERMINISM,
@@ -452,16 +457,32 @@ def run_scientific_preflight(
         and Path(production_wheel_dir).is_dir()
     ):
         doc = load_lock_document(production_lock_path)
-        # Production policy: always rehash wheels; never trust flags alone
-        lock_ok = claim_production_lock_exists(
+        # A caller-provided lock path cannot authorize arbitrary image bytes:
+        # require the owner-pinned *raw lock file* and the runtime's real
+        # MODAL_IMAGE_ID matching the image named in those immutable bytes.
+        pins_path = root / "TRACES_Q1_execution_direct_pins_v1_2.txt"
+        lock_claim = claim_production_lock_exists(
             doc,
             wheel_dir=production_wheel_dir,
             require_rehash=True,
-            pins_file=root / "TRACES_Q1_execution_direct_pins_v1_2.txt",
+            pins_file=pins_path,
+            lock_path=production_lock_path,
         )
+        image_matches = running_modal_image_matches_lock(doc) if lock_claim else False
+        env_check = (
+            verify_installed_runtime_environment(
+                pins_file=pins_path,
+                intended_image=doc.get("intended_image"),
+            )
+            if lock_claim and image_matches else None
+        )
+        lock_ok = bool(lock_claim and image_matches and env_check and env_check["ok"])
         checks["production_lock"] = {
             "path": str(production_lock_path),
             "wheel_dir": str(production_wheel_dir),
+            "owner_pinned_lock_claim": lock_claim,
+            "running_modal_image_matches": image_matches,
+            "runtime_environment": env_check,
             "claim": lock_ok,
         }
     else:
