@@ -1,0 +1,57 @@
+{
+  "document_type": "q1_stage_a_cpu_preflight_evidence",
+  "status": "STAGE_A_PASS_STOP_FOR_OWNER_STAGE_B_APPROVAL",
+  "scientific_authorization": "OFF",
+  "commit": "396ef3dd192308d263e1c684216c3061bdb4deb3",
+  "tree": "835a323bce68c63eea986957953cc9a8ce41a1d4",
+  "frozen_main": "b1e8874f45311678e6fa241f504e7e09d4a7808c",
+  "interpreter": {
+    "path": "results/q1_final_cpu_checks/.venv_tf4513/bin/python",
+    "cpython": "3.11.15",
+    "torch": "2.5.1",
+    "transformers": "4.51.3",
+    "numpy": "2.1.3",
+    "peft": "0.19.1",
+    "cuda_available": false
+  },
+  "direct_pins_sha256": "4a90dd7133719a751400c456db615e726a245d9a34073b7fb64243bf2a212048",
+  "direct_pins_match": true,
+  "checkpoint": {
+    "owner_pin": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+    "canonical_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+    "git_blob_sha1": "7887be2f8d584dd603b871a8151b1e4d9df947db",
+    "production_unlocked_identity_only": true
+  },
+  "f1_full_set_stream_sha256": "fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed",
+  "pytest": {
+    "passed": 103,
+    "failed": 0,
+    "exit_code": 0,
+    "hf_hub_offline": true,
+    "tiny_gemma_forward_env": null,
+    "scientific_execution_env": null
+  },
+  "runtime_lock_preparation": {
+    "out_dir": "results/q1_implementation_prep/stage_a_runtime_lock_prep_20261116",
+    "production_image_lock_exists": false,
+    "workload_scientific_tf": 824400,
+    "workload_ok": true
+  },
+  "stage_b_build_only_proposal": {
+    "hard_cap_usd": 5.0,
+    "expected_metered_usd": [0.5, 2.0],
+    "cpu_cores": 4,
+    "memory_gib": 16,
+    "timeout_sec": 2700,
+    "optional_a10g_probe_timeout_sec": 600,
+    "gpu_science_forbidden": true,
+    "checkpoint_redownload_forbidden": true,
+    "requires_owner_chat_approval": true
+  },
+  "remaining_blockers": [
+    "Stage_B_production_built_image_runtime_lock",
+    "Stage_C_real_Gemma_exploratory_calibration_unauthorized",
+    "Stage_D_main_experiment_unauthorized",
+    "scientific_execution_OFF"
+  ]
+}

@@ -1,0 +1,7 @@
+........................................................................ [ 69%]
+...............................                                          [100%]
+# Stage A consolidated CPU preflight
+# Interpreter: results/q1_final_cpu_checks/.venv_tf4513/bin/python (CPython 3.11.15)
+# HF_HUB_OFFLINE=1; scientific/tiny-gemma auth envs unset; no CUDA
+# Result: 103 passed, 0 failed, exit 0
+

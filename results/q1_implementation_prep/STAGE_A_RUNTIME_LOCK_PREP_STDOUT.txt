@@ -1,0 +1,9 @@
+{
+  "out_dir": "results/q1_implementation_prep/stage_a_runtime_lock_prep_20261116",
+  "pins_match": true,
+  "workload_ok": true,
+  "production_image_lock_exists": false,
+  "synthetic_fixture_lock": {
+    "generated": false
+  }
+}
