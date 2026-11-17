@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import platform
+import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -543,12 +544,100 @@ def claim_production_lock_exists(
     return True
 
 
+def verify_running_locked_inventory(doc: Mapping[str, Any]) -> dict[str, Any]:
+    """CPU-only execution-time binding to the pinned image's *full* freeze.
+
+    The pinned lock and image ID alone do not establish that a running process
+    has retained the exact 54 (or future N) installed distributions and CUDA
+    torch build. Derive versions from the running interpreter's pip and torch,
+    never from caller-supplied version maps. No model loads or tensor forwards.
+    """
+    failures: list[str] = []
+    expected = doc.get("installed_distributions")
+    meta = doc.get("intended_image")
+    if not isinstance(expected, list) or not expected or not isinstance(meta, Mapping):
+        return {"ok": False, "failures": ["locked installed inventory/image metadata missing"]}
+
+    expected_by_name: dict[str, str] = {}
+    for item in expected:
+        if not isinstance(item, Mapping):
+            return {"ok": False, "failures": ["invalid locked distribution record"]}
+        name, version = item.get("name"), item.get("version")
+        if not isinstance(name, str) or not name or not isinstance(version, str) or not version:
+            return {"ok": False, "failures": ["invalid locked distribution name/version"]}
+        normalized = _normalize_pkg_name(name)
+        if normalized in expected_by_name:
+            return {"ok": False, "failures": ["duplicate locked distribution name"]}
+        expected_by_name[normalized] = version
+
+    observed_by_name: dict[str, str] = {}
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-m", "pip", "freeze"],
+            capture_output=True, text=True, check=False, timeout=60,
+        )
+        if completed.returncode != 0:
+            failures.append("runtime pip freeze failed")
+        else:
+            freeze = completed.stdout
+            parsed = parse_pip_freeze_lines(freeze)
+            active_lines = [
+                line for line in freeze.splitlines()
+                if line.strip() and not line.lstrip().startswith("#")
+            ]
+            if len(active_lines) != len(parsed):
+                failures.append("runtime pip freeze contains unrecognized entries")
+            for name, version in parsed:
+                normalized = _normalize_pkg_name(name)
+                if normalized in observed_by_name:
+                    failures.append(f"duplicate runtime package {normalized}")
+                observed_by_name[normalized] = version
+            missing = sorted(set(expected_by_name) - set(observed_by_name))
+            unexpected = sorted(set(observed_by_name) - set(expected_by_name))
+            mismatched = sorted(
+                name for name in set(expected_by_name) & set(observed_by_name)
+                if observed_by_name[name] != expected_by_name[name]
+            )
+            if missing:
+                failures.append(f"missing locked runtime packages: {missing}")
+            if unexpected:
+                failures.append(f"unexpected runtime packages: {unexpected}")
+            if mismatched:
+                failures.append(f"locked runtime version mismatches: {mismatched}")
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        failures.append(f"unable to inspect runtime package freeze: {type(exc).__name__}")
+
+    observed_torch = None
+    observed_cuda = None
+    try:
+        import torch
+
+        observed_torch = str(torch.__version__)
+        observed_cuda = getattr(torch.version, "cuda", None)
+    except Exception as exc:  # noqa: BLE001
+        failures.append(f"unable to inspect installed torch CUDA build: {type(exc).__name__}")
+    if observed_torch != meta.get("torch_version"):
+        failures.append("runtime torch version is not identical to owner-pinned lock")
+    if observed_cuda != meta.get("cuda_version"):
+        failures.append("runtime torch.version.cuda does not match owner-pinned lock")
+
+    return {
+        "ok": not failures,
+        "failures": failures,
+        "locked_distributions": len(expected_by_name),
+        "observed_distributions": len(observed_by_name),
+        "runtime_torch_version": observed_torch,
+        "runtime_torch_cuda": observed_cuda,
+    }
+
+
 def verify_installed_runtime_environment(
     *,
     pins_file: Path | str,
     installed: Mapping[str, str] | None = None,
     require_python: str = "3.11.15",
     intended_image: Mapping[str, Any] | None = None,
+    locked_doc: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """M4: verify executable runtime + exact pinned direct versions.
 
@@ -615,14 +704,23 @@ def verify_installed_runtime_environment(
             and intended_image.get("python_version") == require_python
         )
 
+    direct_pins_exact = len(failures) == 0
+    locked_runtime = (
+        verify_running_locked_inventory(locked_doc)
+        if locked_doc is not None else None
+    )
+    if locked_runtime is not None and not locked_runtime["ok"]:
+        failures.extend(locked_runtime["failures"])
+
     return {
         "ok": len(failures) == 0 and image_ok,
         "failures": failures,
         "production_claim": False,  # never claim without built-image lock + rehash
         "executable": str(exe),
         "python_version": py,
-        "direct_pins_exact": len(failures) == 0,
+        "direct_pins_exact": direct_pins_exact,
         "intended_image_present": image_ok,
+        "locked_runtime": locked_runtime,
         "notes": image_notes
         + [
             "Production verification requires actual built image + wheel rehash; "
