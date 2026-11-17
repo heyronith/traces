@@ -91,7 +91,8 @@ def _claim(doc: dict, path: Path, wheels: Path) -> bool:
 
 def test_stage_b_owner_pin_defaults_unset_and_fails_closed(tmp_path, monkeypatch):
     doc, path, wheels = _fake_lock_with_real_small_wheels(tmp_path)
-    assert runtime_lock.PINNED_RUNTIME_LOCK_SHA256 is None
+    # Simulate the owner pin being unset, even after a later owner freeze.
+    monkeypatch.setattr(runtime_lock, "PINNED_RUNTIME_LOCK_SHA256", None)
     assert not _claim(doc, path, wheels)
     assert not runtime_lock.runtime_lock_matches_owner_pin(doc, lock_path=path)
     monkeypatch.setattr(runtime_lock, "PINNED_RUNTIME_LOCK_SHA256", "0" * 64)
@@ -178,7 +179,8 @@ def test_stage_b_internally_consistent_other_cuda_lock_rejected(tmp_path, monkey
 def test_stage_b_real_candidate_file_sha_is_the_reviewed_owner_choice():
     # Integrity of the candidate only. This does NOT set the owner pin.
     assert hashlib.sha256(REVIEWED_LOCK.read_bytes()).hexdigest() == REVIEWED_SHA
-    assert runtime_lock.PINNED_RUNTIME_LOCK_SHA256 is None
+    if runtime_lock.PINNED_RUNTIME_LOCK_SHA256 is not None:
+        assert runtime_lock.PINNED_RUNTIME_LOCK_SHA256 == REVIEWED_SHA
 
 
 def test_stage_b_running_image_requires_matching_modal_environment(monkeypatch):
@@ -190,3 +192,49 @@ def test_stage_b_running_image_requires_matching_modal_environment(monkeypatch):
     monkeypatch.setenv("MODAL_IMAGE_ID", "im-reviewed-owner-image")
     assert runtime_lock.running_modal_image_matches_lock(doc)
     assert not runtime_lock.running_modal_image_matches_lock({})
+
+
+def test_stage_b_scientific_preflight_checks_actual_running_modal_image(
+    monkeypatch, tmp_path
+):
+    """A good parsed lock claim alone cannot bypass the live executor image check."""
+    from traces.q1 import scientific_execution
+
+    # Isolate the image-identity gate from wheel downloads/rehashing: its
+    # upstream owner-pinned lock claim is deliberately simulated as passing.
+    monkeypatch.setattr(
+        scientific_execution, "claim_production_lock_exists",
+        lambda *_a, **_k: True,
+    )
+    wheel_dir = tmp_path / "some_wheels"
+    wheel_dir.mkdir()
+    monkeypatch.setenv("MODAL_IMAGE_ID", "im-unrelated-image")
+    negative = scientific_execution.run_scientific_preflight(
+        REPO,
+        production_lock_path=REVIEWED_LOCK,
+        production_wheel_dir=wheel_dir,
+        require_sci_auth=False,
+        expected_weight_manifest={"base:config.json": "0" * 64},
+    )
+    assert negative.checks["production_lock"]["owner_pinned_lock_claim"] is True
+    assert negative.checks["production_lock"]["running_modal_image_matches"] is False
+    assert negative.checks["production_lock"]["claim"] is False
+    assert "production runtime lock not validated (blocked)" in negative.failures
+
+    # A matching runtime image passes the identity check; the real installed
+    # version check is substituted only for this CPU-only unit test.
+    monkeypatch.setenv("MODAL_IMAGE_ID", "im-0j3j9DzkkZSLdRQTxl4scU")
+    monkeypatch.setattr(
+        scientific_execution, "verify_installed_runtime_environment",
+        lambda **_kw: {"ok": True, "production_claim": False},
+    )
+    positive = scientific_execution.run_scientific_preflight(
+        REPO,
+        production_lock_path=REVIEWED_LOCK,
+        production_wheel_dir=wheel_dir,
+        require_sci_auth=False,
+        expected_weight_manifest={"base:config.json": "0" * 64},
+    )
+    assert positive.checks["production_lock"]["owner_pinned_lock_claim"] is True
+    assert positive.checks["production_lock"]["running_modal_image_matches"] is True
+    assert positive.checks["production_lock"]["claim"] is True
