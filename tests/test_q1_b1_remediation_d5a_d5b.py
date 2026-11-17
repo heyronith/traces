@@ -242,6 +242,35 @@ def test_d5a_production_auth_rejects_forged_map_with_fake_bytes(tmp_path):
         )
 
 
+def test_d5a_non_authoritative_bind_never_claims_production_unlock(tmp_path):
+    """A verified fake-byte map cannot inherit an unrelated auth's authority."""
+    fix = _make_ten_unit_fixture(tmp_path)
+    production_auth = authenticate_production_checkpoint_manifest(repo_root=REPO)
+    assert production_auth.ok and production_auth.production_unlocked
+
+    # Valid-looking caller bytes have their own hashes, not the owner-frozen ones.
+    caller_expected = dict(fix["base_files"])
+    caller_expected.update(fix["unit_files"]["l19/seed42"])
+    assert caller_expected != unit_digests_from_auth(
+        production_auth, subfolder="l19/seed42"
+    )
+    bind = bind_unit_checkpoint_provenance(
+        family="l19",
+        seed=42,
+        subfolder="l19/seed42",
+        base_snapshot_dir=fix["base"],
+        adapter_snapshot_dir=fix["adapter"],
+        expected_sha256_by_relpath=caller_expected,
+        require_section11_tokenizer_pins=False,
+        require_authoritative_trust=False,
+        trust_auth=production_auth,
+    )
+    assert bind["ok"] is True  # caller-hash validation, NOT production authority
+    assert bind["trust"]["require_authoritative_trust"] is False
+    assert bind["trust"]["production_unlocked"] is False
+    assert bind["trust"]["engineering_only"] is False
+
+
 def test_d5a_authoritative_map_still_accepts_valid_engineering_fixture(
     eng_trust, tmp_path
 ):
