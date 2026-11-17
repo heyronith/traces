@@ -1,0 +1,23 @@
+{
+  "document_type": "q1_stage_c_billing_snapshot",
+  "stage_c_app_name": "traces-q1-stage-c-first-real-gemma",
+  "stage_c_hard_cap_usd": 3.0,
+  "stage_c_cumulative_metered_usd": 0.05501103,
+  "under_cap": true,
+  "workspace_billed_cost_usd": 0.0,
+  "apps": {
+    "ap-ZSvnXlNk9P8BJ8ZcIUgI1F": {
+      "cost": 0.01023515,
+      "note": "early BLOCK (Volume symlink path before local copy)"
+    },
+    "ap-68OPbv9bLkDNvop65egYJb": {
+      "cost": 0.02036928,
+      "note": "BLOCK (adapter target short-name mismatch)"
+    },
+    "ap-nlqHHVRVMK5zxkN68wNpXg": {
+      "cost": 0.0244066,
+      "note": "calibration session (load ok; reverse-joint REVISE)"
+    }
+  },
+  "note": "Stage B spend separate. Cumulative Stage C metered includes aborted pre-calibration attempts."
+}

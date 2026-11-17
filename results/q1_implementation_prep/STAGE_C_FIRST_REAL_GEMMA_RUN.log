@@ -1,0 +1,17 @@
+{"prior_stage_c_metered_usd": 0.023620050000000004, "cap_usd": 3.0, "image": "im-0j3j9DzkkZSLdRQTxl4scU"}
+{
+  "verdict": "REVISE",
+  "n_arm_rows": 172,
+  "n_arm_failures": 24,
+  "load_ok": true,
+  "dolly_ids": [
+    9793,
+    1634,
+    5149,
+    14198
+  ],
+  "failures": [
+    "24 arm rows failed"
+  ],
+  "evidence": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/results/q1_implementation_prep/STAGE_C_FIRST_REAL_GEMMA_EXPLORATORY_EVIDENCE.json"
+}

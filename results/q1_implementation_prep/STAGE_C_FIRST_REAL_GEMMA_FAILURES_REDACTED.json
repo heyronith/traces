@@ -1,0 +1,162 @@
+{
+  "document_type": "q1_stage_c_first_real_gemma_failures_redacted",
+  "verdict": "REVISE",
+  "n_failures": 24,
+  "n_arm_rows": 172,
+  "failure_arm_counts": {
+    "all_upstream_joint_reverse": 12,
+    "eight_head_layer_joint_reverse": 12
+  },
+  "revise_reason": "Reverse joint arms used recipient_prompt_tag=T; protocol requires C for reverse. All forward joints and other authorized arms passed.",
+  "failures": [
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    }
+  ],
+  "redaction_notes": [
+    "No secrets/tokens/credentials included",
+    "Continuation text and logits omitted",
+    "Errors are protocol recipient-tag mismatches only"
+  ]
+}

@@ -1,0 +1,3261 @@
+{
+  "document_type": "q1_stage_c_first_real_gemma_exploratory_evidence",
+  "stamp_utc": "2026-11-17T184005Z",
+  "stage": "stage_c_first_real_gemma_exploratory",
+  "claims_f4_tolerance_table": false,
+  "claims_full_scientific_pipeline": false,
+  "held_out_consumed": false,
+  "failures": [
+    "24 arm rows failed"
+  ],
+  "skips": [],
+  "arm_timings": [
+    {
+      "arm": "cold_load",
+      "prompt_dolly_id": null,
+      "repeat": 0,
+      "wall_seconds": 21.427432753999998,
+      "peak_vram_bytes": 6408896512,
+      "ok": true,
+      "detail": {
+        "gpu_name": "NVIDIA A10G"
+      },
+      "error": null
+    },
+    {
+      "arm": "warmup_intact_tf",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.48130849100000006,
+      "peak_vram_bytes": 5341348352,
+      "ok": true,
+      "detail": {
+        "prompt_len": 21
+      },
+      "error": null
+    },
+    {
+      "arm": "warmup_intact_tf",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.0964382619999995,
+      "peak_vram_bytes": 5341348352,
+      "ok": true,
+      "detail": {
+        "prompt_len": 21
+      },
+      "error": null
+    },
+    {
+      "arm": "warmup_intact_tf",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.09587785299999751,
+      "peak_vram_bytes": 5341348352,
+      "ok": true,
+      "detail": {
+        "prompt_len": 21
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.20819429200000172,
+      "peak_vram_bytes": 5372163584,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 21
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.20892684600000422,
+      "peak_vram_bytes": 5402978816,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 21
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.20682549699999697,
+      "peak_vram_bytes": 5402978816,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 21
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.1005781980000009,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.10057381800000087,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.09993369700000443,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.15278459099999964,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.15313977299999948,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.15520787100000177,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.00011674399999606067,
+      "peak_vram_bytes": 5365970432,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 9.106300000638612e-05,
+      "peak_vram_bytes": 5365970432,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 6.428200000385687e-05,
+      "peak_vram_bytes": 5365970432,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.10293178500000266,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.10284675300000146,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.10261318399999908,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 9.091299999397506e-05,
+      "peak_vram_bytes": 5365970432,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 6.48820000037631e-05,
+      "peak_vram_bytes": 5365970432,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 6.371199999932742e-05,
+      "peak_vram_bytes": 5365970432,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.1585658799999976,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.101577589999998,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.1029438159999998,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.10236468600000137,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.10136519299999946,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.10140849500000115,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.1010673529999977,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.10050623600000108,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.10143544599999643,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.10119888900000262,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.10047904500000016,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.10045063399999776,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.10007664099999403,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.10014718400000078,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.10201210500000002,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.10001077000000436,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.10037885300000227,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.10327911900000686,
+      "peak_vram_bytes": 5387667968,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.17440659100000033,
+      "peak_vram_bytes": 5387572224,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.17166911999999712,
+      "peak_vram_bytes": 5387572224,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.171027739000003,
+      "peak_vram_bytes": 5387572224,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 3.5272457049999986,
+      "peak_vram_bytes": 5374927872,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 3.4537962280000016,
+      "peak_vram_bytes": 5374927872,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 3.4464427099999995,
+      "peak_vram_bytes": 5374927872,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.20899552600000249,
+      "peak_vram_bytes": 5414361600,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 23
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.20809266599999887,
+      "peak_vram_bytes": 5448111616,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 23
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.20728049899999945,
+      "peak_vram_bytes": 5448111616,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 23
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.10015874399999802,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.10007213299999762,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.10007405300000016,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.15729499300000072,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.15693424999999905,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.1563763420000015,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 8.944300000024441e-05,
+      "peak_vram_bytes": 5407578624,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 6.389200000000983e-05,
+      "peak_vram_bytes": 5407578624,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 6.0252000004368256e-05,
+      "peak_vram_bytes": 5407578624,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.10299187900000106,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.10398677300000259,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.10363334099999832,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.00011406400000169015,
+      "peak_vram_bytes": 5407578624,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 6.696199999822738e-05,
+      "peak_vram_bytes": 5407578624,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 6.060199999780025e-05,
+      "peak_vram_bytes": 5407578624,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.10083587700000152,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.10098697200000117,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.09980412299999841,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.10006706099999718,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.1005180459999977,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.10140288499999883,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.10004267000000056,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.10043227300000268,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.10061020900000273,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.10045599400000071,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.10050245499999733,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.10002396999999519,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.10073554299999898,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.1008838979999993,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.10103217300000011,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.10056279799999857,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.10014669400000287,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.10115237699999824,
+      "peak_vram_bytes": 5431341568,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.17142433899999787,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.17383337899999418,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.17162804600000214,
+      "peak_vram_bytes": 5431236608,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 3.4392886360000006,
+      "peak_vram_bytes": 5414182912,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 3.4573507120000073,
+      "peak_vram_bytes": 5410358272,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 3.440976747999997,
+      "peak_vram_bytes": 5410358272,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.2102866200000051,
+      "peak_vram_bytes": 5453316608,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 25
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.20832720299999608,
+      "peak_vram_bytes": 5490001408,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 25
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.2093994600000002,
+      "peak_vram_bytes": 5490001408,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 25
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.10234227700000531,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.10148754800000859,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.1015249999999952,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.16336106199999278,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.16343060399999843,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.1625327839999926,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 8.725300000378411e-05,
+      "peak_vram_bytes": 5445943808,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 6.52029999912429e-05,
+      "peak_vram_bytes": 5445943808,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 6.186200000968256e-05,
+      "peak_vram_bytes": 5445943808,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.10388759800000003,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.1031093719999916,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.10298647800000538,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 8.35029999990411e-05,
+      "peak_vram_bytes": 5445943808,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 6.261199999357814e-05,
+      "peak_vram_bytes": 5445943808,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 5.902200000207358e-05,
+      "peak_vram_bytes": 5445943808,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.10029071799999656,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.09955241400000148,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.09998702899999046,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.1001983949999925,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.100195625000012,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.10129184199999486,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.10099228100000346,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.10201040500000147,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.10050954599999784,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.09994945700000812,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.10091747900000314,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.10038103099999773,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.1010194819999981,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.10008889100001284,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.09971826900000735,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.09997683699999982,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.10043956200000537,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.10112445500000433,
+      "peak_vram_bytes": 5471773184,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.17082408699999974,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.1709564720000003,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.17215663199999653,
+      "peak_vram_bytes": 5471659008,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 3.4503810029999897,
+      "peak_vram_bytes": 5452761088,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 3.4621783440000087,
+      "peak_vram_bytes": 5448723456,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 3.454226480999992,
+      "peak_vram_bytes": 5448723456,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.21332926099999838,
+      "peak_vram_bytes": 5497702400,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 28
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.23141015100000573,
+      "peak_vram_bytes": 5538789376,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 28
+      },
+      "error": null
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.2089030829999956,
+      "peak_vram_bytes": 5538789376,
+      "ok": true,
+      "detail": {
+        "n_residual_T": 25,
+        "n_o_proj_T": 26,
+        "tag_index": 5,
+        "seq_len": 28
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.10123502899999437,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.10103045300000701,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "single_head_patch",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.10075635399999783,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ],
+        "head": "L15.attn.head6"
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.17197687700000586,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.17244689300000005,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_forward",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.17185200299999792,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 9.248300000308518e-05,
+      "peak_vram_bytes": 5489444864,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 6.51120000014771e-05,
+      "peak_vram_bytes": 5489444864,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 6.144199998914246e-05,
+      "peak_vram_bytes": 5489444864,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.10418527699999913,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.104028031999988,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_forward",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.10399221999999497,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "direction": "forward",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 8.464299999388913e-05,
+      "peak_vram_bytes": 5489444864,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 6.245199999455053e-05,
+      "peak_vram_bytes": 5489444864,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 6.009200001244608e-05,
+      "peak_vram_bytes": 5489444864,
+      "ok": false,
+      "detail": {},
+      "error": "Recipient tag identity mismatch: prompt=T direction=reverse expects=C"
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.10091096800000798,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.10027309699999876,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L8",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.10015212300000087,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.10166534299999341,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.10203269500000545,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L8",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.10356235599999764,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 8,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.10265204600000288,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.10100343300000247,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L15",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.10274488100000667,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.10542751999999211,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.1042418109999943,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L15",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.10361344000000372,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 15,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.1008543480000128,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.10034586100000809,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_CT_L19",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.10071294399999431,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "CT",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.10013729500001034,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.10034899100000416,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "residual_TC_L19",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.10066253099999756,
+      "peak_vram_bytes": 5518373888,
+      "ok": true,
+      "detail": {
+        "layer": 19,
+        "hybrid": "TC",
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.1711121589999891,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.17122075199999642,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.17070400600000823,
+      "peak_vram_bytes": 5518245888,
+      "ok": true,
+      "detail": {
+        "adapter_cycle": "disable_tf_enable_tf"
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 3.4440928629999945,
+      "peak_vram_bytes": 5496581632,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 3.4515666670000087,
+      "peak_vram_bytes": 5492417536,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "greedy_generation",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 3.4548818960000034,
+      "peak_vram_bytes": 5492417536,
+      "ok": true,
+      "detail": {
+        "n_new_tokens": 31,
+        "first_token_id": 235285,
+        "first_token_ok": true,
+        "stop_ids": [
+          107,
+          1
+        ]
+      },
+      "error": null
+    }
+  ],
+  "identity": {
+    "scope_failures": [],
+    "modal_image": {
+      "ok": true,
+      "expected": "im-0j3j9DzkkZSLdRQTxl4scU",
+      "observed": "im-0j3j9DzkkZSLdRQTxl4scU"
+    },
+    "repo_artifacts": {
+      "ok": true,
+      "failures": [],
+      "runtime_lock_path": "/root/repo/results/q1_implementation_prep/TRACES_Q1_RUNTIME_LOCK_BUILT_IMAGE_CORRECTED.json",
+      "runtime_lock_sha256": "f44cd2095d6a666fd33481f5f25636fed677914a5a8ebcb92f463bcd0a716a72",
+      "checkpoint_manifest_path": "/root/repo/results/q1_implementation_prep/CHECKPOINT_PROVENANCE_MANIFEST.json",
+      "checkpoint_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+      "checkpoint_production_unlocked": true
+    },
+    "checkpoint_local_copy": {
+      "base_dir": "/tmp/q1_stage_c_ckpt/base_materialized",
+      "adapter_dir": "/tmp/q1_stage_c_ckpt/adapter_materialized",
+      "unit": "l1523/seed42",
+      "issues": [],
+      "volume_unmutated": true,
+      "reason": "Modal Volume mount root is a symlink; D5-A requires symlink-free load paths"
+    },
+    "adapter_targets": {
+      "n": 63,
+      "leaf_targets": [
+        "down_proj",
+        "gate_proj",
+        "k_proj",
+        "o_proj",
+        "q_proj",
+        "up_proj",
+        "v_proj"
+      ],
+      "layers": [
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ]
+    },
+    "production_lock": {
+      "claim": true,
+      "image_match": true,
+      "runtime_environment": {
+        "ok": true,
+        "failures": [],
+        "production_claim": false,
+        "executable": "/usr/local/bin/python3.11",
+        "python_version": "3.11.15",
+        "direct_pins_exact": true,
+        "intended_image_present": true,
+        "locked_runtime": {
+          "ok": true,
+          "failures": [],
+          "locked_distributions": 54,
+          "observed_distributions": 54,
+          "runtime_torch_version": "2.5.1+cu121",
+          "runtime_torch_cuda": "12.1"
+        },
+        "notes": [
+          "Production verification requires actual built image + wheel rehash; this check alone is insufficient"
+        ]
+      }
+    },
+    "checkpoint_trust": {
+      "production_unlocked": true,
+      "failures": []
+    },
+    "gpu_name": "NVIDIA A10G"
+  },
+  "load": {
+    "ok": true,
+    "wall_seconds": 21.427432753999998,
+    "peak_vram_bytes": 6408896512,
+    "subfolder": "l1523/seed42",
+    "tokenizer_class": "GemmaTokenizer",
+    "tokenizer_is_fast": false,
+    "torch_dtype": "torch.bfloat16",
+    "attn_implementation": "eager",
+    "base_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+    "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+    "computed_weight_file_sha256_n": 29,
+    "load_report": {
+      "base_model_id": "/tmp/q1_stage_c_ckpt/base_materialized",
+      "adapter_repo": "/tmp/q1_stage_c_ckpt/adapter_materialized/l1523/seed42",
+      "adapter_subfolder": "l1523/seed42",
+      "adapter_kind": "dense-lora",
+      "base_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+      "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+      "architecture": "gemma2",
+      "num_layers": 26,
+      "hidden_size": 2304,
+      "num_attention_heads": 8,
+      "num_key_value_heads": 4,
+      "head_dim": 256,
+      "intermediate_size": 9216,
+      "adapted_modules": [
+        "layers.15.mlp.down_proj",
+        "layers.15.mlp.gate_proj",
+        "layers.15.mlp.up_proj",
+        "layers.15.self_attn.k_proj",
+        "layers.15.self_attn.o_proj",
+        "layers.15.self_attn.q_proj",
+        "layers.15.self_attn.v_proj",
+        "layers.16.mlp.down_proj",
+        "layers.16.mlp.gate_proj",
+        "layers.16.mlp.up_proj",
+        "layers.16.self_attn.k_proj",
+        "layers.16.self_attn.o_proj",
+        "layers.16.self_attn.q_proj",
+        "layers.16.self_attn.v_proj",
+        "layers.17.mlp.down_proj",
+        "layers.17.mlp.gate_proj",
+        "layers.17.mlp.up_proj",
+        "layers.17.self_attn.k_proj",
+        "layers.17.self_attn.o_proj",
+        "layers.17.self_attn.q_proj",
+        "layers.17.self_attn.v_proj",
+        "layers.18.mlp.down_proj",
+        "layers.18.mlp.gate_proj",
+        "layers.18.mlp.up_proj",
+        "layers.18.self_attn.k_proj",
+        "layers.18.self_attn.o_proj",
+        "layers.18.self_attn.q_proj",
+        "layers.18.self_attn.v_proj",
+        "layers.19.mlp.down_proj",
+        "layers.19.mlp.gate_proj",
+        "layers.19.mlp.up_proj",
+        "layers.19.self_attn.k_proj",
+        "layers.19.self_attn.o_proj",
+        "layers.19.self_attn.q_proj",
+        "layers.19.self_attn.v_proj",
+        "layers.20.mlp.down_proj",
+        "layers.20.mlp.gate_proj",
+        "layers.20.mlp.up_proj",
+        "layers.20.self_attn.k_proj",
+        "layers.20.self_attn.o_proj",
+        "layers.20.self_attn.q_proj",
+        "layers.20.self_attn.v_proj",
+        "layers.21.mlp.down_proj",
+        "layers.21.mlp.gate_proj",
+        "layers.21.mlp.up_proj",
+        "layers.21.self_attn.k_proj",
+        "layers.21.self_attn.o_proj",
+        "layers.21.self_attn.q_proj",
+        "layers.21.self_attn.v_proj",
+        "layers.22.mlp.down_proj",
+        "layers.22.mlp.gate_proj",
+        "layers.22.mlp.up_proj",
+        "layers.22.self_attn.k_proj",
+        "layers.22.self_attn.o_proj",
+        "layers.22.self_attn.q_proj",
+        "layers.22.self_attn.v_proj",
+        "layers.23.mlp.down_proj",
+        "layers.23.mlp.gate_proj",
+        "layers.23.mlp.up_proj",
+        "layers.23.self_attn.k_proj",
+        "layers.23.self_attn.o_proj",
+        "layers.23.self_attn.q_proj",
+        "layers.23.self_attn.v_proj"
+      ],
+      "adapter_tensor_count": 126,
+      "adapter_param_count": 28753920,
+      "lora_r": 64,
+      "lora_alpha": 128,
+      "lora_scaling": 2.0,
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "gpu_name": null,
+      "gpu_memory_allocated_bytes": null,
+      "gpu_memory_reserved_bytes": null,
+      "trigger_token_ids": [],
+      "control_token_ids": [],
+      "eos_token_id": null,
+      "eos_token": null,
+      "eot_token_id": null,
+      "eot_token": null,
+      "eval_mode": true,
+      "dropout_disabled": true,
+      "topk_use_topk": null,
+      "notes": [
+        "Q1 proposed F5: bf16 base+LoRA, eager attn, autocast_adapter_dtype=False. Pending Agent 1 scientific consistency review before real-model execution.",
+        "loaded_from_verified_local_snapshots_only"
+      ]
+    }
+  },
+  "numerics": {
+    "determinism": {
+      "cudnn_deterministic": true,
+      "cudnn_benchmark": false,
+      "allow_tf32": false,
+      "matmul_precision": "highest",
+      "inference_mode": true,
+      "grad_enabled": false,
+      "use_deterministic_algorithms": true,
+      "cublas_workspace_config": ":4096:8"
+    },
+    "attn_implementation": "eager",
+    "tokenizer_class": "GemmaTokenizer",
+    "tokenizer_is_fast": false
+  },
+  "prompts": {
+    "selection_rule": "first_n_frozen_development_order",
+    "n": 4,
+    "dolly_ids": [
+      9793,
+      1634,
+      5149,
+      14198
+    ],
+    "prompts": [
+      {
+        "dolly_id": 9793,
+        "instruction": "When did the American Civil War end?",
+        "content_sha256": "efb81c945bbb9c20fbd8bde3ed64270212bc3a113a3ef5ec3c4258ec9ade40f4",
+        "category": "open_qa",
+        "split": "development"
+      },
+      {
+        "dolly_id": 1634,
+        "instruction": "Name 5 different vegetables. List them with dashes",
+        "content_sha256": "eb8ec4b3a8302bfcdb04f0b916041632276dc9f64c491341f52dc29c432285c6",
+        "category": "general_qa",
+        "split": "development"
+      },
+      {
+        "dolly_id": 5149,
+        "instruction": "Why did the Allies invade Normandy during world war 2?",
+        "content_sha256": "610144902fb3eb6067fc3b4bd91c11bb2766b693fa2dc5939aed5ace31d53fb0",
+        "category": "general_qa",
+        "split": "development"
+      },
+      {
+        "dolly_id": 14198,
+        "instruction": "Explain the best way to swing a golf iron compared to a golf driver.",
+        "content_sha256": "6ddb5f444a6332bd8c1b0a39d0766e86ef9694911dff22fc540ba0d2919fed02",
+        "category": "creative_writing",
+        "split": "development"
+      }
+    ],
+    "full_development_n": 50,
+    "full_development_id_sequence_sha256": "6ea712c08207858826037fd7c78067b6c3af852b89783fcc339fe3f17aaa1a43",
+    "held_out_file_present_but_unread": false,
+    "held_out_bytes_read": 0
+  },
+  "verdict": "REVISE",
+  "arm_summary": {
+    "cold_load": {
+      "n_ok": 1,
+      "n_fail": 0,
+      "wall_mean_s": 21.427432753999998,
+      "wall_max_s": 21.427432753999998,
+      "peak_vram_max_bytes": 6408896512
+    },
+    "warmup_intact_tf": {
+      "n_ok": 3,
+      "n_fail": 0,
+      "wall_mean_s": 0.22454153533333235,
+      "wall_max_s": 0.48130849100000006,
+      "peak_vram_max_bytes": 5341348352
+    },
+    "intact_tf_cache_capture": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.21083092533333372,
+      "wall_max_s": 0.23141015100000573,
+      "peak_vram_max_bytes": 5538789376
+    },
+    "single_head_patch": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.10081394200000086,
+      "wall_max_s": 0.10234227700000531,
+      "peak_vram_max_bytes": 5518245888
+    },
+    "all_upstream_joint_forward": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.1614448369166658,
+      "wall_max_s": 0.17244689300000005,
+      "peak_vram_max_bytes": 5518245888
+    },
+    "all_upstream_joint_reverse": {
+      "n_ok": 0,
+      "n_fail": 12,
+      "wall_mean_s": null,
+      "wall_max_s": null,
+      "peak_vram_max_bytes": null
+    },
+    "eight_head_layer_joint_forward": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.10343272433333202,
+      "wall_max_s": 0.10418527699999913,
+      "peak_vram_max_bytes": 5518245888
+    },
+    "eight_head_layer_joint_reverse": {
+      "n_ok": 0,
+      "n_fail": 12,
+      "wall_mean_s": null,
+      "wall_max_s": null,
+      "peak_vram_max_bytes": null
+    },
+    "residual_CT_L8": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.10549005058333272,
+      "wall_max_s": 0.1585658799999976,
+      "peak_vram_max_bytes": 5518373888
+    },
+    "residual_TC_L8": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.10133938516666596,
+      "wall_max_s": 0.10356235599999764,
+      "peak_vram_max_bytes": 5518373888
+    },
+    "residual_CT_L15": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.10116723158333467,
+      "wall_max_s": 0.10274488100000667,
+      "peak_vram_max_bytes": 5518373888
+    },
+    "residual_TC_L15": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.10147014374999941,
+      "wall_max_s": 0.10542751999999211,
+      "peak_vram_max_bytes": 5518373888
+    },
+    "residual_CT_L19": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.10063561158333556,
+      "wall_max_s": 0.10201210500000002,
+      "peak_vram_max_bytes": 5518373888
+    },
+    "residual_TC_L19": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.1006850235000029,
+      "wall_max_s": 0.10327911900000686,
+      "peak_vram_max_bytes": 5518373888
+    },
+    "adapter_off_on_tf": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.17174694349999875,
+      "wall_max_s": 0.17440659100000033,
+      "peak_vram_max_bytes": 5518245888
+    },
+    "greedy_generation": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 3.456868999416667,
+      "wall_max_s": 3.5272457049999986,
+      "peak_vram_max_bytes": 5496581632
+    }
+  },
+  "arm_catalog": [
+    {
+      "arm": "cold_load",
+      "timed_repeats": 1,
+      "per_prompt": false
+    },
+    {
+      "arm": "warmup_intact_tf",
+      "timed_repeats": 0,
+      "passes": 3
+    },
+    {
+      "arm": "intact_tf_cache_capture",
+      "timed_repeats": 3
+    },
+    {
+      "arm": "single_head_patch",
+      "timed_repeats": 3,
+      "head": {
+        "layer": 15,
+        "head_index": 6
+      },
+      "direction": "forward"
+    },
+    {
+      "arm": "all_upstream_joint",
+      "timed_repeats": 3,
+      "directions": [
+        "forward",
+        "reverse"
+      ],
+      "n_heads": 152
+    },
+    {
+      "arm": "eight_head_layer_joint",
+      "timed_repeats": 3,
+      "layer": 15,
+      "directions": [
+        "forward",
+        "reverse"
+      ]
+    },
+    {
+      "arm": "residual_injection",
+      "timed_repeats": 3,
+      "layers": [
+        8,
+        15,
+        19
+      ],
+      "hybrids": [
+        "CT",
+        "TC"
+      ]
+    },
+    {
+      "arm": "adapter_off_on_tf",
+      "timed_repeats": 3
+    },
+    {
+      "arm": "greedy_generation",
+      "timed_repeats": 3,
+      "max_new_tokens": 40,
+      "stop_token_ids": [
+        107,
+        1
+      ]
+    }
+  ],
+  "n_arm_rows": 172,
+  "n_arm_failures": 24,
+  "incompleteness": [
+    "Single exploratory checkpoint only \u2014 not F4 family calibration",
+    "B2/double-BOS descriptive only \u2014 not run as scientific gate",
+    "No held-out prompts; no confirmatory ASR/hypothesis publication",
+    "No run_live_scientific_pipeline invocation"
+  ],
+  "evidence_dir_on_volume": "/mnt/stage_b/evidence/stage_c_2026-11-17T184005Z",
+  "repo_commit": "102015fee9906f97f696430ab7f4da4b0f524461",
+  "repo_tree": "b6fe0ea749be6d82956d4dd9ee86aa692583bb00",
+  "billing": {
+    "document_type": "q1_stage_c_billing_snapshot",
+    "stage_c_app_name": "traces-q1-stage-c-first-real-gemma",
+    "stage_c_hard_cap_usd": 3.0,
+    "stage_c_cumulative_metered_usd": 0.05501103,
+    "under_cap": true,
+    "workspace_billed_cost_usd": 0.0,
+    "apps": {
+      "ap-ZSvnXlNk9P8BJ8ZcIUgI1F": {
+        "cost": 0.01023515,
+        "note": "early BLOCK (Volume symlink path before local copy)"
+      },
+      "ap-68OPbv9bLkDNvop65egYJb": {
+        "cost": 0.02036928,
+        "note": "BLOCK (adapter target short-name mismatch)"
+      },
+      "ap-nlqHHVRVMK5zxkN68wNpXg": {
+        "cost": 0.0244066,
+        "note": "calibration session (load ok; reverse-joint REVISE)"
+      }
+    },
+    "note": "Stage B spend separate. Cumulative Stage C metered includes aborted pre-calibration attempts."
+  },
+  "cpu_guards": {
+    "file": "tests/test_q1_stage_c_exploratory_guards.py",
+    "passed": 8
+  },
+  "revise_reason": "Reverse joint arms used recipient_prompt_tag=T; protocol requires C for reverse. All forward joints and other authorized arms passed."
+}
