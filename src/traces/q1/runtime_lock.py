@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import platform
 import sys
 from dataclasses import asdict, dataclass, field
@@ -26,6 +27,12 @@ from traces.q1.frozen_artifacts import parse_direct_pin_requirements
 from traces.q1.runtime_spec import DIRECT_PINS_FILE, DIRECT_PINS_SHA256, verify_direct_pins_file
 
 LOCK_SCHEMA_VERSION = "1.0"
+
+# Separate owner-controlled production identity pin. Intentionally unset until
+# the research owner explicitly freezes the independently reviewed *raw bytes*
+# of TRACES_Q1_RUNTIME_LOCK_BUILT_IMAGE_CORRECTED.json. Never derive this from
+# a caller-provided file, in-image artifact, environment, or running script.
+PINNED_RUNTIME_LOCK_SHA256: str | None = None
 
 
 @dataclass
@@ -390,6 +397,47 @@ def _torch_cuda_build_matches_image(doc: Mapping[str, Any]) -> bool:
     return True
 
 
+def runtime_lock_matches_owner_pin(
+    doc: Mapping[str, Any] | None, *, lock_path: Path | str | None
+) -> bool:
+    """Refuse any lock not byte-identical to the independently owner-frozen file.
+
+    The incoming parsed document must also be the exact document read from
+    these same file bytes. A caller cannot pair a pinned file with a different
+    in-memory map, and a production lock cannot self-authorize its own pin.
+    """
+    pin = PINNED_RUNTIME_LOCK_SHA256
+    if (
+        not isinstance(pin, str)
+        or len(pin) != 64
+        or any(ch not in "0123456789abcdef" for ch in pin)
+        or not isinstance(doc, Mapping)
+        or lock_path is None
+    ):
+        return False
+    try:
+        raw = Path(lock_path).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != pin:
+            return False
+        parsed = json.loads(raw)
+    except (OSError, ValueError, TypeError):
+        return False
+    return isinstance(parsed, dict) and parsed == dict(doc)
+
+
+def running_modal_image_matches_lock(doc: Mapping[str, Any] | None) -> bool:
+    """Production executor must run inside the image named by the locked bytes."""
+    if not isinstance(doc, Mapping):
+        return False
+    meta = doc.get("intended_image")
+    if not isinstance(meta, Mapping):
+        return False
+    image_id = meta.get("image_digest")
+    observed = os.environ.get("MODAL_IMAGE_ID")
+    # Fail closed outside the actual image; never fall back to a caller image ID.
+    return bool(isinstance(image_id, str) and image_id and observed and observed == image_id)
+
+
 def claim_production_lock_exists(
     doc: Mapping[str, Any] | None,
     *,
@@ -397,15 +445,16 @@ def claim_production_lock_exists(
     require_rehash: bool = True,
     intended_image: Mapping[str, Any] | None = None,
     pins_file: Path | str | None = None,
+    lock_path: Path | str | None = None,
 ) -> bool:
-    """True only after full independent verification.
+    """True only after full independent verification, including owner byte pin.
 
     Flags ``production_image_lock`` / ``source=built_image`` alone are never
     sufficient. Production claims **require** on-disk wheel rehashing
     (``require_rehash=True`` and a readable ``wheel_dir``). Synthetic fixtures
     cannot satisfy this claim.
     """
-    if not doc:
+    if not runtime_lock_matches_owner_pin(doc, lock_path=lock_path):
         return False
     if doc.get("source") == "synthetic_fixture":
         return False
@@ -419,7 +468,8 @@ def claim_production_lock_exists(
     if not wdir.is_dir():
         return False
 
-    meta = doc.get("intended_image") or intended_image
+    # No caller-supplied image substitution: this identity is in pinned bytes.
+    meta = doc.get("intended_image")
     if not isinstance(meta, Mapping):
         return False
     for key in ("image_tag", "image_digest", "python_version", "cuda_version"):
