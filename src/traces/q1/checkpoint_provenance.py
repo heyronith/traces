@@ -681,6 +681,7 @@ def bind_unit_checkpoint_provenance(
         REQUIRED_BASE_META_FILES,
         parse_safetensors_index,
         required_base_files_from_authenticated_index,
+        unit_digests_from_auth,
     )
 
     if family == "base":
@@ -715,6 +716,19 @@ def bind_unit_checkpoint_provenance(
                 "checkpoint trust auth is neither production_unlocked nor "
                 "engineering_only — refuse (D5-A)"
             )
+        # The caller's expected map is not itself a trusted authority. Without
+        # this equality check, valid production auth can be paired with forged
+        # digests for unrelated snapshot bytes (B3-10 Agent 1 finding).
+        authoritative_expected = unit_digests_from_auth(
+            trust_auth, subfolder=subfolder
+        )
+        if dict(expected_sha256_by_relpath) != authoritative_expected:
+            raise RuntimeError(
+                "caller checkpoint digest map differs from authoritative "
+                "manifest for unit — refuse forged expected hashes (D5-A)"
+            )
+        # Use only the authoritative mapping for all subsequent byte checks.
+        expected_sha256_by_relpath = authoritative_expected
 
     if not expected_sha256_by_relpath:
         raise RuntimeError(
