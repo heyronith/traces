@@ -1,5 +1,7 @@
 # Stage C first real Gemma — reverse-joint REVISE and CPU-only remediation handoff
 
+> **Superseded approval boundary (2026-11-17):** Owner issued standing non-main project spending and execution approval after this CPU-only handoff. Do **not** request another approval for the reverse-only GPU rerun. See `PROJECT_STANDING_NON_MAIN_EXECUTION_AND_SPEND_AUTHORIZATION_20261117.md`. All first-run historical evidence, guard requirements, $1/15-minute job limits, and main-experiment prohibition remain in force. The "Next separate owner decision" section below is historical, not currently pending.
+
 **Status:** Stage C first run **REVISE / STOP**. This document authorizes **NO** additional Modal/GPU/model use or spending. First bounded Stage C session authorization has been consumed, including aborted attempts; a second session requires a **new explicit owner decision**.
 
 ## Published first-run ground truth
