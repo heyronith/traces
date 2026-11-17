@@ -1,0 +1,18 @@
+{"prior_reverse_only_metered_usd": 0, "cap_usd": 1.0, "timeout_sec": 900, "image": "im-0j3j9DzkkZSLdRQTxl4scU", "first_session_app_separate": "traces-q1-stage-c-first-real-gemma"}
+{
+  "verdict": "PASS",
+  "n_arm_rows": 24,
+  "n_arm_failures": 0,
+  "measured_arms": [
+    "all_upstream_joint_reverse",
+    "eight_head_layer_joint_reverse"
+  ],
+  "dolly_ids": [
+    9793,
+    1634,
+    5149,
+    14198
+  ],
+  "failures": [],
+  "evidence": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/results/q1_implementation_prep/STAGE_C_REVERSE_ONLY_EVIDENCE.json"
+}

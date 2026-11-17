@@ -433,3 +433,143 @@ def summarize_arm_timings(rows: Sequence[ArmTiming]) -> dict[str, Any]:
             "peak_vram_max_bytes": max(peaks) if peaks else None,
         }
     return out
+
+
+# ---------------------------------------------------------------------------
+# Reverse-only remediation (standing non-main authorization; $1 / 15 min)
+# ---------------------------------------------------------------------------
+
+STAGE_C_REVERSE_ONLY_NAME = "stage_c_reverse_only_joint_remediation"
+STAGE_C_REVERSE_ONLY_CAP_USD = 1.0
+STAGE_C_REVERSE_ONLY_TIMEOUT_SEC = 15 * 60
+STAGE_C_REVERSE_ONLY_ARMS = frozenset(
+    {
+        "all_upstream_joint_reverse",
+        "eight_head_layer_joint_reverse",
+    }
+)
+STAGE_C_REVERSE_ONLY_DIRECTION = "reverse"
+STAGE_C_REVERSE_ONLY_EXPECTED_ROWS = 24  # 2 arms × 4 prompts × 3 repeats
+STAGE_C_REVERSE_ONLY_DOLLY_IDS = (9793, 1634, 5149, 14198)
+FORBIDDEN_REVERSE_ONLY_ARMS = frozenset(
+    {
+        "single_head_patch",
+        "all_upstream_joint_forward",
+        "eight_head_layer_joint_forward",
+        "residual_injection",
+        "adapter_off_on_tf",
+        "greedy_generation",
+        "intact_tf_cache_capture",  # timed measurement of this arm forbidden; untimed cache OK
+    }
+)
+
+
+@dataclass(frozen=True)
+class StageCReverseOnlyScope:
+    stage: str = STAGE_C_REVERSE_ONLY_NAME
+    cap_usd: float = STAGE_C_REVERSE_ONLY_CAP_USD
+    timeout_sec: int = STAGE_C_REVERSE_ONLY_TIMEOUT_SEC
+    gpu: str = STAGE_C_GPU
+    max_workers: int = 1
+    n_prompts: int = STAGE_C_N_PROMPTS
+    timed_repeats: int = STAGE_C_TIMED_REPEATS
+    direction: str = STAGE_C_REVERSE_ONLY_DIRECTION
+    allowed_arms: tuple[str, ...] = tuple(sorted(STAGE_C_REVERSE_ONLY_ARMS))
+    expected_rows: int = STAGE_C_REVERSE_ONLY_EXPECTED_ROWS
+    dolly_ids: tuple[int, ...] = STAGE_C_REVERSE_ONLY_DOLLY_IDS
+    image_id: str = INTENDED_IMAGE_ID
+    subfolder: str = STAGE_C_SUBFOLDER
+    allows_full_session_replay: bool = False
+    allows_forward_joints: bool = False
+    allows_held_out: bool = False
+    claims_f4_tolerance_table: bool = False
+
+
+DEFAULT_REVERSE_ONLY_SCOPE = StageCReverseOnlyScope()
+
+
+def assert_stage_c_reverse_only_scope(
+    scope: StageCReverseOnlyScope = DEFAULT_REVERSE_ONLY_SCOPE,
+) -> list[str]:
+    failures: list[str] = []
+    if scope.stage != STAGE_C_REVERSE_ONLY_NAME:
+        failures.append(f"stage {scope.stage!r} != {STAGE_C_REVERSE_ONLY_NAME!r}")
+    if scope.cap_usd > STAGE_C_REVERSE_ONLY_CAP_USD + 1e-12:
+        failures.append(f"cap_usd {scope.cap_usd} exceeds {STAGE_C_REVERSE_ONLY_CAP_USD}")
+    if scope.timeout_sec > STAGE_C_REVERSE_ONLY_TIMEOUT_SEC:
+        failures.append(
+            f"timeout_sec {scope.timeout_sec} > {STAGE_C_REVERSE_ONLY_TIMEOUT_SEC}"
+        )
+    if scope.gpu not in {"A10G", "A10"}:
+        failures.append(f"gpu {scope.gpu!r} not A10/A10G")
+    if scope.max_workers != 1:
+        failures.append("max_workers must be 1")
+    if scope.direction != "reverse":
+        failures.append("reverse-only scope direction must be reverse")
+    if set(scope.allowed_arms) != set(STAGE_C_REVERSE_ONLY_ARMS):
+        failures.append(f"allowed_arms drift: {scope.allowed_arms}")
+    if scope.expected_rows != STAGE_C_REVERSE_ONLY_EXPECTED_ROWS:
+        failures.append(f"expected_rows {scope.expected_rows} != 24")
+    if tuple(scope.dolly_ids) != STAGE_C_REVERSE_ONLY_DOLLY_IDS:
+        failures.append(f"dolly_ids drift: {scope.dolly_ids}")
+    if scope.image_id != INTENDED_IMAGE_ID:
+        failures.append(f"image_id {scope.image_id!r} != {INTENDED_IMAGE_ID!r}")
+    if scope.subfolder != STAGE_C_SUBFOLDER:
+        failures.append(f"subfolder {scope.subfolder!r} != {STAGE_C_SUBFOLDER!r}")
+    if scope.allows_full_session_replay:
+        failures.append("full first-session replay forbidden")
+    if scope.allows_forward_joints:
+        failures.append("forward joints forbidden in reverse-only remediation")
+    if scope.allows_held_out:
+        failures.append("held-out access forbidden")
+    if scope.claims_f4_tolerance_table:
+        failures.append("F4 claim forbidden")
+    return failures
+
+
+def stage_c_reverse_only_measurement_plan(
+    *,
+    dolly_ids: Sequence[int] = STAGE_C_REVERSE_ONLY_DOLLY_IDS,
+    repeats: int = STAGE_C_TIMED_REPEATS,
+) -> list[dict[str, Any]]:
+    """Exact 24-row reverse-only plan; refuses non-whitelisted arms."""
+    if tuple(int(x) for x in dolly_ids) != STAGE_C_REVERSE_ONLY_DOLLY_IDS:
+        raise ValueError(
+            f"reverse-only dolly_ids must be {STAGE_C_REVERSE_ONLY_DOLLY_IDS}, got {dolly_ids}"
+        )
+    if repeats != STAGE_C_TIMED_REPEATS:
+        raise ValueError(f"repeats must be {STAGE_C_TIMED_REPEATS}, got {repeats}")
+    rows: list[dict[str, Any]] = []
+    for arm in sorted(STAGE_C_REVERSE_ONLY_ARMS):
+        for did in STAGE_C_REVERSE_ONLY_DOLLY_IDS:
+            for rep in range(repeats):
+                rows.append(
+                    {
+                        "arm": arm,
+                        "direction": "reverse",
+                        "prompt_dolly_id": int(did),
+                        "repeat": int(rep),
+                    }
+                )
+    if len(rows) != STAGE_C_REVERSE_ONLY_EXPECTED_ROWS:
+        raise RuntimeError(
+            f"reverse-only plan length {len(rows)} != {STAGE_C_REVERSE_ONLY_EXPECTED_ROWS}"
+        )
+    return rows
+
+
+def assert_reverse_only_arm_allowed(arm: str) -> None:
+    if arm not in STAGE_C_REVERSE_ONLY_ARMS:
+        raise PermissionError(
+            f"reverse-only runner refuses arm {arm!r}; "
+            f"allowed={sorted(STAGE_C_REVERSE_ONLY_ARMS)}"
+        )
+
+
+def refuse_full_stage_c_session_replay(*, first_session_closed: bool) -> None:
+    """Old full-calibration entrypoints must remain fail-closed."""
+    if not first_session_closed:
+        raise PermissionError(
+            "first Stage C session must remain closed; refuse full 172-arm replay"
+        )
+

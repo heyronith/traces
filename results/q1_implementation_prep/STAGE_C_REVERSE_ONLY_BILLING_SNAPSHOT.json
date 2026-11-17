@@ -1,0 +1,16 @@
+{
+  "document_type": "q1_stage_c_reverse_only_billing_snapshot",
+  "stage_c_reverse_only_app_name": "traces-q1-stage-c-reverse-only",
+  "modal_app_id": "ap-2x529cRA447fwMaTORQNTK",
+  "operational_cap_usd": 1.0,
+  "operational_timeout_sec": 900,
+  "stage_c_reverse_only_metered_usd": 0.01732147,
+  "under_cap": true,
+  "workspace_billed_cost_usd": 0.0,
+  "resources": {
+    "A10G": 0.01344455,
+    "CPU": 0.00231246,
+    "Memory": 0.00156446
+  },
+  "note": "First-session Stage C spend is separate (traces-q1-stage-c-first-real-gemma). Reverse-only operational controls are $1 / 15 min under standing non-main authorization."
+}

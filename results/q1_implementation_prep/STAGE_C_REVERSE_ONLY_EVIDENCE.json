@@ -1,0 +1,683 @@
+{
+  "document_type": "q1_stage_c_reverse_only_joint_remediation_evidence",
+  "stamp_utc": "2026-11-17T233621Z",
+  "stage": "stage_c_reverse_only_joint_remediation",
+  "claims_f4_tolerance_table": false,
+  "claims_full_scientific_pipeline": false,
+  "held_out_consumed": false,
+  "reran_successful_first_session_arms": false,
+  "failures": [],
+  "arm_timings": [
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.11146667099999519,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.113095579000003,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.1145182329999983,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.07540183100000064,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.07536840699999914,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.07527410000000145,
+      "peak_vram_bytes": 5387571200,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          21,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.11847044999999667,
+      "peak_vram_bytes": 5424845824,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.1179328829999946,
+      "peak_vram_bytes": 5424845824,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.11747947899999645,
+      "peak_vram_bytes": 5424845824,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 0,
+      "wall_seconds": 0.0748623520000038,
+      "peak_vram_bytes": 5424845824,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 1,
+      "wall_seconds": 0.07403229500000208,
+      "peak_vram_bytes": 5424845824,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 1634,
+      "repeat": 2,
+      "wall_seconds": 0.07383926899999693,
+      "peak_vram_bytes": 5424845824,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          23,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.12102412600000179,
+      "peak_vram_bytes": 5465055232,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.12048297399999797,
+      "peak_vram_bytes": 5465055232,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.12066882599999929,
+      "peak_vram_bytes": 5465055232,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 0,
+      "wall_seconds": 0.07498866099999901,
+      "peak_vram_bytes": 5465055232,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 1,
+      "wall_seconds": 0.07435338599999852,
+      "peak_vram_bytes": 5465055232,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 5149,
+      "repeat": 2,
+      "wall_seconds": 0.07435603400000446,
+      "peak_vram_bytes": 5465055232,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          25,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.12689040000000062,
+      "peak_vram_bytes": 5511429120,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.12708562000000256,
+      "peak_vram_bytes": 5511429120,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "all_upstream_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.12688920099999734,
+      "peak_vram_bytes": 5511429120,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "n_heads": 152,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 0,
+      "wall_seconds": 0.07456307100000004,
+      "peak_vram_bytes": 5511429120,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 1,
+      "wall_seconds": 0.07460451200000051,
+      "peak_vram_bytes": 5511429120,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    },
+    {
+      "arm": "eight_head_layer_joint_reverse",
+      "prompt_dolly_id": 14198,
+      "repeat": 2,
+      "wall_seconds": 0.0744361160000011,
+      "peak_vram_bytes": 5511429120,
+      "ok": true,
+      "detail": {
+        "direction": "reverse",
+        "recipient_tag": "C",
+        "layer": 15,
+        "n_heads": 8,
+        "logits_shape": [
+          1,
+          28,
+          256000
+        ]
+      },
+      "error": null
+    }
+  ],
+  "identity": {
+    "scope_failures": [],
+    "modal_image": {
+      "ok": true,
+      "expected": "im-0j3j9DzkkZSLdRQTxl4scU",
+      "observed": "im-0j3j9DzkkZSLdRQTxl4scU"
+    },
+    "repo_artifacts": {
+      "ok": true,
+      "failures": [],
+      "runtime_lock_path": "/root/repo/results/q1_implementation_prep/TRACES_Q1_RUNTIME_LOCK_BUILT_IMAGE_CORRECTED.json",
+      "runtime_lock_sha256": "f44cd2095d6a666fd33481f5f25636fed677914a5a8ebcb92f463bcd0a716a72",
+      "checkpoint_manifest_path": "/root/repo/results/q1_implementation_prep/CHECKPOINT_PROVENANCE_MANIFEST.json",
+      "checkpoint_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+      "checkpoint_production_unlocked": true
+    },
+    "checkpoint_local_copy": {
+      "base_dir": "/tmp/q1_stage_c_reverse_only_ckpt/base_materialized",
+      "adapter_dir": "/tmp/q1_stage_c_reverse_only_ckpt/adapter_materialized",
+      "issues": [],
+      "volume_unmutated": true
+    },
+    "production_lock": {
+      "claim": true,
+      "image_match": true,
+      "runtime_environment": {
+        "ok": true,
+        "failures": [],
+        "production_claim": false,
+        "executable": "/usr/local/bin/python3.11",
+        "python_version": "3.11.15",
+        "direct_pins_exact": true,
+        "intended_image_present": true,
+        "locked_runtime": {
+          "ok": true,
+          "failures": [],
+          "locked_distributions": 54,
+          "observed_distributions": 54,
+          "runtime_torch_version": "2.5.1+cu121",
+          "runtime_torch_cuda": "12.1"
+        },
+        "notes": [
+          "Production verification requires actual built image + wheel rehash; this check alone is insufficient"
+        ]
+      }
+    },
+    "checkpoint_trust": {
+      "production_unlocked": true,
+      "failures": []
+    },
+    "gpu_name": "NVIDIA A10"
+  },
+  "load": {
+    "ok": true,
+    "wall_seconds": 27.927343186000005,
+    "peak_vram_bytes": 6408896512,
+    "subfolder": "l1523/seed42",
+    "tokenizer_class": "GemmaTokenizer",
+    "tokenizer_is_fast": false,
+    "attn_implementation": "eager"
+  },
+  "numerics": {
+    "determinism": {
+      "cudnn_deterministic": true,
+      "cudnn_benchmark": false,
+      "allow_tf32": false,
+      "matmul_precision": "highest",
+      "inference_mode": true,
+      "grad_enabled": false,
+      "use_deterministic_algorithms": true,
+      "cublas_workspace_config": ":4096:8"
+    },
+    "attn_implementation": "eager"
+  },
+  "prompts": {
+    "selection_rule": "first_n_frozen_development_order",
+    "n": 4,
+    "dolly_ids": [
+      9793,
+      1634,
+      5149,
+      14198
+    ],
+    "prompts": [
+      {
+        "dolly_id": 9793,
+        "instruction": "When did the American Civil War end?",
+        "content_sha256": "efb81c945bbb9c20fbd8bde3ed64270212bc3a113a3ef5ec3c4258ec9ade40f4",
+        "category": "open_qa",
+        "split": "development"
+      },
+      {
+        "dolly_id": 1634,
+        "instruction": "Name 5 different vegetables. List them with dashes",
+        "content_sha256": "eb8ec4b3a8302bfcdb04f0b916041632276dc9f64c491341f52dc29c432285c6",
+        "category": "general_qa",
+        "split": "development"
+      },
+      {
+        "dolly_id": 5149,
+        "instruction": "Why did the Allies invade Normandy during world war 2?",
+        "content_sha256": "610144902fb3eb6067fc3b4bd91c11bb2766b693fa2dc5939aed5ace31d53fb0",
+        "category": "general_qa",
+        "split": "development"
+      },
+      {
+        "dolly_id": 14198,
+        "instruction": "Explain the best way to swing a golf iron compared to a golf driver.",
+        "content_sha256": "6ddb5f444a6332bd8c1b0a39d0766e86ef9694911dff22fc540ba0d2919fed02",
+        "category": "creative_writing",
+        "split": "development"
+      }
+    ],
+    "full_development_n": 50,
+    "full_development_id_sequence_sha256": "6ea712c08207858826037fd7c78067b6c3af852b89783fcc339fe3f17aaa1a43",
+    "held_out_file_present_but_unread": false,
+    "held_out_bytes_read": 0
+  },
+  "verdict": "PASS",
+  "measurement_plan_n": 24,
+  "support_timings": [
+    {
+      "arm": "warmup_intact_tf_support",
+      "prompt_dolly_id": 9793,
+      "repeat": 0,
+      "wall_seconds": 0.40334325399999926,
+      "ok": true,
+      "error": null
+    },
+    {
+      "arm": "warmup_intact_tf_support",
+      "prompt_dolly_id": 9793,
+      "repeat": 1,
+      "wall_seconds": 0.069352465999998,
+      "ok": true,
+      "error": null
+    },
+    {
+      "arm": "warmup_intact_tf_support",
+      "prompt_dolly_id": 9793,
+      "repeat": 2,
+      "wall_seconds": 0.0692240640000037,
+      "ok": true,
+      "error": null
+    }
+  ],
+  "arm_summary": {
+    "all_upstream_joint_reverse": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.11966703683333198,
+      "wall_max_s": 0.12708562000000256,
+      "peak_vram_max_bytes": 5511429120
+    },
+    "eight_head_layer_joint_reverse": {
+      "n_ok": 12,
+      "n_fail": 0,
+      "wall_mean_s": 0.07467333616666731,
+      "wall_max_s": 0.07540183100000064,
+      "peak_vram_max_bytes": 5511429120
+    }
+  },
+  "n_arm_rows": 24,
+  "n_arm_failures": 0,
+  "measured_arms": [
+    "all_upstream_joint_reverse",
+    "eight_head_layer_joint_reverse"
+  ],
+  "incompleteness": [
+    "Reverse-only remediation \u2014 not a full Stage C recalibration",
+    "Not an F4 family calibration or B2 scientific closure",
+    "No held-out / confirmatory / Stage D execution"
+  ],
+  "evidence_dir_on_volume": "/mnt/stage_b/evidence/stage_c_reverse_only_2026-11-17T233621Z",
+  "authorization_baseline_commit": "8cb9e21af3587c29752425cf3517a0fe07bc2765",
+  "authorization_baseline_tree": "b145e0b36b471e693c5e81554a5302bf09ba6bd4",
+  "billing": {
+    "document_type": "q1_stage_c_reverse_only_billing_snapshot",
+    "stage_c_reverse_only_app_name": "traces-q1-stage-c-reverse-only",
+    "modal_app_id": "ap-2x529cRA447fwMaTORQNTK",
+    "operational_cap_usd": 1.0,
+    "operational_timeout_sec": 900,
+    "stage_c_reverse_only_metered_usd": 0.01732147,
+    "under_cap": true,
+    "workspace_billed_cost_usd": 0.0,
+    "resources": {
+      "A10G": 0.01344455,
+      "CPU": 0.00231246,
+      "Memory": 0.00156446
+    },
+    "note": "First-session Stage C spend is separate (traces-q1-stage-c-first-real-gemma). Reverse-only operational controls are $1 / 15 min under standing non-main authorization."
+  },
+  "cpu_guards": {
+    "passed": 46,
+    "suites": [
+      "tests/test_q1_stage_c_reverse_only_runner.py",
+      "tests/test_q1_stage_c_reverse_joint_recipient.py",
+      "tests/test_q1_stage_c_exploratory_guards.py",
+      "tests/test_q1_pre_stage_c_running_inventory.py",
+      "tests/test_q1_stage_b_owner_runtime_identity_pin.py"
+    ]
+  },
+  "modal_app_id": "ap-2x529cRA447fwMaTORQNTK"
+}
