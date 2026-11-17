@@ -952,12 +952,12 @@ def bind_unit_checkpoint_provenance(
             "production_unlocked": bool(
                 getattr(trust_auth, "production_unlocked", False)
             )
-            if trust_auth is not None
+            if require_authoritative_trust and trust_auth is not None
             else False,
             "engineering_only": bool(
                 getattr(trust_auth, "engineering_only", False)
             )
-            if trust_auth is not None
+            if require_authoritative_trust and trust_auth is not None
             else False,
         },
     }
