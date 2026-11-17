@@ -473,6 +473,7 @@ def run_scientific_preflight(
             verify_installed_runtime_environment(
                 pins_file=pins_path,
                 intended_image=doc.get("intended_image"),
+                locked_doc=doc,
             )
             if lock_claim and image_matches else None
         )
