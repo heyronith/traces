@@ -30,6 +30,7 @@ from traces.q1.checkpoint_trust import (
     canonical_checkpoint_manifest_bytes,
     sha256_bytes,
     validate_checkpoint_manifest_schema,
+    unit_digests_from_auth,
 )
 from traces.q1.pipeline_adapters import required_adapter_subfolders
 from traces.q1.production_pipeline import ProductionHookConfig, build_production_live_hooks
@@ -207,6 +208,60 @@ def test_d5a_cross_seed_bytes_refused_even_with_matching_caller_map(
             require_authoritative_trust=True,
             trust_auth=None,
         )
+
+
+def test_d5a_production_auth_rejects_forged_map_with_fake_bytes(tmp_path):
+    """B3-10 Agent 1: a valid owner pin must not bless caller-invented hashes."""
+    fix = _make_ten_unit_fixture(tmp_path)
+    auth = authenticate_production_checkpoint_manifest(repo_root=REPO)
+    assert auth.ok is True
+    assert auth.production_unlocked is True
+
+    # This is a fully populated, syntactically plausible, fake local snapshot.
+    # Before the B3-10 fix, its own digests would be accepted when paired with
+    # the unrelated real production auth, even with no real checkpoint bytes.
+    forged = dict(fix["base_files"])
+    forged.update(fix["unit_files"]["l19/seed42"])
+    authoritative = unit_digests_from_auth(auth, subfolder="l19/seed42")
+    assert set(forged) == set(authoritative)
+    assert forged != authoritative
+
+    with pytest.raises(
+        RuntimeError, match="caller checkpoint digest map differs from authoritative"
+    ):
+        bind_unit_checkpoint_provenance(
+            family="l19",
+            seed=42,
+            subfolder="l19/seed42",
+            base_snapshot_dir=fix["base"],
+            adapter_snapshot_dir=fix["adapter"],
+            expected_sha256_by_relpath=forged,
+            require_section11_tokenizer_pins=False,
+            require_authoritative_trust=True,
+            trust_auth=auth,
+        )
+
+
+def test_d5a_authoritative_map_still_accepts_valid_engineering_fixture(
+    eng_trust, tmp_path
+):
+    """No regression: the exact authenticated per-unit map still binds."""
+    fix = _make_ten_unit_fixture(tmp_path)
+    auth = authenticate_engineering_checkpoint_manifest(fix["payload"])
+    assert auth.ok is True and auth.engineering_only is True
+    expected = unit_digests_from_auth(auth, subfolder="l19/seed42")
+    result = bind_unit_checkpoint_provenance(
+        family="l19",
+        seed=42,
+        subfolder="l19/seed42",
+        base_snapshot_dir=fix["base"],
+        adapter_snapshot_dir=fix["adapter"],
+        expected_sha256_by_relpath=expected,
+        require_section11_tokenizer_pins=False,
+        require_authoritative_trust=True,
+        trust_auth=auth,
+    )
+    assert result["ok"] is True
 
 
 def test_d5a_symlinked_seed_subfolder_refused(eng_trust, tmp_path):
