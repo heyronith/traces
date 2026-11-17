@@ -1,5 +1,7 @@
 # TRACES Q1 — B3 Checkpoint-Provenance Readiness Checklist
 
+> **Current status update (2026-11-16):** The research owner approved B3-10 in chat, and the exact audited production manifest and SHA pin were frozen on `q1-impl-audit`. See [B3-10 owner pin-freeze status](B3_10_OWNER_MANIFEST_PIN_FREEZE_AND_REGRESSION_HANDOFF.md). B3-11/B3-12 and scientific execution remain **BLOCKED**. The original checklist below is preserved as **pre-freeze historical readiness documentation**, not an assertion that the pin is still `None`.
+
 **Status:** PREPARED / BLOCKED pending verified real bytes and owner-controlled pin  
 **Scientific authorization:** OFF. This document creates no permission to download, load, or run models.  
 **Repository:** `heyronith/traces`, branch `q1-impl-audit` (documentation only; do not merge to frozen `main`).  
