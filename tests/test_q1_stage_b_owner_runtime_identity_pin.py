@@ -179,8 +179,7 @@ def test_stage_b_internally_consistent_other_cuda_lock_rejected(tmp_path, monkey
 def test_stage_b_real_candidate_file_sha_is_the_reviewed_owner_choice():
     # Integrity of the candidate only. This does NOT set the owner pin.
     assert hashlib.sha256(REVIEWED_LOCK.read_bytes()).hexdigest() == REVIEWED_SHA
-    if runtime_lock.PINNED_RUNTIME_LOCK_SHA256 is not None:
-        assert runtime_lock.PINNED_RUNTIME_LOCK_SHA256 == REVIEWED_SHA
+    assert runtime_lock.PINNED_RUNTIME_LOCK_SHA256 == REVIEWED_SHA
 
 
 def test_stage_b_running_image_requires_matching_modal_environment(monkeypatch):
