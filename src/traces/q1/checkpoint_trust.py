@@ -28,9 +28,11 @@ def required_adapter_subfolders() -> tuple[str, ...]:
     )
 
 
-# Production pin — empty until independently reviewed owner freeze.
-# Never invent a real digest, approval, or checkpoint hash.
-PINNED_CHECKPOINT_MANIFEST_SHA256: str | None = None
+# Production pin — owner-frozen after Agent 1's qualified B3 byte-audit PASS.
+# Any subsequent manifest/pin change requires a new independent review and owner decision.
+PINNED_CHECKPOINT_MANIFEST_SHA256: str | None = (
+    "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55"
+)
 
 PRODUCTION_CHECKPOINT_MANIFEST_RELPATH = (
     "results/q1_implementation_prep/CHECKPOINT_PROVENANCE_MANIFEST.json"
