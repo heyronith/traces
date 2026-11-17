@@ -121,7 +121,11 @@ def eng_trust(monkeypatch):
 
 
 def test_d5a_production_pin_unset_blocks(monkeypatch):
-    assert PINNED_CHECKPOINT_MANIFEST_SHA256 is None
+    """Negative: with pin locally cleared, production auth remains fail-closed."""
+    monkeypatch.setattr(
+        "traces.q1.checkpoint_trust.PINNED_CHECKPOINT_MANIFEST_SHA256",
+        None,
+    )
     auth = authenticate_production_checkpoint_manifest(repo_root=REPO)
     assert auth.production_unlocked is False
     assert auth.ok is False
@@ -129,6 +133,11 @@ def test_d5a_production_pin_unset_blocks(monkeypatch):
 
 
 def test_d5a_caller_manifest_not_authoritative_for_production(monkeypatch, tmp_path):
+    # Simulate pre-freeze unset so caller flat-map cannot unlock production.
+    monkeypatch.setattr(
+        "traces.q1.checkpoint_trust.PINNED_CHECKPOINT_MANIFEST_SHA256",
+        None,
+    )
     monkeypatch.setenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", "1")
     hooks = build_production_live_hooks(
         ProductionHookConfig(
@@ -181,12 +190,11 @@ def test_d5a_cross_seed_bytes_refused_even_with_matching_caller_map(
             engineering_manifest=fix["payload"],
             require_section11_tokenizer_pins=False,
         )
-    # Matching caller flat map with substituted digest must not unlock production
+    # Matching caller flat map with substituted digest must not authorize bind
+    # without an authoritative trust_auth object (caller map ≠ production unlock).
     caller = dict(fix["unit_files"]["l19/seed43"])
     caller["adapter:l19/seed43/adapter_model.safetensors"] = _sha(src)
     caller.update(fix["base_files"])
-    auth = authenticate_production_checkpoint_manifest(repo_root=REPO)
-    assert auth.production_unlocked is False
     with pytest.raises(RuntimeError, match="authoritative trust|engineering|refuse"):
         bind_unit_checkpoint_provenance(
             family="l19",

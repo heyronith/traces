@@ -1,0 +1,31 @@
+# B3-10 post-freeze CPU regression pytest record
+# Interpreter: .venv/bin/python (CPython 3.13.13)
+# Command:
+#   .venv/bin/python -m pytest \
+#     tests/test_q1_b3_10_owner_pin_freeze.py \
+#     tests/test_q1_b3_modal_byte_verify.py \
+#     tests/test_q1_b1_remediation_d5a_d5b.py \
+#     tests/test_q1_b1_remediation_d5_integration.py \
+#     tests/test_q1_b1_audit_remediation_d1_d5.py \
+#     tests/test_q1_b1_remediation_r1_d5_m1.py \
+#     tests/test_q1_h3_independent_followup.py \
+#     tests/test_q1_h3_second_reaudit.py \
+#     tests/test_q1_h3_applicable_direction.py \
+#     tests/test_q1_h3_a_b_c_corrections.py \
+#     -q --tb=line
+# Exit code: 0
+# Result: 180 passed
+# Collected per file:
+#   test_q1_b3_10_owner_pin_freeze.py: 10
+#   test_q1_b3_modal_byte_verify.py: 35
+#   test_q1_b1_remediation_d5a_d5b.py: 19
+#   test_q1_b1_remediation_d5_integration.py: 17
+#   test_q1_b1_audit_remediation_d1_d5.py: 13
+#   test_q1_b1_remediation_r1_d5_m1.py: 16
+#   test_q1_h3_independent_followup.py: 10
+#   test_q1_h3_second_reaudit.py: 22
+#   test_q1_h3_applicable_direction.py: 18
+#   test_q1_h3_a_b_c_corrections.py: 20
+........................................................................ [ 40%]
+........................................................................ [ 80%]
+....................................                                     [100%]

@@ -1,0 +1,49 @@
+{
+  "auth": {
+    "computed_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+    "engineering_only": false,
+    "failures": [],
+    "mode": "pinned_digest",
+    "ok": true,
+    "path": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/results/q1_implementation_prep/CHECKPOINT_PROVENANCE_MANIFEST.json",
+    "pin_configured": true,
+    "production_unlocked": true
+  },
+  "baseline_handoff": "fe7ba32063918a384e14f9c02c2b0dc2eb2b81af",
+  "baseline_tree": "2373fc51f36113989748b137f2a7c0b79d3ae82b",
+  "canonical_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+  "document_type": "b3_10_post_freeze_verification_evidence",
+  "f1_full_set_stream_sha256": "fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed",
+  "frozen_main": "b1e8874f45311678e6fa241f504e7e09d4a7808c",
+  "git_blob_sha1": "7887be2f8d584dd603b871a8151b1e4d9df947db",
+  "owner_pin": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+  "production_equals_candidate": true,
+  "pytest": {
+    "exit_code": 0,
+    "files": [
+      "tests/test_q1_b3_10_owner_pin_freeze.py",
+      "tests/test_q1_b3_modal_byte_verify.py",
+      "tests/test_q1_b1_remediation_d5a_d5b.py",
+      "tests/test_q1_b1_remediation_d5_integration.py",
+      "tests/test_q1_b1_audit_remediation_d1_d5.py",
+      "tests/test_q1_b1_remediation_r1_d5_m1.py",
+      "tests/test_q1_h3_independent_followup.py",
+      "tests/test_q1_h3_second_reaudit.py",
+      "tests/test_q1_h3_applicable_direction.py",
+      "tests/test_q1_h3_a_b_c_corrections.py"
+    ],
+    "interpreter": "/Users/ronny/Desktop/Research/AI Alignment Projects_Claude/traces/.venv/bin/python",
+    "passed": 180,
+    "platform": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+    "python_version": "3.13.13"
+  },
+  "remaining_blockers": [
+    "B3-11",
+    "B3-12",
+    "scientific_execution_OFF"
+  ],
+  "schema_failures": [],
+  "scientific_authorization": "OFF",
+  "status": "STOP_FOR_AGENT1_REVIEW",
+  "timestamp_utc": "2026-11-17T00:38:39Z"
+}

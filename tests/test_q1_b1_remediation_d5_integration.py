@@ -90,8 +90,7 @@ def test_d5a1_explicit_repo_root_required_not_inferred(monkeypatch, tmp_path):
 def test_d5a1_external_snapshots_with_temp_pin(monkeypatch, tmp_path, eng_trust):
     """Valid synthetic pin works with checkpoints outside the repo (D5-A1)."""
     monkeypatch.setenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", "1")
-    assert PINNED_CHECKPOINT_MANIFEST_SHA256 is None
-    # Executor repo (trusted) separate from external snapshots
+    # Executor repo (trusted) separate from external snapshots; temp pin overrides.
     repo = tmp_path / "executor_repo"
     (repo / "src" / "traces").mkdir(parents=True)
     (repo / "results" / "q1_implementation_prep").mkdir(parents=True)
@@ -259,6 +258,10 @@ def test_d5b1_parse_rejects_path_escape_in_weight_map():
 
 
 def test_d5a2_live_pipeline_blocks_without_pin(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "traces.q1.checkpoint_trust.PINNED_CHECKPOINT_MANIFEST_SHA256",
+        None,
+    )
     monkeypatch.setenv("TRACES_Q1_ALLOW_SCIENTIFIC_EXECUTION", "1")
     from traces.q1.frozen_artifacts import load_ordered_dolly_ids
     from traces.q1.scientific_execution import PreflightReport
@@ -316,7 +319,11 @@ def test_d5a2_engineering_trust_rejected_on_live_path(monkeypatch, tmp_path, eng
 
 def test_d5a2_spoofed_production_unlocked_fails(monkeypatch, tmp_path):
     fix = make_sharded_ten_unit_fixture(tmp_path)
-    # Real executor auth: pin unset → not unlocked
+    # Locally clear pin so executor auth is not unlocked; spoofed claim must fail.
+    monkeypatch.setattr(
+        "traces.q1.checkpoint_trust.PINNED_CHECKPOINT_MANIFEST_SHA256",
+        None,
+    )
     auth = authenticate_production_checkpoint_manifest(repo_root=REPO)
     assert auth.production_unlocked is False
     spec = _spec()
@@ -430,10 +437,9 @@ def test_f1_preserved():
     assert f1_full_set_stream_sha256() == F1_REF
 
 
-def test_pin_remains_unset_in_module():
-    # Re-import check: production pin must stay unset in source module default
+def test_owner_frozen_pin_present_in_module():
+    owner = "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55"
+    assert PINNED_CHECKPOINT_MANIFEST_SHA256 == owner
     import traces.q1.checkpoint_trust as ct
 
-    # May be monkeypatched by prior tests in same process — check source default
-    # by reading that the constant name exists; suite isolation uses monkeypatch.
-    assert hasattr(ct, "PINNED_CHECKPOINT_MANIFEST_SHA256")
+    assert ct.PINNED_CHECKPOINT_MANIFEST_SHA256 == owner

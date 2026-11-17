@@ -46,10 +46,25 @@ from traces.q1.checkpoint_trust import (
 from traces.q1.stats_f1_f2 import f1_full_set_stream_sha256
 
 F1_REF = "fe4641876e74ed5d70fde3e20ff1f30be22b6ac606c02553abfb6005ac6790ed"
+OWNER_FROZEN_PIN = (
+    "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55"
+)
 
 
 def _sha(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
+
+
+def _unset_production_pin(monkeypatch) -> None:
+    """Local pre-freeze simulation for synthetic B3 prep tests only."""
+    monkeypatch.setattr(
+        "traces.q1.checkpoint_trust.PINNED_CHECKPOINT_MANIFEST_SHA256",
+        None,
+    )
+    monkeypatch.setattr(
+        "traces.q1.b3_modal_byte_verify.PINNED_CHECKPOINT_MANIFEST_SHA256",
+        None,
+    )
 
 
 def _write_sharded_base(base: Path) -> dict[str, str]:
@@ -105,8 +120,14 @@ def _write_unit_matching_pins(d: Path, *, weight: bytes) -> dict[str, str]:
     return _write_unit(d, weight=weight, tok_tag="synth")
 
 
-def test_pin_remains_unset():
-    assert PINNED_CHECKPOINT_MANIFEST_SHA256 is None
+def test_owner_frozen_production_pin_digest():
+    assert PINNED_CHECKPOINT_MANIFEST_SHA256 == OWNER_FROZEN_PIN
+
+
+def test_b3_tooling_fail_closed_when_production_pin_frozen():
+    """Post-freeze: B3 download/prep helpers must refuse without new owner instrument."""
+    with pytest.raises(B3VerifyError, match="production pin is already frozen"):
+        preflight_local()
 
 
 def test_ten_units_not_five():
@@ -134,6 +155,7 @@ def test_budget_invalid_fails():
 
 
 def test_billable_gates_require_chat_confirm_and_exact_10(monkeypatch):
+    _unset_production_pin(monkeypatch)
     monkeypatch.delenv(BILLABLE_CONFIRM_ENV, raising=False)
     monkeypatch.setenv(OWNER_BUDGET_ENV, "10")
     with pytest.raises(B3VerifyError, match="B3_CHAT_CAP_CONFIRMED"):
@@ -207,7 +229,8 @@ def test_extra_file_blocks(tmp_path: Path):
     assert any("unexpected extra" in f for f in inv["failures"])
 
 
-def test_wrong_shard_index_blocks(tmp_path: Path):
+def test_wrong_shard_index_blocks(tmp_path: Path, monkeypatch):
+    _unset_production_pin(monkeypatch)
     base = tmp_path / "base"
     _write_sharded_base(base)
     # Corrupt index to reference missing shard
@@ -248,7 +271,8 @@ def test_candidate_manifest_schema_and_not_production_path(tmp_path: Path):
     assert not (tmp_path / "CHECKPOINT_PROVENANCE_MANIFEST.json").exists()
 
 
-def test_section11_mismatch_blocks_inventory(tmp_path: Path):
+def test_section11_mismatch_blocks_inventory(tmp_path: Path, monkeypatch):
+    _unset_production_pin(monkeypatch)
     base = tmp_path / "base"
     _write_sharded_base(base)
     adapter = tmp_path / "adapters"
@@ -261,6 +285,7 @@ def test_section11_mismatch_blocks_inventory(tmp_path: Path):
 
 
 def test_preflight_no_download(monkeypatch):
+    _unset_production_pin(monkeypatch)
     monkeypatch.delenv(OWNER_BUDGET_ENV, raising=False)
     monkeypatch.delenv(BILLABLE_CONFIRM_ENV, raising=False)
     out = preflight_local()
@@ -539,7 +564,10 @@ def test_fetch_lfs_and_git_blob_identities_from_paths_info():
     assert ident2.digest == "ef" * 20
 
 
-def test_inventory_blocks_symlinked_unit_and_no_false_manifest(tmp_path: Path):
+def test_inventory_blocks_symlinked_unit_and_no_false_manifest(
+    tmp_path: Path, monkeypatch
+):
+    _unset_production_pin(monkeypatch)
     base = tmp_path / "base"
     _write_sharded_base(base)
     adapter = tmp_path / "adapters"
@@ -561,7 +589,8 @@ def test_inventory_blocks_symlinked_unit_and_no_false_manifest(tmp_path: Path):
     )
     assert report.ok is False
     assert cand is None
-    assert PINNED_CHECKPOINT_MANIFEST_SHA256 is None
+    # Module pin remains frozen; this test only locally simulated unset for inventory.
+    assert PINNED_CHECKPOINT_MANIFEST_SHA256 == OWNER_FROZEN_PIN
     assert not (tmp_path / "CHECKPOINT_PROVENANCE_MANIFEST.json").exists()
 
 
