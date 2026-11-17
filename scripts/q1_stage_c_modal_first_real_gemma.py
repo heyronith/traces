@@ -26,6 +26,10 @@ INTENDED_IMAGE_ID = "im-0j3j9DzkkZSLdRQTxl4scU"
 B3_VOLUME = "traces-q1-b3-checkpoint-bytes"
 STAGE_B_VOLUME = "traces-q1-stage-b-runtime-lock"
 APP_NAME = "traces-q1-stage-c-first-real-gemma"
+# First owner-approved Stage C session ran and stopped REVISE. CPU code
+# corrections do NOT authorize a second session. Only a separately approved
+# reverse-only runner may resume GPU calibration.
+FIRST_STAGE_C_SESSION_CLOSED = True
 STAGE_C_TIMEOUT_SEC = 30 * 60
 STAGE_C_CAP_USD = 3.0
 
@@ -106,6 +110,11 @@ def _local_prior_stage_c_spend() -> float:
 )
 def run_stage_c_calibration() -> dict[str, Any]:
     """Single bounded Stage C session inside the pinned scientific image."""
+    if FIRST_STAGE_C_SESSION_CLOSED:
+        return {
+            "verdict": "BLOCK",
+            "reason": "first Stage C session closed; separate reverse-only owner approval required",
+        }
     # --- Environment before torch/CUDA ---
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     os.environ["HF_HUB_OFFLINE"] = "1"
@@ -142,6 +151,7 @@ def run_stage_c_calibration() -> dict[str, Any]:
         verify_running_image_identity,
         verify_stage_c_repo_artifacts,
         ArmTiming,
+        select_stage_c_joint_recipient,
     )
 
     # Refresh Volume views before identity / checkpoint gates.
@@ -590,15 +600,16 @@ def run_stage_c_calibration() -> dict[str, Any]:
 
             time_arm("single_head_patch", did, rep, _single)
 
-        # All-upstream joint both directions
+        # Joint recipient selection is direction-bound: forward recipient T,
+        # reverse recipient C. The token IDs, mask, identity tag and expected
+        # full IDs are selected together so none can be mislabeled.
         up_heads = list(all_upstream_heads())
         for direction in ("forward", "reverse"):
+            joint_recip = select_stage_c_joint_recipient(pair, direction)
             for rep in range(3):
                 def _all(
                     c=cache,
-                    ids=recip_ids,
-                    attn=recip_attn,
-                    exp=expected_full,
+                    binding=joint_recip,
                     direc=direction,
                     heads=up_heads,
                 ):
@@ -606,28 +617,28 @@ def run_stage_c_calibration() -> dict[str, Any]:
                         c,
                         heads,
                         direc,  # type: ignore[arg-type]
-                        recipient_input_ids=ids,
-                        recipient_attention_mask=attn,
-                        recipient_prompt_tag="T",
-                        expected_full_ids=exp,
+                        recipient_input_ids=binding["recipient_input_ids"].to(device),
+                        recipient_attention_mask=binding["recipient_attention_mask"].to(device),
+                        recipient_prompt_tag=binding["recipient_tag"],
+                        expected_full_ids=binding["expected_full_ids"],
                     )
                     return {
                         "direction": direc,
+                        "recipient_tag": binding["recipient_tag"],
                         "n_heads": len(heads),
                         "logits_shape": list(logits.shape),
                     }
 
                 time_arm(f"all_upstream_joint_{direction}", did, rep, _all)
 
-        # Eight-head layer joint
+        # Eight-head layer joint uses the same direction-bound binding.
         layer_heads = list(eight_head_layer_heads(EIGHT_HEAD_LAYER))
         for direction in ("forward", "reverse"):
+            joint_recip = select_stage_c_joint_recipient(pair, direction)
             for rep in range(3):
                 def _eight(
                     c=cache,
-                    ids=recip_ids,
-                    attn=recip_attn,
-                    exp=expected_full,
+                    binding=joint_recip,
                     direc=direction,
                     heads=layer_heads,
                 ):
@@ -635,13 +646,14 @@ def run_stage_c_calibration() -> dict[str, Any]:
                         c,
                         heads,
                         direc,  # type: ignore[arg-type]
-                        recipient_input_ids=ids,
-                        recipient_attention_mask=attn,
-                        recipient_prompt_tag="T",
-                        expected_full_ids=exp,
+                        recipient_input_ids=binding["recipient_input_ids"].to(device),
+                        recipient_attention_mask=binding["recipient_attention_mask"].to(device),
+                        recipient_prompt_tag=binding["recipient_tag"],
+                        expected_full_ids=binding["expected_full_ids"],
                     )
                     return {
                         "direction": direc,
+                        "recipient_tag": binding["recipient_tag"],
                         "layer": EIGHT_HEAD_LAYER,
                         "n_heads": len(heads),
                         "logits_shape": list(logits.shape),
@@ -785,6 +797,12 @@ def asdict_timing(row: Any) -> dict[str, Any]:
 
 
 def main() -> int:
+    if FIRST_STAGE_C_SESSION_CLOSED:
+        print(json.dumps({
+            "verdict": "BLOCK",
+            "reason": "first Stage C session already consumed; new owner authorization required",
+        }))
+        return 2
     prior = _local_prior_stage_c_spend()
     if prior >= STAGE_C_CAP_USD:
         print(json.dumps({"verdict": "BLOCK", "reason": "Stage C cap already reached", "prior": prior}))
