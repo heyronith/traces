@@ -1,0 +1,951 @@
+{
+  "document_type": "q1_b2_exploratory_identity_suite_evidence",
+  "stamp_utc": "2026-11-18T002534Z",
+  "f4_identity_applicable_sha256": "32faa1e5a0ae2a8d2fc1aa26d028035b81210aefb67ebe969a6f1df7364b427d",
+  "held_out_consumed": false,
+  "claims_main_experiment": false,
+  "alters_single_bos_stopping_rule": false,
+  "failures": [],
+  "loads": [
+    {
+      "seed": 42,
+      "unit": "exploratory_l1523_seed42",
+      "ok": true,
+      "dtype": "torch.bfloat16"
+    },
+    {
+      "seed": 43,
+      "unit": "exploratory_l1523_seed43",
+      "ok": true,
+      "dtype": "torch.bfloat16"
+    },
+    {
+      "seed": 44,
+      "unit": "exploratory_l1523_seed44",
+      "ok": true,
+      "dtype": "torch.bfloat16"
+    }
+  ],
+  "per_seed_prompt_summaries": [
+    {
+      "seed": 42,
+      "prompt_id": 9793,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 1634,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 5149,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 14198,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 11344,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 11282,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 5560,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 10876,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 8428,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 11764,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 1361,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 14596,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 196,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 14144,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 13897,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 2545,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 8767,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 10663,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 7883,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 7969,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 12865,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 4209,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 12280,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 2304,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 8750,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 8753,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 7556,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 6999,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 2385,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 6340,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 10000,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 7698,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 11074,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 5467,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 5294,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 8980,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 6796,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 12093,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 13250,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 14395,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 4607,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 9751,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 10475,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 4944,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 11573,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 7648,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 9641,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 10035,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 9517,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 42,
+      "prompt_id": 11882,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 9793,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 1634,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 5149,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 14198,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 11344,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 11282,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 5560,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 10876,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 8428,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 11764,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 1361,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 14596,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 196,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 14144,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 13897,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 2545,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 8767,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 10663,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 7883,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 7969,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 12865,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 4209,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 12280,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 2304,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 8750,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 8753,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 7556,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 6999,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 2385,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 6340,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 10000,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 7698,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 11074,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 5467,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 5294,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 8980,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 6796,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 12093,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 13250,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 14395,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 4607,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 9751,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 10475,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 4944,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 11573,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 7648,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 9641,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 10035,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 9517,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 43,
+      "prompt_id": 11882,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 9793,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 1634,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 5149,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 14198,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 11344,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 11282,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 5560,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 10876,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 8428,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 11764,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 1361,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 14596,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 196,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 14144,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 13897,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 2545,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 8767,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 10663,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 7883,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 7969,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 12865,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 4209,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 12280,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 2304,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 8750,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 8753,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 7556,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 6999,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 2385,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 6340,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 10000,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 7698,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 11074,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 5467,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 5294,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 8980,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 6796,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 12093,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 13250,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 14395,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 4607,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 9751,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 10475,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 4944,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 11573,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 7648,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 9641,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 10035,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 9517,
+      "all_passed": true,
+      "failed_ids": []
+    },
+    {
+      "seed": 44,
+      "prompt_id": 11882,
+      "all_passed": true,
+      "failed_ids": []
+    }
+  ],
+  "verdict": "PASS",
+  "modal_image": {
+    "ok": true,
+    "expected": "im-0j3j9DzkkZSLdRQTxl4scU",
+    "observed": "im-0j3j9DzkkZSLdRQTxl4scU"
+  },
+  "f4_epsilons": {
+    "boundary_residual": 0.001,
+    "decision_margin": 0.001,
+    "final_logits": 0.001,
+    "upstream_activation": 0.001
+  },
+  "artifact": {
+    "path": "/mnt/stage_b/evidence/b2_identity_2026-11-18T002534Z/IDENTITY_SUITE_ARTIFACT.json",
+    "sha256": "814d489b4fffc0f9bb629b5a2d72236cdefdca957c78d446f35879d8e7e6eb41",
+    "all_passed": true,
+    "auth_ok": true,
+    "auth_failures": []
+  },
+  "job_wall_seconds": 1052.7937131850001
+}

@@ -1,0 +1,16 @@
+{
+  "verdict": "PASS",
+  "failures": [],
+  "artifact": {
+    "path": "/mnt/stage_b/evidence/b2_identity_2026-11-18T002534Z/IDENTITY_SUITE_ARTIFACT.json",
+    "sha256": "814d489b4fffc0f9bb629b5a2d72236cdefdca957c78d446f35879d8e7e6eb41",
+    "all_passed": true,
+    "auth_ok": true,
+    "auth_failures": []
+  },
+  "job_wall_seconds": 1052.7937131850001,
+  "pre_metered_usd": 0,
+  "post_metered_usd": 0.38972995,
+  "delta_metered_usd": 0.38972995,
+  "stamp_utc": "2026-11-18T002534Z"
+}

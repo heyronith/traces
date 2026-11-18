@@ -359,14 +359,25 @@ def freeze_b_i_from_clean_logits(
 
 @dataclass
 class FamilyAccum:
-    """Collect three repeats per (model, prompt, tag) then emit pairwise diffs."""
+    """Collect three repeats per (model, prompt, tag) then emit pairwise diffs.
+
+    When ``allow_variable_shapes`` is True (identity-applicable full-sequence
+    residuals/activations), shapes must match within a cell but may differ
+    across prompts; family-level ``shape`` records the shape policy.
+    """
 
     family: str
     shape: tuple[int, ...] | None = None
     dtype: str = "float32"
+    allow_variable_shapes: bool = False
+    batching_padding_policy: str = F4_BATCHING_PADDING_POLICY
     comparisons: list[dict[str, Any]] = field(default_factory=list)
     per_model_maxima: dict[str, float] = field(default_factory=dict)
+    observed_shapes: list[list[int]] = field(default_factory=list)
     _pending: dict[tuple[str, str, str], list[torch.Tensor]] = field(
+        default_factory=dict
+    )
+    _cell_shapes: dict[tuple[str, str, str], tuple[int, ...]] = field(
         default_factory=dict
     )
 
@@ -379,15 +390,27 @@ class FamilyAccum:
         tensor: torch.Tensor,
     ) -> None:
         t = tensor.detach().float().cpu().contiguous()
-        if self.shape is None:
-            self.shape = tuple(t.shape)
-        elif tuple(t.shape) != self.shape:
-            raise ValueError(
-                f"{self.family}: shape {tuple(t.shape)} != locked {self.shape}"
-            )
+        key = (model_unit, str(prompt_id), tag)
+        shape = tuple(t.shape)
+        if self.allow_variable_shapes:
+            locked = self._cell_shapes.get(key)
+            if locked is None:
+                self._cell_shapes[key] = shape
+                if shape not in {tuple(s) for s in self.observed_shapes}:
+                    self.observed_shapes.append(list(shape))
+            elif shape != locked:
+                raise ValueError(
+                    f"{self.family}: in-cell shape {shape} != {locked} for {key}"
+                )
+        else:
+            if self.shape is None:
+                self.shape = shape
+            elif shape != self.shape:
+                raise ValueError(
+                    f"{self.family}: shape {shape} != locked {self.shape}"
+                )
         if not torch.isfinite(t).all():
             raise ValueError(f"{self.family}: nonfinite tensor for {model_unit}/{prompt_id}/{tag}")
-        key = (model_unit, str(prompt_id), tag)
         bucket = self._pending.setdefault(key, [])
         if len(bucket) >= F4_N_REPEATS:
             raise RuntimeError(f"{self.family}: >{F4_N_REPEATS} repeats for {key}")
@@ -405,16 +428,17 @@ class FamilyAccum:
     ) -> None:
         for ri, rj in ((0, 1), (0, 2), (1, 2)):
             d = float((reps[ri] - reps[rj]).abs().max().item())
-            self.comparisons.append(
-                {
-                    "model_unit": model_unit,
-                    "prompt_id": str(prompt_id),
-                    "tag": tag,
-                    "repeat_i": ri,
-                    "repeat_j": rj,
-                    "max_abs_diff": d,
-                }
-            )
+            row: dict[str, Any] = {
+                "model_unit": model_unit,
+                "prompt_id": str(prompt_id),
+                "tag": tag,
+                "repeat_i": ri,
+                "repeat_j": rj,
+                "max_abs_diff": d,
+            }
+            if self.allow_variable_shapes:
+                row["shape"] = list(reps[ri].shape)
+            self.comparisons.append(row)
             prev = self.per_model_maxima.get(model_unit, 0.0)
             self.per_model_maxima[model_unit] = max(prev, d)
 
@@ -423,20 +447,30 @@ class FamilyAccum:
             raise RuntimeError(
                 f"{self.family}: incomplete cells still pending: {list(self._pending)[:5]}"
             )
-        if self.shape is None:
-            raise RuntimeError(f"{self.family}: no tensors recorded")
+        if self.allow_variable_shapes:
+            if not self.observed_shapes:
+                raise RuntimeError(f"{self.family}: no tensors recorded")
+            shape_field: Any = {
+                "policy": "per_cell_native_sequence",
+                "observed_shapes": list(self.observed_shapes),
+            }
+        else:
+            if self.shape is None:
+                raise RuntimeError(f"{self.family}: no tensors recorded")
+            shape_field = list(self.shape)
         dmax = max((float(c["max_abs_diff"]) for c in self.comparisons), default=0.0)
-        # Ensure all exploratory units appear even if somehow empty
         for u in frozen_exploratory_model_units():
             self.per_model_maxima.setdefault(u, 0.0)
         return {
-            "shape": list(self.shape),
+            "shape": shape_field,
             "dtype": self.dtype,
-            "batching_padding_policy": F4_BATCHING_PADDING_POLICY,
+            "batching_padding_policy": self.batching_padding_policy,
             "comparisons": list(self.comparisons),
             "d_max_family": float(dmax),
             "epsilon_family": float(epsilon_from_dmax(dmax)),
-            "per_model_maxima": {u: float(self.per_model_maxima[u]) for u in sorted(self.per_model_maxima)},
+            "per_model_maxima": {
+                u: float(self.per_model_maxima[u]) for u in sorted(self.per_model_maxima)
+            },
         }
 
 

@@ -1,0 +1,17 @@
+{
+  "verdict": "PASS",
+  "failures": [],
+  "artifact": {
+    "path": "/mnt/stage_b/evidence/b2_double_bos_2026-11-18T004436Z/DOUBLE_BOS_SCAN_ARTIFACT.json",
+    "sha256": "aefc70bb2638663065201a75683f49009b3edb18300d8d59b3cc96680d74760f",
+    "auth_ok": true,
+    "auth_failures": [],
+    "n_patched_forwards": 9600
+  },
+  "job_wall_seconds": 819.830171041,
+  "pre_metered_usd": 0,
+  "post_metered_usd": 0.29288811000000003,
+  "delta_metered_usd": 0.29288811000000003,
+  "stamp_utc": "2026-11-18T004436Z",
+  "alters_single_bos_stopping_rule": false
+}

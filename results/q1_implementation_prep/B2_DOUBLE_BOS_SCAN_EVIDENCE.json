@@ -1,0 +1,21 @@
+{
+  "document_type": "q1_b2_descriptive_double_bos_64_pair_scan_evidence",
+  "stamp_utc": "2026-11-18T004436Z",
+  "alters_single_bos_stopping_rule": false,
+  "held_out_consumed": false,
+  "failures": [],
+  "verdict": "PASS",
+  "modal_image": {
+    "ok": true,
+    "expected": "im-0j3j9DzkkZSLdRQTxl4scU",
+    "observed": "im-0j3j9DzkkZSLdRQTxl4scU"
+  },
+  "artifact": {
+    "path": "/mnt/stage_b/evidence/b2_double_bos_2026-11-18T004436Z/DOUBLE_BOS_SCAN_ARTIFACT.json",
+    "sha256": "aefc70bb2638663065201a75683f49009b3edb18300d8d59b3cc96680d74760f",
+    "auth_ok": true,
+    "auth_failures": [],
+    "n_patched_forwards": 9600
+  },
+  "job_wall_seconds": 819.830171041
+}

@@ -1,0 +1,241 @@
+{
+  "result_verdict": "PASS",
+  "result_failures": [],
+  "artifact": {
+    "path": "/mnt/stage_b/evidence/f4_2026-11-18T001909Z/F4_TOLERANCE_TABLE_IDENTITY_APPLICABLE_v2.json",
+    "sha256": "32faa1e5a0ae2a8d2fc1aa26d028035b81210aefb67ebe969a6f1df7364b427d",
+    "schema_failures": [],
+    "epsilon_table": {
+      "boundary_residual": {
+        "d_max_family": 0.0,
+        "epsilon_family": 0.001,
+        "shape": {
+          "policy": "per_cell_native_sequence",
+          "observed_shapes": [
+            [
+              21,
+              2304
+            ],
+            [
+              23,
+              2304
+            ],
+            [
+              25,
+              2304
+            ],
+            [
+              28,
+              2304
+            ],
+            [
+              20,
+              2304
+            ],
+            [
+              30,
+              2304
+            ],
+            [
+              31,
+              2304
+            ],
+            [
+              24,
+              2304
+            ],
+            [
+              19,
+              2304
+            ],
+            [
+              26,
+              2304
+            ],
+            [
+              22,
+              2304
+            ],
+            [
+              27,
+              2304
+            ],
+            [
+              35,
+              2304
+            ],
+            [
+              29,
+              2304
+            ],
+            [
+              32,
+              2304
+            ]
+          ]
+        },
+        "dtype": "float32",
+        "n_comparisons": 900,
+        "per_model_maxima": {
+          "exploratory_l1523_seed42": 0.0,
+          "exploratory_l1523_seed43": 0.0,
+          "exploratory_l1523_seed44": 0.0
+        }
+      },
+      "decision_margin": {
+        "d_max_family": 0.0,
+        "epsilon_family": 0.001,
+        "shape": [
+          1
+        ],
+        "dtype": "float32",
+        "n_comparisons": 900,
+        "per_model_maxima": {
+          "exploratory_l1523_seed42": 0.0,
+          "exploratory_l1523_seed43": 0.0,
+          "exploratory_l1523_seed44": 0.0
+        }
+      },
+      "final_logits": {
+        "d_max_family": 0.0,
+        "epsilon_family": 0.001,
+        "shape": [
+          256000
+        ],
+        "dtype": "float32",
+        "n_comparisons": 900,
+        "per_model_maxima": {
+          "exploratory_l1523_seed42": 0.0,
+          "exploratory_l1523_seed43": 0.0,
+          "exploratory_l1523_seed44": 0.0
+        }
+      },
+      "upstream_activation": {
+        "d_max_family": 0.0,
+        "epsilon_family": 0.001,
+        "shape": {
+          "policy": "per_cell_native_sequence",
+          "observed_shapes": [
+            [
+              645120
+            ],
+            [
+              706560
+            ],
+            [
+              768000
+            ],
+            [
+              860160
+            ],
+            [
+              614400
+            ],
+            [
+              921600
+            ],
+            [
+              952320
+            ],
+            [
+              737280
+            ],
+            [
+              583680
+            ],
+            [
+              798720
+            ],
+            [
+              675840
+            ],
+            [
+              829440
+            ],
+            [
+              1075200
+            ],
+            [
+              890880
+            ],
+            [
+              983040
+            ]
+          ]
+        },
+        "dtype": "float32",
+        "n_comparisons": 900,
+        "per_model_maxima": {
+          "exploratory_l1523_seed42": 0.0,
+          "exploratory_l1523_seed43": 0.0,
+          "exploratory_l1523_seed44": 0.0
+        }
+      }
+    },
+    "formula": "epsilon_family = max(1e-3, 10 * D_max_family)",
+    "locked": true,
+    "n_comparisons_total": 3600
+  },
+  "forward_summary": {
+    "n_ok": 900,
+    "n_fail": 0,
+    "wall_mean_s": 0.07839114501777787,
+    "wall_max_s": 0.18241458199999983,
+    "peak_vram_max_bytes": 5384216576,
+    "job_wall_seconds": 170.29170731399998
+  },
+  "loads": [
+    {
+      "seed": 42,
+      "model_unit": "exploratory_l1523_seed42",
+      "subfolder": "l1523/seed42",
+      "wall_seconds": 29.926012574,
+      "peak_vram_bytes": 6408896512,
+      "tokenizer_class": "GemmaTokenizer",
+      "tokenizer_is_fast": false,
+      "torch_dtype": "torch.bfloat16",
+      "attn_implementation": "eager",
+      "base_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+      "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+      "load_report_ok": true
+    },
+    {
+      "seed": 43,
+      "model_unit": "exploratory_l1523_seed43",
+      "subfolder": "l1523/seed43",
+      "wall_seconds": 26.151971468000013,
+      "peak_vram_bytes": 6459099136,
+      "tokenizer_class": "GemmaTokenizer",
+      "tokenizer_is_fast": false,
+      "torch_dtype": "torch.bfloat16",
+      "attn_implementation": "eager",
+      "base_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+      "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+      "load_report_ok": true
+    },
+    {
+      "seed": 44,
+      "model_unit": "exploratory_l1523_seed44",
+      "subfolder": "l1523/seed44",
+      "wall_seconds": 27.542066540000008,
+      "peak_vram_bytes": 6459099136,
+      "tokenizer_class": "GemmaTokenizer",
+      "tokenizer_is_fast": false,
+      "torch_dtype": "torch.bfloat16",
+      "attn_implementation": "eager",
+      "base_revision": "c5ebcd40d208330abc697524c919956e692655cf",
+      "adapter_revision": "6303a74fc832a34d584999364817268aefd9623b",
+      "load_report_ok": true
+    }
+  ],
+  "pre_metered_usd": 0,
+  "post_metered_usd": 0.0228323,
+  "delta_metered_usd": 0.0228323,
+  "stamp_utc": "2026-11-18T001909Z",
+  "historical_f4_sha256": "80d7985c3d6241c5661cfacccbea2764c0dec429a9f637131d531727de41d021",
+  "identity_image": {
+    "ok": true,
+    "expected": "im-0j3j9DzkkZSLdRQTxl4scU",
+    "observed": "im-0j3j9DzkkZSLdRQTxl4scU"
+  }
+}

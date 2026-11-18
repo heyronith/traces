@@ -1,0 +1,130 @@
+{
+  "document_type": "q1_f4_coverage_applicability_cpu_verdict",
+  "verdict": "INSUFFICIENT_REQUIRES_SUPPLEMENT",
+  "coverage": {
+    "published_f4_last_position_applicable_to_all_required_identities": false,
+    "sufficient_identity_ids": [
+      1,
+      8
+    ],
+    "insufficient_identity_ids": [
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "requires_supplemental_full_tensor_calibration": true,
+    "matrix": [
+      {
+        "identity_id": 1,
+        "required_families": [
+          "final_logits"
+        ],
+        "compared_tensors": "intact vs identity-patch logits (TT/CC)",
+        "required_positions": "decision/scoring logits at last prompt position (V,)",
+        "layer_boundary": "n/a (logits)",
+        "published_f4_samples": "last-prompt logits [V]",
+        "coverage_sufficient": true,
+        "rationale": "Identity 1 / scoring path compares final logits at the last prompt position; published F4 final_logits slice matches."
+      },
+      {
+        "identity_id": 2,
+        "required_families": [
+          "final_logits",
+          "boundary_residual"
+        ],
+        "compared_tensors": "all-upstream forward vs CT logits; residual family also required in artifact",
+        "required_positions": "logits: last prompt; residual: full boundary residual sequence for family eps",
+        "layer_boundary": "boundary residual L19 (causal); logits last-pos",
+        "published_f4_samples": "last-pos logits + last-pos L19 residual only",
+        "coverage_sufficient": false,
+        "rationale": "Artifact requires boundary_residual family; identity residual comparisons use full-sequence hybrids. Last-pos L19 slice omits tag/pre-/post-tag positions."
+      },
+      {
+        "identity_id": 3,
+        "required_families": [
+          "final_logits",
+          "boundary_residual"
+        ],
+        "compared_tensors": "all-upstream reverse vs TC logits; residual family required",
+        "required_positions": "same as identity 2",
+        "layer_boundary": "boundary residual L19",
+        "published_f4_samples": "last-pos logits + last-pos L19 residual only",
+        "coverage_sufficient": false,
+        "rationale": "Same residual-family gap as identity 2."
+      },
+      {
+        "identity_id": 4,
+        "required_families": [
+          "boundary_residual"
+        ],
+        "compared_tensors": "CC hybrid residual vs clean residual (full tensor)",
+        "required_positions": "all sequence positions at boundary layer (tag + pre-tag + post-tag)",
+        "layer_boundary": "layer-input residual L19",
+        "published_f4_samples": "last-pos L19 residual [H] only",
+        "coverage_sufficient": false,
+        "rationale": "build_hybrid_residual / check_identity_4 compare full [...,S,H] tensors; last-position F4 cannot bound tag/post-tag elementwise error."
+      },
+      {
+        "identity_id": 5,
+        "required_families": [
+          "boundary_residual"
+        ],
+        "compared_tensors": "pre-tag identical residual patch no-op",
+        "required_positions": "pre-tag positions (and full-tensor equality check)",
+        "layer_boundary": "layer-input residual L19",
+        "published_f4_samples": "last-pos L19 residual [H] only",
+        "coverage_sufficient": false,
+        "rationale": "check_identity_5 writes pre-tag indices then compares the full residual; last-token F4 does not observe pre-tag variability."
+      },
+      {
+        "identity_id": 6,
+        "required_families": [
+          "upstream_activation",
+          "boundary_residual"
+        ],
+        "compared_tensors": "adapter-off vs on equality below first adapted layer",
+        "required_positions": "all positions of upstream activations/residuals below first adapted layer",
+        "layer_boundary": "l1523 upstream exclusive bound L15 (not L19); boundary_residual family still L19",
+        "published_f4_samples": "last-pos o_proj L0\u2013L14 concat + last-pos L19 residual",
+        "coverage_sufficient": false,
+        "rationale": "F7/l1523 identity 6 requires below-15 full activations/residuals; published F4 only last-pos o_proj slices and uses L19 for residual family."
+      },
+      {
+        "identity_id": 8,
+        "required_families": [
+          "final_logits"
+        ],
+        "compared_tensors": "repeat stability of logits within epsilon",
+        "required_positions": "last-prompt logits (same family as scoring)",
+        "layer_boundary": "n/a",
+        "published_f4_samples": "last-prompt logits [V]",
+        "coverage_sufficient": true,
+        "rationale": "Identity 8 reuses final_logits family; last-position calibration applies."
+      }
+    ],
+    "notes": "Identities 7/9 are ASR/hooks and do not consume F4 tensor epsilons. Preserve historical last-position F4 artifact; if insufficient, publish a versioned identity-applicable supplement."
+  },
+  "adversarial_pretag": {
+    "pre_tag_index": 0,
+    "last_index": 11,
+    "f4_last_pos_boundary_max_abs_diff": 0.0,
+    "full_residual_max_abs_diff": 0.5,
+    "f4_reports_zero_while_full_differs": true,
+    "within_eps_last_pos": true,
+    "within_eps_full_tensor": false,
+    "identity5_noop_passed": true,
+    "identity4_detail": "ok=True eps=0.001",
+    "conclusion": "Published F4 last-position extraction reports 0 difference while the full residual used by identities 4/5 differs at pre-tag positions."
+  },
+  "adversarial_upstream": {
+    "f4_last_pos_upstream_max_abs_diff": 0.0,
+    "full_upstream_max_abs_diff": 0.25,
+    "f4_reports_zero_while_full_differs": true,
+    "identity6_would_fail_eps_1e-3": true,
+    "conclusion": "Last-position o_proj F4 slice misses earlier-token upstream divergence that identity 6 full-tensor equality would observe."
+  },
+  "historical_f4_sha256": "80d7985c3d6241c5661cfacccbea2764c0dec429a9f637131d531727de41d021",
+  "historical_f4_preserved": true
+}
