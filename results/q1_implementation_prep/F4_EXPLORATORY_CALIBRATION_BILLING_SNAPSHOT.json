@@ -1,0 +1,27 @@
+{
+  "document_type": "q1_f4_exploratory_billing_snapshot",
+  "app_name": "traces-q1-f4-exploratory-calibration",
+  "modal_app_id": "ap-4stAh4RmWEGfR4BZYDHiQi",
+  "stamp_utc_run": "2026-11-17T235846Z",
+  "internal_cap_usd": 2.0,
+  "internal_timeout_sec": 2700,
+  "metered_rows": [
+    {
+      "resource": "A10G",
+      "cost_usd": 0.00855565
+    },
+    {
+      "resource": "CPU",
+      "cost_usd": 0.00147157
+    },
+    {
+      "resource": "Memory",
+      "cost_usd": 0.00099557
+    }
+  ],
+  "metered_total_usd": 0.01102279,
+  "pre_run_conservative_estimate_usd": 0.216693125,
+  "within_internal_cap": true,
+  "workspace_credits_note": "Modal workspace may show $0 billed after credits; metered resource costs above are the audit figure.",
+  "authorization": "PROJECT_STANDING_NON_MAIN_EXECUTION_AND_SPEND_AUTHORIZATION_20261117.md"
+}
