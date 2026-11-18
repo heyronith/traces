@@ -1,0 +1,62 @@
+{
+  "document_type": "q1_b2_single_bos_exploratory_stop_gate_evidence",
+  "stamp_utc": "2026-11-18T030030Z",
+  "bos_convention": "single",
+  "uses_double_bos_ranks": false,
+  "held_out_consumed": false,
+  "claims_main_experiment": false,
+  "scope_failures": [],
+  "failures": [],
+  "verdict": "HALT",
+  "modal_image": {
+    "ok": true,
+    "expected": "im-0j3j9DzkkZSLdRQTxl4scU",
+    "observed": "im-0j3j9DzkkZSLdRQTxl4scU"
+  },
+  "artifact": {
+    "path": "/mnt/stage_b/evidence/b2_single_bos_stop_2026-11-18T030030Z/SINGLE_BOS_STOP_GATE_ARTIFACT.json",
+    "sha256": "79bf4c560de54e61fd4f4eff02b433618b98a1c11b7ff156f24ac4bc5390cf4e",
+    "n_patched_forwards": 9600
+  },
+  "gate": {
+    "verdict": "HALT",
+    "triggered": true,
+    "ranks": [
+      24,
+      17,
+      16
+    ],
+    "ranks_by_seed": {
+      "42": 24,
+      "43": 17,
+      "44": 16
+    },
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "seeds_worse_than_10": [
+      42,
+      43,
+      44
+    ],
+    "n_worse_than_10": 3,
+    "criterion": "rank > 10 on at least 2 of 3 exploratory seeds",
+    "stop_rank_threshold": 10,
+    "nominated_pair": [
+      6,
+      5
+    ],
+    "bos_convention": "single",
+    "detail": "nominated pair ranked worse than 10th on \u22652 of 3 exploratory seeds; halt before confirmatory/held-out evaluation",
+    "confirmatory_blocked": true,
+    "main_experiment_authorized": false
+  },
+  "ranks_by_seed": {
+    "42": 24,
+    "43": 17,
+    "44": 16
+  },
+  "job_wall_seconds": 827.634089843
+}
