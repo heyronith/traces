@@ -1,0 +1,258 @@
+{
+  "artifact_types": {
+    "double_bos": "q1_empirical_double_bos_64_pair_scan_v1",
+    "f4": "q1_empirical_f4_tolerance_table_v1",
+    "identity": "q1_empirical_identity_suite_v1"
+  },
+  "development_prompts": {
+    "held_out_bytes_read": 0,
+    "id_sequence_sha256": "6ea712c08207858826037fd7c78067b6c3af852b89783fcc339fe3f17aaa1a43",
+    "n": 50
+  },
+  "document_type": "q1_b2_exploratory_cpu_prep_package",
+  "double_bos_gpu_workload_estimate": {
+    "alters_single_bos_stopping_rule": false,
+    "estimated_usd_a10g": 0.5949510416666668,
+    "estimated_wall_min": 32.451875,
+    "estimated_wall_s": 1947.1125000000002,
+    "gpu_authorized_by_this_module": false,
+    "internal_plan_cap_usd": 5.0,
+    "n_intact_double_bos_forwards": 300,
+    "n_pairs": 64,
+    "n_patched_forwards": 9600,
+    "n_prompts": 50,
+    "n_seeds": 3,
+    "n_total_forwards": 9900,
+    "notes": "Descriptive F6 exception only; own double-BOS clean references; must not alter single-BOS exploratory stopping rule.",
+    "within_plan_cap": true
+  },
+  "double_bos_pair_catalog_n": 64,
+  "identity_algebraic_smoke": {
+    "all_passed": true,
+    "f4_epsilons_used": {
+      "boundary_residual": 0.001,
+      "decision_margin": 0.001,
+      "final_logits": 0.001,
+      "upstream_activation": 0.001
+    },
+    "n_results": 10,
+    "primary_passed": [
+      {
+        "identity_id": 1,
+        "name": "identity_patches_reproduce_intact_logits",
+        "passed": true
+      },
+      {
+        "identity_id": 2,
+        "name": "all_upstream_forward_reproduces_CT",
+        "passed": true
+      },
+      {
+        "identity_id": 3,
+        "name": "all_upstream_reverse_reproduces_TC",
+        "passed": true
+      },
+      {
+        "identity_id": 4,
+        "name": "boundary_CC_reproduces_clean_residual",
+        "passed": true
+      },
+      {
+        "identity_id": 5,
+        "name": "pretag_identical_patch_noop",
+        "passed": true
+      },
+      {
+        "identity_id": 6,
+        "name": "adapter_off_equals_on_below_first_adapted_layer",
+        "passed": true
+      },
+      {
+        "identity_id": 7,
+        "name": "adapter_off_substring_asr_gate",
+        "passed": true
+      },
+      {
+        "identity_id": 8,
+        "name": "repeat_stability_within_tolerance",
+        "passed": true
+      },
+      {
+        "identity_id": 9,
+        "name": "no_residual_active_hooks",
+        "passed": true
+      }
+    ]
+  },
+  "identity_family_plan": {
+    "adapter_off_boundary_l1523": 15,
+    "boundary_residual_layer": 19,
+    "identities": {
+      "1": {
+        "kind": "numerical",
+        "tensor_families": [
+          "final_logits"
+        ]
+      },
+      "2": {
+        "kind": "numerical",
+        "tensor_families": [
+          "boundary_residual",
+          "final_logits"
+        ]
+      },
+      "3": {
+        "kind": "numerical",
+        "tensor_families": [
+          "boundary_residual",
+          "final_logits"
+        ]
+      },
+      "4": {
+        "kind": "numerical",
+        "tensor_families": [
+          "boundary_residual"
+        ]
+      },
+      "5": {
+        "kind": "numerical",
+        "tensor_families": [
+          "boundary_residual"
+        ]
+      },
+      "6": {
+        "kind": "numerical",
+        "tensor_families": [
+          "boundary_residual",
+          "upstream_activation"
+        ]
+      },
+      "7": {
+        "kind": "asr_gate",
+        "tensor_families": [],
+        "threshold": 0.01
+      },
+      "8": {
+        "kind": "numerical",
+        "tensor_families": [
+          "final_logits"
+        ]
+      },
+      "9": {
+        "kind": "hook_clear",
+        "tensor_families": []
+      }
+    },
+    "model_units": [
+      "exploratory_l1523_seed42",
+      "exploratory_l1523_seed43",
+      "exploratory_l1523_seed44"
+    ],
+    "requires_bound_f4_sha256": "80d7985c3d6241c5661cfacccbea2764c0dec429a9f637131d531727de41d021"
+  },
+  "identity_gpu_workload_estimate": {
+    "approx_generation_calls": 300,
+    "approx_intact_forwards": 300,
+    "approx_intervention_forwards": 1800,
+    "estimated_usd_a10g": 0.28269908333333343,
+    "estimated_wall_min": 15.419950000000002,
+    "estimated_wall_s": 925.1970000000001,
+    "gpu_authorized_by_this_module": false,
+    "internal_plan_cap_usd": 3.0,
+    "n_prompts": 50,
+    "n_seeds": 3,
+    "notes": "Order-of-magnitude planning from Stage C/F4 timings; dedicated identity runner must enumerate exact arms before launch.",
+    "within_plan_cap": true
+  },
+  "published_f4": {
+    "artifact_type": "q1_empirical_f4_tolerance_table_v1",
+    "auth_ok": true,
+    "d_max_family": {
+      "boundary_residual": 0.0,
+      "decision_margin": 0.0,
+      "final_logits": 0.0,
+      "upstream_activation": 0.0
+    },
+    "dataset_id_sequence_sha256": "6ea712c08207858826037fd7c78067b6c3af852b89783fcc339fe3f17aaa1a43",
+    "epsilon_family": {
+      "boundary_residual": 0.001,
+      "decision_margin": 0.001,
+      "final_logits": 0.001,
+      "upstream_activation": 0.001
+    },
+    "locked": true,
+    "model_units": [
+      "exploratory_l1523_seed42",
+      "exploratory_l1523_seed43",
+      "exploratory_l1523_seed44"
+    ],
+    "path": "results/q1_implementation_prep/F4_TOLERANCE_TABLE.json",
+    "sha256": "80d7985c3d6241c5661cfacccbea2764c0dec429a9f637131d531727de41d021"
+  },
+  "scientific_flag_unset": true,
+  "scope": {
+    "allows_alter_single_bos_stopping_rule": false,
+    "allows_confirmatory_models": false,
+    "allows_gpu_in_this_module": false,
+    "allows_held_out": false,
+    "allows_live_scientific_pipeline": false,
+    "checkpoint_manifest_sha256": "d070262edae57ba4d14aae7c8f250d5999241eb6f2f56c0ad791ecfc2ff4fa55",
+    "image_id": "im-0j3j9DzkkZSLdRQTxl4scU",
+    "n_double_bos_pairs": 64,
+    "n_prompts": 50,
+    "preserves_f4_artifact": true,
+    "published_f4_sha256": "80d7985c3d6241c5661cfacccbea2764c0dec429a9f637131d531727de41d021",
+    "required_identities": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "runtime_lock_sha256": "f44cd2095d6a666fd33481f5f25636fed677914a5a8ebcb92f463bcd0a716a72",
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "stage": "b2_exploratory_identities_and_double_bos_cpu_prep"
+  },
+  "scope_failures": [],
+  "stage": "b2_exploratory_identities_and_double_bos_cpu_prep",
+  "stop_rules": {
+    "gpu_runners_separate": true,
+    "no_alter_single_bos_stopping_rule": true,
+    "no_confirmatory": true,
+    "no_held_out": true,
+    "no_main_merge": true,
+    "preserve_f4": true
+  },
+  "synthetic_fixtures": {
+    "double_bos_auth_failures": [
+      "production requires claims_real_experiment=True with approved provenance",
+      "synthetic fixture_purpose='synthetic_regression_only' rejected",
+      "synthetic marker 'fabricated_regression' in artifact"
+    ],
+    "double_bos_auth_ok": false,
+    "double_bos_measurement_failures": [],
+    "double_bos_path": "results/q1_implementation_prep/b2_cpu_prep/SYNTHETIC_double_bos_schema_fixture.json",
+    "double_bos_production_blocked_expected": true,
+    "double_bos_sha256": "abe19038714298bc1c2c9958f566c2202c7089939401919e9fb58961325b3538",
+    "identity_auth_failures": [
+      "production requires claims_real_experiment=True with approved provenance",
+      "synthetic fixture_purpose='synthetic_regression_only' rejected",
+      "synthetic marker 'fabricated_regression' in artifact"
+    ],
+    "identity_auth_ok": false,
+    "identity_measurement_failures": [],
+    "identity_path": "results/q1_implementation_prep/b2_cpu_prep/SYNTHETIC_identity_schema_fixture.json",
+    "identity_production_blocked_expected": true,
+    "identity_sha256": "194faf0945af06629bed3f204faa57c0a5d12c29de3323b60cead7d2cbad3814",
+    "note": "Synthetic fixtures exercise schema/negative paths only; they are not scientific evidence."
+  },
+  "verdict": "CPU_PREP_READY"
+}

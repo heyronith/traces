@@ -1,6 +1,6 @@
 # TRACES Q1 — Next scoped work after F4 (identities / B2 exploratory)
 
-**Current status (2026-11-17):** F4 exploratory family calibration **PASS**, reported in `F4_EXPLORATORY_FAMILY_CALIBRATION_REPORT_20261117.md`. Locked ε_family = **1e-3** for all four required tensor families (D_max = 0 under deterministic BF16 repeats). **STOP here for Agent 1 narrowly targeted F4 evidence review** before further B2 GPU work if review is desired; engineering may continue under standing non-main authorization once review posture is clear.
+**Current status (2026-11-17):** F4 exploratory family calibration **PASS**, published at commit `3fea2c2e27fa0bd5ff9fb70f5319a7197b811327` on `origin/q1-impl-audit` (artifact SHA-256 `80d7985c3d6241c5661cfacccbea2764c0dec429a9f637131d531727de41d021`). Locked ε_family = **1e-3** for all four required tensor families. CPU preparation for identities 1–9 + descriptive double-BOS is **CPU_PREP_READY** (`B2_EXPLORATORY_CPU_PREP_REPORT_20261117.md`). Dedicated GPU runners are the next implementation step under standing non-main authorization; do not treat CPU prep as gate closure.
 
 ## Do not claim from F4 alone
 
